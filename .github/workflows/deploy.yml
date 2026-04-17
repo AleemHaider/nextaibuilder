@@ -1,0 +1,316 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# nextaibuilder — Deploy to Production (with health check + auto-rollback)
+# FIR-84
+#
+# This workflow complements ci-cd.yml. Use it when deploying to a
+# production environment that requires:
+#   - Manual approval gate (GitHub environment protection rules)
+#   - Explicit rollback on health-check failure
+#   - Slack notifications on success and failure
+#
+# Trigger: workflow_dispatch (manual) or push to 'production' branch
+#
+# GitHub Secrets required (repository or 'production' environment):
+#   EC2_HOST              EC2 public IP or hostname
+#   EC2_USER              ubuntu
+#   EC2_SSH_KEY           Full content of the .pem private key
+#   GHCR_TOKEN            GitHub PAT with read:packages scope (for docker pull on EC2)
+#   SLACK_WEBHOOK_URL     Incoming webhook URL for deploy notifications
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag to deploy (short SHA or "latest")'
+        required: false
+        default: 'latest'
+  push:
+    branches: [production]
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false  # Never cancel an in-flight production deploy
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # CI gate — run tests before any production deploy
+  # ───────────────────────────────────────────────────────────────────────────
+  test:
+    name: Test Gate
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/api
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval \"db.adminCommand('ping').ok\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npm test
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://localhost:27017/nextaibuilder_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ci-test-jwt-secret-minimum-32-chars-long
+          JWT_REFRESH_SECRET: ci-test-refresh-secret-min-32-chars-long
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_REGION: us-east-1
+          S3_BUCKET_NAME: test-bucket
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder
+          FRONTEND_URL: http://localhost:3000
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Build & push Docker images
+  # ───────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build & Push Images
+    runs-on: ubuntu-24.04
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+      image_base: ${{ steps.meta.outputs.image_base }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute image metadata
+        id: meta
+        run: |
+          REPO_LC=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_BASE="ghcr.io/${REPO_LC}"
+          # Use manually specified tag if workflow_dispatch, else short SHA
+          INPUT_TAG="${{ github.event.inputs.image_tag }}"
+          IMAGE_TAG="${INPUT_TAG:-${GITHUB_SHA::8}}"
+          echo "image_base=${IMAGE_BASE}" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${IMAGE_TAG}"   >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build & push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.api
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_base }}/nextaibuilder-api:${{ steps.meta.outputs.image_tag }}
+            ${{ steps.meta.outputs.image_base }}/nextaibuilder-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.frontend
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_base }}/nextaibuilder-frontend:${{ steps.meta.outputs.image_tag }}
+            ${{ steps.meta.outputs.image_base }}/nextaibuilder-frontend:latest
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+            VITE_APP_URL=${{ secrets.VITE_APP_URL }}
+            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+            VITE_APPLE_CLIENT_ID=${{ secrets.VITE_APPLE_CLIENT_ID }}
+            VITE_APPLE_REDIRECT_URI=${{ secrets.VITE_APPLE_REDIRECT_URI }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Deploy to EC2 with health check + auto-rollback
+  # ───────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-24.04
+    needs: build
+    environment: production  # Requires manual approval if GitHub environment is protected
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Add EC2 to known hosts
+        run: ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Copy docker-compose.yml to EC2
+        run: |
+          scp docker-compose.yml \
+            "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/opt/nab/docker-compose.yml"
+
+      - name: Deploy new images on EC2
+        env:
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+          IMAGE_BASE: ${{ needs.build.outputs.image_base }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          ssh "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" \
+            IMAGE_TAG="${IMAGE_TAG}" \
+            IMAGE_BASE="${IMAGE_BASE}" \
+            GHCR_TOKEN="${GHCR_TOKEN}" \
+            GITHUB_ACTOR="${GITHUB_ACTOR}" \
+            bash << 'ENDSSH'
+              set -e
+
+              echo "==> Logging in to GHCR..."
+              echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+
+              export IMAGE_BASE IMAGE_TAG
+              cd /opt/nab
+
+              echo "==> Saving current image tag for rollback..."
+              CURRENT_TAG=$(docker inspect nab-api --format='{{index .Config.Image}}' 2>/dev/null | awk -F: '{print $NF}' || echo "latest")
+              echo "${CURRENT_TAG}" > /opt/nab/.previous_tag
+              echo "Previous tag: ${CURRENT_TAG}"
+
+              echo "==> Pulling new images (before stopping current containers)..."
+              docker compose pull
+
+              echo "==> Bringing up new containers..."
+              docker compose up -d --remove-orphans
+
+              echo "==> Pruning dangling images..."
+              docker image prune -f
+
+              echo "==> Deploy step complete. Running health check..."
+          ENDSSH
+
+      - name: Health check (API)
+        id: health_check
+        run: |
+          echo "Waiting 30s for containers to initialise..."
+          sleep 30
+          API_HEALTH="http://${{ secrets.EC2_HOST }}:4000/health"
+          echo "Checking ${API_HEALTH}"
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${API_HEALTH}" 2>/dev/null || echo "000")
+            echo "Attempt ${i}/5 — HTTP ${STATUS}"
+            if [ "${STATUS}" = "200" ]; then
+              echo "Health check PASSED"
+              exit 0
+            fi
+            [ $i -lt 5 ] && sleep 15
+          done
+          echo "Health check FAILED after 5 attempts"
+          exit 1
+
+      - name: Auto-rollback on health check failure
+        if: failure() && steps.health_check.outcome == 'failure'
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          echo "HEALTH CHECK FAILED — initiating auto-rollback..."
+          ssh "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" \
+            GHCR_TOKEN="${GHCR_TOKEN}" \
+            GITHUB_ACTOR="${GITHUB_ACTOR}" \
+            bash << 'ENDSSH'
+              set -e
+              echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+
+              PREVIOUS_TAG=$(cat /opt/nab/.previous_tag 2>/dev/null || echo "latest")
+              echo "Rolling back to tag: ${PREVIOUS_TAG}"
+
+              REPO_LC=$(docker inspect nab-api --format='{{index .Config.Image}}' 2>/dev/null | awk -F/ '{print $1"/"$2"/"$3}' | awk -F: '{print $1}' || echo "")
+              if [ -n "${REPO_LC}" ]; then
+                export IMAGE_TAG="${PREVIOUS_TAG}"
+                export IMAGE_BASE="${REPO_LC%/*}"
+                cd /opt/nab
+                docker compose pull
+                docker compose up -d --remove-orphans
+                echo "Rollback complete — running on tag ${PREVIOUS_TAG}"
+              else
+                echo "ERROR: Could not determine previous image base. Manual intervention required."
+                exit 1
+              fi
+          ENDSSH
+
+      - name: Notify Slack — Success
+        if: success()
+        run: |
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H 'Content-type: application/json' \
+            --data "{
+              \"text\": \"*nextaibuilder deployed successfully* :white_check_mark:\",
+              \"attachments\": [{
+                \"color\": \"good\",
+                \"fields\": [
+                  {\"title\": \"Commit\", \"value\": \"${{ github.sha }}\", \"short\": true},
+                  {\"title\": \"Actor\", \"value\": \"${{ github.actor }}\", \"short\": true},
+                  {\"title\": \"Run\", \"value\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}
+                ]
+              }]
+            }"
+
+      - name: Notify Slack — Failure
+        if: failure()
+        run: |
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H 'Content-type: application/json' \
+            --data "{
+              \"text\": \"*nextaibuilder deploy FAILED* :x: Auto-rollback may have been triggered.\",
+              \"attachments\": [{
+                \"color\": \"danger\",
+                \"fields\": [
+                  {\"title\": \"Commit\", \"value\": \"${{ github.sha }}\", \"short\": true},
+                  {\"title\": \"Actor\", \"value\": \"${{ github.actor }}\", \"short\": true},
+                  {\"title\": \"Run\", \"value\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}
+                ]
+              }]
+            }"

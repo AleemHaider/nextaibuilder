@@ -1,0 +1,3 @@
+/* Entry point — imports fonts then the full theme (tokens + Tailwind + base layer) */
+@import "./fonts.css";
+@import "./theme.css";

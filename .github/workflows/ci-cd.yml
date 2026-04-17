@@ -1,0 +1,282 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NAB CI/CD Pipeline
+#
+# Triggers:
+#   push → main        : full pipeline (lint + type-check + test + build + deploy)
+#   pull_request → main: CI only (lint + type-check + test + build, no deploy)
+#
+# Deployment target:
+#   EC2 (Ubuntu 24.04) running Docker + Docker Compose v2
+#   Frontend: nginx container exposing port 3000
+#   API:      Fastify container on port 4000, proxied via nginx on /api/* and /socket.io/*
+#
+# GitHub Secrets required (Settings → Secrets and variables → Actions):
+#
+#   EC2_SSH_KEY            Private SSH key for the EC2 instance
+#                          Paste the full contents of CollegeChoice101_Test_Server_Key.pem
+#   EC2_HOST               ec2-18-222-21-166.us-east-2.compute.amazonaws.com
+#   EC2_USER               ubuntu
+#
+#   GHCR_TOKEN             GitHub personal access token with write:packages scope
+#                          Create at: github.com/settings/tokens → "Classic" → check write:packages
+#
+#   VITE_API_URL           URL the *browser* uses to reach the API
+#                          Set to: https://aleemhaider.com
+#                          (Apache on :443 proxies to Docker nginx on :3000,
+#                           which in turn proxies /api/* to the API container on :4000)
+#   VITE_GOOGLE_CLIENT_ID  Google OAuth 2.0 client ID (from Google Cloud Console)
+#   VITE_APPLE_CLIENT_ID   Apple Services ID (from Apple Developer portal)
+#
+# Optional secrets (leave unset if the features are not in use):
+#   VITE_APP_URL               Public frontend URL — set to: https://aleemhaider.com
+#   VITE_APPLE_REDIRECT_URI    Apple OAuth redirect URI
+#   SLACK_ERROR_WEBHOOK_URL    Slack webhook for server-side error alerts
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 1: CI — Frontend
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  ci-frontend:
+    name: Frontend CI (lint + type-check + build)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: nextaibuilder-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: nextaibuilder-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build (smoke-test with placeholder env vars)
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'http://localhost:3000' }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID || '' }}
+          VITE_APPLE_CLIENT_ID: ${{ secrets.VITE_APPLE_CLIENT_ID || '' }}
+          VITE_APP_URL: ${{ secrets.VITE_APP_URL || '' }}
+          VITE_APPLE_REDIRECT_URI: ${{ secrets.VITE_APPLE_REDIRECT_URI || '' }}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 2: CI — API
+# ─────────────────────────────────────────────────────────────────────────────
+  ci-api:
+    name: API CI (type-check + test + build)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 3: Build & push Docker images (main branch only)
+# Runs after both CI jobs pass.
+# Images are pushed to GitHub Container Registry (GHCR).
+# ─────────────────────────────────────────────────────────────────────────────
+  docker-build:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-24.04
+    needs: [ci-frontend, ci-api]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+      image_base: ${{ steps.meta.outputs.image_base }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Compute image metadata
+        id: meta
+        run: |
+          # GHCR requires all-lowercase image names
+          REPO_LC=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_BASE="ghcr.io/${REPO_LC}"
+          IMAGE_TAG="${GITHUB_SHA::8}"
+          echo "image_base=${IMAGE_BASE}" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${IMAGE_TAG}"   >> "$GITHUB_OUTPUT"
+          echo "Resolved IMAGE_BASE=${IMAGE_BASE}"
+          echo "Resolved IMAGE_TAG=${IMAGE_TAG}"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.api
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_base }}/nextaibuilder-api:${{ steps.meta.outputs.image_tag }}
+            ${{ steps.meta.outputs.image_base }}/nextaibuilder-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.frontend
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_base }}/nextaibuilder-frontend:${{ steps.meta.outputs.image_tag }}
+            ${{ steps.meta.outputs.image_base }}/nextaibuilder-frontend:latest
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+            VITE_APP_URL=${{ secrets.VITE_APP_URL }}
+            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+            VITE_APPLE_CLIENT_ID=${{ secrets.VITE_APPLE_CLIENT_ID }}
+            VITE_APPLE_REDIRECT_URI=${{ secrets.VITE_APPLE_REDIRECT_URI }}
+            VITE_SUPPORT_EMAIL=support@productbuilderacademy.com
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 4: Deploy to EC2
+# Copies docker-compose.yml, pulls new images, restarts the stack.
+# ─────────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-24.04
+    needs: docker-build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: dev
+
+    steps:
+      - name: Checkout code (for docker-compose.yml)
+        uses: actions/checkout@v4
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Add EC2 to known hosts
+        run: ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Copy docker-compose.yml to server
+        run: |
+          scp docker-compose.yml \
+            "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/opt/nab/docker-compose.yml"
+
+      - name: Deploy on EC2
+        env:
+          IMAGE_TAG: ${{ needs.docker-build.outputs.image_tag }}
+          IMAGE_BASE: ${{ needs.docker-build.outputs.image_base }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          ssh "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" \
+            IMAGE_TAG="${IMAGE_TAG}" \
+            IMAGE_BASE="${IMAGE_BASE}" \
+            GHCR_TOKEN="${GHCR_TOKEN}" \
+            GITHUB_ACTOR="${GITHUB_ACTOR}" \
+            bash << 'ENDSSH'
+              set -e
+
+              # Log in to GHCR so Docker can pull the private images
+              echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+
+              # docker-compose.yml references ${IMAGE_BASE} and ${IMAGE_TAG}
+              export IMAGE_BASE IMAGE_TAG
+
+              cd /opt/nab
+
+              # Pull new images before stopping the old containers (minimises downtime)
+              docker compose pull
+
+              # Bring up new containers, remove orphaned ones
+              docker compose up -d --remove-orphans
+
+              # Remove dangling images to recover disk space
+              docker image prune -f
+          ENDSSH
+
+      - name: Health check (API)
+        run: |
+          echo "Waiting 30s for containers to start..."
+          sleep 30
+          API_HEALTH="http://${{ secrets.EC2_HOST }}:4000/health"
+          echo "Checking ${API_HEALTH}"
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${API_HEALTH}" 2>/dev/null || echo "000")
+            echo "Attempt ${i} — HTTP ${STATUS}"
+            if [ "${STATUS}" = "200" ]; then
+              echo "Health check PASSED"
+              exit 0
+            fi
+            [ $i -lt 5 ] && sleep 10
+          done
+          echo "Health check FAILED after 5 attempts"
+          exit 1
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Deploy FAILED for commit ${{ github.sha }} by ${{ github.actor }}"
+          echo "Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

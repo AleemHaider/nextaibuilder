@@ -1,0 +1,61 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# nextaibuilder — Docker Compose (Local Development)
+# FIR-26
+#
+# Spins up only the infrastructure services (MongoDB + Redis).
+# The API and frontend run locally via `npm run dev`.
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up -d
+#   docker compose -f docker-compose.dev.yml down
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: nab-mongo-dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: nabadmin
+      MONGO_INITDB_ROOT_PASSWORD: nabpassword
+      MONGO_INITDB_DATABASE: nextaibuilder
+    volumes:
+      - nab_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - nab-dev
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: nab-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass nabredispassword
+    volumes:
+      - nab_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "nabredispassword", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - nab-dev
+
+volumes:
+  nab_mongo_data:
+    driver: local
+  nab_redis_data:
+    driver: local
+
+networks:
+  nab-dev:
+    driver: bridge

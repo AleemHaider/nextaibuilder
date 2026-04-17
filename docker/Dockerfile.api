@@ -1,0 +1,47 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NAB API — Production Dockerfile
+# Multi-stage: build TypeScript → serve with Node.js (production deps only)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Stage 1: build
+FROM node:20-alpine AS builder
+
+WORKDIR /build
+
+# Copy manifests first (layer cache)
+COPY apps/api/package.json apps/api/package-lock.json ./
+
+# Install all deps (including devDependencies for tsc)
+RUN npm ci
+
+# Copy source and compile
+COPY apps/api/tsconfig.json ./
+COPY apps/api/src ./src
+
+RUN npm run build
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2: runtime
+FROM node:20-alpine AS runtime
+
+WORKDIR /app
+
+# Copy package manifests
+COPY apps/api/package.json apps/api/package-lock.json ./
+
+# Install production dependencies only
+RUN npm ci --omit=dev && npm cache clean --force
+
+# Copy compiled output from builder stage
+COPY --from=builder /build/dist ./dist
+
+# Non-root user for security
+RUN addgroup -S nab && adduser -S nab -G nab
+USER nab
+
+EXPOSE 4000
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://localhost:4000/health').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"
+
+CMD ["node", "dist/index.js"]

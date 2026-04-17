@@ -1,0 +1,69 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NAB — Docker Compose (Production)
+#
+# Services:
+#   frontend  — nginx serving Vite static build on port 3000 (public)
+#   api       — Fastify Node.js API on port 4000 (also exposed for health checks)
+#
+# Required on the EC2 host before first deploy:
+#   /opt/nab/.env  — API environment variables (see apps/api/.env.example)
+#
+# Environment variables set by the CI/CD pipeline when running docker compose:
+#   IMAGE_BASE  — GHCR image base path (e.g. ghcr.io/aleemhaider/ai-product-builder)
+#   IMAGE_TAG   — Short git SHA (e.g. a1b2c3d4)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  frontend:
+    image: ${IMAGE_BASE}/nextaibuilder-frontend:${IMAGE_TAG:-latest}
+    container_name: nab-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - nab
+
+  api:
+    image: ${IMAGE_BASE}/nextaibuilder-api:${IMAGE_TAG:-latest}
+    container_name: nab-api
+    restart: unless-stopped
+    env_file:
+      - /opt/nab/.env
+    ports:
+      - "4000:4000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - nab
+
+  redis:
+    image: redis:7-alpine
+    container_name: nab-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - nab
+
+networks:
+  nab:
+    driver: bridge
+
+volumes:
+  redis_data:

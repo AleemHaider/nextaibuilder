@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="40" fill="#1a2744"/>
+  <!-- Spark mark centered, scaled to ~116px wide (scale ≈ 2.07×56) -->
+  <!-- cardinal rays -->
+  <rect x="87" y="50"  width="18" height="22" fill="#4a9ad4"/>
+  <rect x="87" y="120" width="18" height="22" fill="#4a9ad4"/>
+  <rect x="50" y="87"  width="22" height="18" fill="#4a9ad4"/>
+  <rect x="120" y="87" width="22" height="18" fill="#4a9ad4"/>
+  <!-- diagonal rays -->
+  <rect x="64" y="64"  width="16" height="16" fill="#7dcbff"/>
+  <rect x="112" y="64" width="16" height="16" fill="#7dcbff"/>
+  <rect x="64" y="112" width="16" height="16" fill="#7dcbff"/>
+  <rect x="112" y="112" width="16" height="16" fill="#7dcbff"/>
+  <!-- mid ring -->
+  <rect x="80"  y="64"  width="16" height="16" fill="#5ab4e8"/>
+  <rect x="96"  y="64"  width="16" height="16" fill="#5ab4e8"/>
+  <rect x="64"  y="80"  width="16" height="16" fill="#5ab4e8"/>
+  <rect x="112" y="80"  width="16" height="16" fill="#5ab4e8"/>
+  <rect x="80"  y="112" width="16" height="16" fill="#5ab4e8"/>
+  <rect x="96"  y="112" width="16" height="16" fill="#5ab4e8"/>
+  <rect x="64"  y="96"  width="16" height="16" fill="#5ab4e8"/>
+  <rect x="112" y="96"  width="16" height="16" fill="#5ab4e8"/>
+  <!-- inner ring -->
+  <rect x="80" y="80" width="32" height="32" fill="rgba(74,154,212,0.18)"/>
+  <rect x="83" y="83" width="26" height="26" fill="#4a9ad4"/>
+  <rect x="87" y="87" width="18" height="18" fill="#7dcbff"/>
+  <!-- center pixel -->
+  <rect x="89" y="89" width="14" height="14" fill="#ffffff"/>
+</svg>
