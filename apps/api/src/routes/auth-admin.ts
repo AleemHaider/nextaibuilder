@@ -234,11 +234,15 @@ export async function authAdminRoutes(fastify: FastifyInstance) {
     // SUPER_ADMIN always gets OTP; ADMIN only if twoFactorEnabled
     if (user!.twoFactorEnabled || user!.role === 'SUPER_ADMIN') {
       const code = await generateOtp(userId)
-      sendEmail(
-        user!.email,
-        'Your admin verification code',
-        adminOtpEmailTemplate(code, user!.firstName),
-      ).catch((err: unknown) => fastify.log.error(err, '[auth-admin] Failed to send OTP email'))
+      if (process.env.NODE_ENV !== 'production' && !process.env.SMTP_HOST) {
+        fastify.log.warn({ email: user!.email, code }, '[auth-admin] DEV OTP (no SMTP configured) — do not use in prod')
+      } else {
+        sendEmail(
+          user!.email,
+          'Your admin verification code',
+          adminOtpEmailTemplate(code, user!.firstName),
+        ).catch((err: unknown) => fastify.log.error(err, '[auth-admin] Failed to send OTP email'))
+      }
 
       const preAuthToken = signPreAuthToken(fastify, userId)
 
@@ -594,11 +598,15 @@ export async function authAdminRoutes(fastify: FastifyInstance) {
     }
 
     const code = await generateOtp(userId)
-    sendEmail(
-      user.email,
-      'Your admin verification code',
-      adminOtpEmailTemplate(code, user.firstName),
-    ).catch((err: unknown) => fastify.log.error(err, '[auth-admin] Failed to send resend OTP email'))
+    if (process.env.NODE_ENV !== 'production' && !process.env.SMTP_HOST) {
+      fastify.log.warn({ email: user.email, code }, '[auth-admin] DEV OTP (no SMTP configured) — do not use in prod')
+    } else {
+      sendEmail(
+        user.email,
+        'Your admin verification code',
+        adminOtpEmailTemplate(code, user.firstName),
+      ).catch((err: unknown) => fastify.log.error(err, '[auth-admin] Failed to send resend OTP email'))
+    }
 
     return reply.code(200).send({
       message: 'New verification code sent.',

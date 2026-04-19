@@ -1,77 +1,25 @@
-import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 // FIR-35 — Admin login page (email + password, optional OTP redirect)
+// Reskinned to Wise theme per DESIGN.md (root workspace)
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { AlertTriangle, Lock, Mail } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { adminLogin } from '../lib/api';
 import { Logo } from '../components/Logo';
-// ---------------------------------------------------------------------------
-// Left panel decorative circles (from 05-admin-auth.html)
-// ---------------------------------------------------------------------------
-function LeftDecoCircles() {
-    return (_jsxs(_Fragment, { children: [_jsx("div", { style: {
-                    position: 'absolute',
-                    bottom: -40,
-                    right: -40,
-                    width: 240,
-                    height: 240,
-                    borderRadius: '50%',
-                    background: 'rgba(74,154,212,0.08)',
-                    border: '1px solid rgba(74,154,212,0.15)',
-                }, "aria-hidden": "true" }), _jsx("div", { style: {
-                    position: 'absolute',
-                    bottom: -80,
-                    right: -80,
-                    width: 340,
-                    height: 340,
-                    borderRadius: '50%',
-                    background: 'rgba(74,154,212,0.04)',
-                    border: '1px solid rgba(74,154,212,0.08)',
-                }, "aria-hidden": "true" })] }));
-}
+import { cn } from '../lib/utils';
 export function AdminLeftPanel({ tagline }) {
-    return (_jsxs("div", { style: {
-            width: 500,
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-            padding: 80,
-            minHeight: '100vh',
-            position: 'relative',
-            overflow: 'hidden',
-            background: 'linear-gradient(135deg, #0d1a3a 0%, #1a2744 60%, #2d4a8a 100%)',
-        }, children: [_jsxs("div", { style: { position: 'relative', zIndex: 1 }, children: [_jsx("div", { style: { marginBottom: 48 }, children: _jsx(Logo, { size: "md", variant: "dark" }) }), _jsxs("div", { style: {
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            background: 'rgba(74,154,212,0.2)',
-                            border: '1px solid rgba(74,154,212,0.3)',
-                            color: '#4a9ad4',
-                            fontSize: 13,
-                            fontWeight: 600,
-                            padding: '6px 14px',
-                            borderRadius: 9999,
-                            marginBottom: 24,
-                        }, children: [_jsx("span", { "aria-hidden": "true", children: "\uD83D\uDD10" }), "Admin Portal"] }), _jsx("h1", { style: {
-                            fontSize: 44,
-                            fontWeight: 900,
-                            color: '#fff',
-                            lineHeight: 0.9,
-                            letterSpacing: -1.5,
-                            marginBottom: 20,
-                        }, children: tagline }), _jsx("p", { style: {
-                            fontSize: 17,
-                            color: 'rgba(255,255,255,0.55)',
-                            lineHeight: 1.6,
-                        }, children: "Manage cohorts, enrollments, payments, and your team from one powerful dashboard." })] }), _jsx(LeftDecoCircles, {})] }));
+    return (_jsxs("div", { className: cn('relative flex w-[500px] shrink-0 flex-col items-start justify-center', 'overflow-hidden px-20 py-20 min-h-screen', 'bg-[#0e0f0c] text-white'), children: [_jsx("div", { "aria-hidden": "true", className: cn('pointer-events-none absolute -bottom-24 -right-24 h-[420px] w-[420px] rounded-full', 'bg-[#9fe870]/15 blur-3xl') }), _jsx("div", { "aria-hidden": "true", className: cn('pointer-events-none absolute -top-20 -left-20 h-[240px] w-[240px] rounded-full', 'bg-[#9fe870]/5 blur-2xl') }), _jsxs("div", { className: "relative z-10 max-w-[340px]", children: [_jsx("div", { className: "mb-12", children: _jsx(Logo, { size: "md", variant: "dark" }) }), _jsxs("div", { className: cn('mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5', 'bg-[#9fe870]/15 text-[#9fe870] text-[13px] font-semibold', 'ring-1 ring-[#9fe870]/25'), children: [_jsx(Lock, { className: "h-3.5 w-3.5", strokeWidth: 2.5 }), "Admin Portal"] }), _jsx("h1", { className: cn('text-[44px] leading-[0.9] tracking-[-1.5px] text-white mb-5', 'font-black'), style: { fontFeatureSettings: '"calt"' }, children: tagline }), _jsx("p", { className: "text-[17px] leading-[1.55] text-white/55", children: "Manage cohorts, enrollments, payments, and your team from one powerful dashboard." })] })] }));
 }
+// ---------------------------------------------------------------------------
+// Shared input styles
+// ---------------------------------------------------------------------------
+const inputBase = cn('w-full h-12 rounded-xl px-4 text-[15px] font-medium', 'bg-white text-[#0e0f0c] placeholder:text-[#868685]', 'border outline-none transition-[border-color,box-shadow,background]', 'focus:bg-white focus:ring-4 focus:ring-[#9fe870]/25');
 // ---------------------------------------------------------------------------
 // AdminLoginPage
 // ---------------------------------------------------------------------------
 export default function AdminLoginPage() {
-    const { isAuthenticated, isLoading, user } = useAuth();
+    const { isAuthenticated, isLoading, user, login } = useAuth();
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -113,75 +61,5 @@ export default function AdminLoginPage() {
     if (isLoading)
         return null;
     const hasError = error !== null;
-    const inputStyle = (errorState) => ({
-        width: '100%',
-        height: 48,
-        borderRadius: 12,
-        border: `1.5px solid ${errorState ? '#d03238' : 'rgba(26,39,68,0.15)'}`,
-        background: errorState ? '#fef2f2' : '#f3f3f5',
-        padding: '0 16px',
-        fontSize: 15,
-        color: '#1a2744',
-        fontFamily: "'Inter', sans-serif",
-        outline: 'none',
-        boxSizing: 'border-box',
-        transition: 'border-color 0.15s, background 0.15s',
-    });
-    return (_jsxs("div", { style: { display: 'flex', minHeight: '100vh', width: '100%' }, children: [_jsx(AdminLeftPanel, { tagline: "Course administration made simple." }), _jsx("div", { style: {
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '60px',
-                    background: '#f8f9fb',
-                }, children: _jsxs("form", { onSubmit: handleSubmit, noValidate: true, style: { width: '100%', maxWidth: 420 }, "aria-label": "Admin sign in form", children: [_jsx("h1", { style: {
-                                fontSize: 36,
-                                fontWeight: 900,
-                                color: '#1a2744',
-                                letterSpacing: -1,
-                                marginBottom: 6,
-                            }, children: "Admin Sign In" }), _jsx("p", { style: { fontSize: 16, color: '#717182', marginBottom: 36 }, children: "Access the nextaibuilder admin portal" }), hasError && (_jsxs("div", { role: "alert", style: {
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                                gap: 10,
-                                marginBottom: 24,
-                                background: '#fdeaeb',
-                                border: '1px solid rgba(208,50,56,0.25)',
-                                borderRadius: 12,
-                                padding: '14px 16px',
-                            }, children: [_jsx("span", { style: { fontSize: 16, flexShrink: 0 }, "aria-hidden": "true", children: "\u26A0\uFE0F" }), _jsx("p", { style: { fontSize: 14, color: '#d03238', fontWeight: 500, lineHeight: 1.4 }, children: error })] })), _jsxs("div", { style: { marginBottom: 18 }, children: [_jsx("label", { htmlFor: "admin-email", style: {
-                                        display: 'block',
-                                        fontSize: 14,
-                                        fontWeight: 600,
-                                        color: '#1a2744',
-                                        marginBottom: 6,
-                                    }, children: "Email address" }), _jsx("input", { id: "admin-email", type: "email", autoComplete: "email", placeholder: "admin@nextaibuilder.com", value: email, onChange: (e) => setEmail(e.target.value), required: true, style: inputStyle(hasError) })] }), _jsxs("div", { style: { marginBottom: 8 }, children: [_jsx("label", { htmlFor: "admin-password", style: {
-                                        display: 'block',
-                                        fontSize: 14,
-                                        fontWeight: 600,
-                                        color: '#1a2744',
-                                        marginBottom: 6,
-                                    }, children: "Password" }), _jsx("input", { id: "admin-password", type: "password", autoComplete: "current-password", placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022", value: password, onChange: (e) => setPassword(e.target.value), required: true, style: inputStyle(hasError) })] }), _jsx(Link, { to: "/admin/forgot-password", style: {
-                                display: 'block',
-                                fontSize: 13,
-                                fontWeight: 600,
-                                color: '#4a9ad4',
-                                textDecoration: 'none',
-                                textAlign: 'right',
-                                marginBottom: 8,
-                            }, children: "Forgot password?" }), _jsx("button", { type: "submit", disabled: isPending, style: {
-                                width: '100%',
-                                height: 52,
-                                borderRadius: 9999,
-                                background: '#4a9ad4',
-                                color: '#0d1a3a',
-                                fontSize: 16,
-                                fontWeight: 700,
-                                border: 'none',
-                                cursor: isPending ? 'not-allowed' : 'pointer',
-                                opacity: isPending ? 0.5 : 1,
-                                marginTop: 8,
-                                fontFamily: "'Inter', sans-serif",
-                                transition: 'opacity 0.15s',
-                            }, children: isPending ? 'Signing in…' : 'Sign In' })] }) })] }));
+    return (_jsxs("div", { className: "flex min-h-screen w-full bg-[#fafaf8]", children: [_jsx(AdminLeftPanel, { tagline: "Course administration made simple." }), _jsx("div", { className: "flex flex-1 items-center justify-center px-6 py-16", children: _jsxs("form", { onSubmit: handleSubmit, noValidate: true, className: cn('w-full max-w-[460px] rounded-[30px] bg-white p-10', 'shadow-[0_0_0_1px_rgba(14,15,12,0.08),0_24px_60px_-24px_rgba(14,15,12,0.18)]'), "aria-label": "Admin sign in form", children: [_jsx("h1", { className: "text-[36px] font-black text-[#0e0f0c] tracking-[-1px] mb-1.5", style: { fontFeatureSettings: '"calt"' }, children: "Admin Sign In" }), _jsx("p", { className: "text-[16px] text-[#868685] mb-9", children: "Access the nextaibuilder admin portal" }), hasError && (_jsxs("div", { role: "alert", className: cn('mb-6 flex items-start gap-2.5 rounded-2xl px-4 py-3.5', 'bg-[#fdeaeb] ring-1 ring-[#d03238]/25'), children: [_jsx(AlertTriangle, { className: "h-4 w-4 shrink-0 mt-0.5 text-[#d03238]", strokeWidth: 2.5 }), _jsx("p", { className: "text-[14px] font-semibold leading-snug text-[#d03238]", children: error })] })), _jsx("label", { htmlFor: "admin-email", className: "block mb-1.5 text-[14px] font-semibold text-[#0e0f0c]", children: "Email address" }), _jsxs("div", { className: "relative mb-5", children: [_jsx(Mail, { className: "pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#868685]", strokeWidth: 2.25, "aria-hidden": "true" }), _jsx("input", { id: "admin-email", type: "email", autoComplete: "email", placeholder: "admin@nextaibuilder.com", value: email, onChange: (e) => setEmail(e.target.value), required: true, className: cn(inputBase, 'pl-11', hasError ? 'border-[#d03238] bg-[#fef2f2]' : 'border-[rgba(14,15,12,0.12)]') })] }), _jsx("label", { htmlFor: "admin-password", className: "block mb-1.5 text-[14px] font-semibold text-[#0e0f0c]", children: "Password" }), _jsxs("div", { className: "relative mb-2", children: [_jsx(Lock, { className: "pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#868685]", strokeWidth: 2.25, "aria-hidden": "true" }), _jsx("input", { id: "admin-password", type: "password", autoComplete: "current-password", placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022", value: password, onChange: (e) => setPassword(e.target.value), required: true, className: cn(inputBase, 'pl-11', hasError ? 'border-[#d03238] bg-[#fef2f2]' : 'border-[rgba(14,15,12,0.12)]') })] }), _jsx("div", { className: "flex justify-end mb-6", children: _jsx(Link, { to: "/admin/forgot-password", className: "text-[13px] font-semibold text-[#163300] hover:underline", children: "Forgot password?" }) }), _jsx("button", { type: "submit", disabled: isPending, className: cn('w-full h-[52px] rounded-full', 'bg-[#9fe870] text-[#163300] text-[16px] font-bold', 'border-none cursor-pointer', 'transition-transform duration-150 ease-out', 'hover:enabled:scale-[1.02] active:enabled:scale-[0.98]', 'disabled:opacity-50 disabled:cursor-not-allowed', 'focus-visible:outline-2 focus-visible:outline-[#163300] focus-visible:outline-offset-2'), children: isPending ? 'Signing in…' : 'Sign In' })] }) })] }));
 }

@@ -1,7 +1,9 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 // FIR-156 — Admin 2FA OTP verification page
+// Reskinned to Wise theme per DESIGN.md (root workspace)
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
+import { AlertTriangle, Mail } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { adminVerifyOtp, adminResendOtp } from '../lib/api';
 import { AdminLeftPanel } from './AdminLoginPage';
@@ -13,13 +15,13 @@ function OtpBox({ index, value, isFocused, hasError, inputRef, onChange, onKeyDo
     return (_jsx("input", { ref: inputRef, id: `otp-${index}`, type: "text", inputMode: "numeric", pattern: "[0-9]", maxLength: 1, value: value, "aria-label": `OTP digit ${index + 1}`, onChange: (e) => {
             const raw = e.target.value.replace(/\D/g, '');
             onChange(index, raw.slice(-1));
-        }, onKeyDown: (e) => onKeyDown(index, e), onFocus: () => onFocus(index), onPaste: onPaste, className: cn('w-[62px] h-[72px] rounded-xl text-center', 'text-[28px] font-extrabold text-[#1a2744]', 'border-[1.5px] outline-none transition-[border-color,background,box-shadow]', 'caret-transparent', hasError
+        }, onKeyDown: (e) => onKeyDown(index, e), onFocus: () => onFocus(index), onPaste: onPaste, className: cn('w-[62px] h-[72px] rounded-2xl text-center bg-white', 'text-[28px] font-black text-[#0e0f0c]', 'border outline-none caret-transparent', 'transition-[border-color,background,box-shadow] duration-150', hasError
             ? 'border-[#d03238] bg-[#fef2f2]'
             : value
-                ? 'border-[#4a9ad4] bg-white'
+                ? 'border-[#163300] shadow-[0_0_0_3px_rgba(159,232,112,0.35)]'
                 : isFocused
-                    ? 'border-[#1a2744] bg-white shadow-[0_0_0_3px_rgba(26,39,68,0.1)]'
-                    : 'border-[rgba(26,39,68,0.15)] bg-[#f3f3f5]') }));
+                    ? 'border-[#0e0f0c] shadow-[0_0_0_3px_rgba(159,232,112,0.35)]'
+                    : 'border-[rgba(14,15,12,0.12)]'), style: { fontFeatureSettings: '"calt"' } }));
 }
 export default function AdminOtpPage() {
     const navigate = useNavigate();
@@ -57,7 +59,6 @@ export default function AdminOtpPage() {
     }
     useEffect(() => () => { if (cooldownRef.current)
         clearInterval(cooldownRef.current); }, []);
-    // Input refs
     const inputRefs = useRef([]);
     function focusBox(index) {
         inputRefs.current[index]?.focus();
@@ -123,14 +124,13 @@ export default function AdminOtpPage() {
             setAttemptCount(newCount);
             if (newCount >= MAX_ATTEMPTS) {
                 setIsLockedOut(true);
-                setError(`Too many incorrect attempts. Please go back and sign in again.`);
+                setError('Too many incorrect attempts. Please go back and sign in again.');
             }
             else {
                 setError(err instanceof Error
                     ? err.message
                     : `Invalid code. ${MAX_ATTEMPTS - newCount} attempt${MAX_ATTEMPTS - newCount === 1 ? '' : 's'} remaining.`);
             }
-            // Clear digits on error
             setDigits(Array(OTP_LENGTH).fill(''));
             focusBox(0);
         }
@@ -156,5 +156,5 @@ export default function AdminOtpPage() {
     const allFilled = digits.every((d) => d !== '');
     if (!preAuthToken)
         return null;
-    return (_jsxs("div", { className: "flex min-h-screen w-full", children: [_jsx(AdminLeftPanel, { tagline: "Two-factor authentication keeps your admin account secure." }), _jsx("div", { className: cn('flex-1 flex items-center justify-center', 'px-6 py-16 bg-[#f8f9fb]'), children: _jsxs("form", { onSubmit: handleVerify, noValidate: true, className: "w-full max-w-[440px]", "aria-label": "OTP verification form", children: [_jsx("p", { className: "text-[48px] mb-5", "aria-hidden": "true", children: "\uD83D\uDCE7" }), _jsx("h1", { className: cn('text-[36px] font-black text-[#1a2744]', 'tracking-[-1px] mb-2'), children: "Check your email" }), _jsx("p", { className: "text-[16px] text-[#717182] mb-1", children: "We sent a 6-digit code to" }), _jsx("p", { className: "text-[16px] font-bold text-[#1a2744] mb-8", children: email }), _jsx("div", { className: "flex gap-2.5 mb-6", role: "group", "aria-label": "One-time password input", children: digits.map((digit, i) => (_jsx(OtpBox, { index: i, value: digit, isFocused: focusedIndex === i, hasError: error !== null, inputRef: (el) => { inputRefs.current[i] = el; }, onChange: handleChange, onKeyDown: handleKeyDown, onFocus: setFocusedIndex, onPaste: handlePaste }, i))) }), error && (_jsxs("div", { role: "alert", className: cn('flex items-start gap-2.5 mb-5', 'bg-[#fdeaeb] border border-[rgba(208,50,56,0.25)]', 'rounded-xl px-4 py-3.5'), children: [_jsx("span", { className: "text-base flex-shrink-0 mt-0.5", "aria-hidden": "true", children: "\u26A0\uFE0F" }), _jsx("p", { className: "text-[14px] text-[#d03238] font-medium leading-snug", children: error })] })), _jsx("button", { type: "submit", disabled: isPending || isLockedOut || !allFilled, className: cn('w-full h-[52px] rounded-full mb-5', 'bg-[#4a9ad4] text-[#0d1a3a] text-[16px] font-bold', 'border-none cursor-pointer', 'hover:opacity-90 transition-opacity', 'disabled:opacity-50 disabled:cursor-not-allowed', 'focus-visible:outline-2 focus-visible:outline-[#4a9ad4] focus-visible:outline-offset-2'), children: isPending ? 'Verifying…' : 'Verify Code' }), _jsx("div", { className: "text-center", children: _jsxs("span", { className: "text-[14px] text-[#717182]", children: ["Didn't receive it?", ' ', cooldown > 0 ? (_jsxs("span", { className: "text-[#a3a3a3] font-semibold", children: ["Resend code (", Math.floor(cooldown / 60), ":", String(cooldown % 60).padStart(2, '0'), ")"] })) : (_jsx("button", { type: "button", onClick: handleResend, disabled: isLockedOut, className: cn('text-[#4a9ad4] font-semibold bg-transparent border-none', 'cursor-pointer p-0 hover:underline', 'disabled:opacity-50 disabled:cursor-not-allowed'), children: "Resend code" }))] }) }), _jsxs("p", { className: "text-[12px] text-[#a3a3a3] text-center mt-3", children: ["Code expires in 10 minutes \u00B7", ' ', _jsx("button", { type: "button", onClick: () => navigate('/admin/login', { replace: true }), className: cn('text-[#4a9ad4] bg-transparent border-none', 'cursor-pointer p-0 text-[12px] hover:underline'), children: "Sign out" })] })] }) })] }));
+    return (_jsxs("div", { className: "flex min-h-screen w-full bg-[#fafaf8]", children: [_jsx(AdminLeftPanel, { tagline: "Two-factor authentication keeps your admin account secure." }), _jsx("div", { className: "flex flex-1 items-center justify-center px-6 py-16", children: _jsxs("form", { onSubmit: handleVerify, noValidate: true, className: cn('w-full max-w-[460px] rounded-[30px] bg-white p-10', 'shadow-[0_0_0_1px_rgba(14,15,12,0.08),0_24px_60px_-24px_rgba(14,15,12,0.18)]'), "aria-label": "OTP verification form", children: [_jsx("div", { className: cn('mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl', 'bg-[#e2f6d5] text-[#163300]'), "aria-hidden": "true", children: _jsx(Mail, { className: "h-6 w-6", strokeWidth: 2.25 }) }), _jsx("h1", { className: "text-[36px] font-black text-[#0e0f0c] tracking-[-1px] mb-2", style: { fontFeatureSettings: '"calt"' }, children: "Check your email" }), _jsx("p", { className: "text-[16px] text-[#868685] mb-1", children: "We sent a 6-digit code to" }), _jsx("p", { className: "text-[16px] font-bold text-[#0e0f0c] mb-8", children: email }), _jsx("div", { className: "flex gap-2.5 mb-6", role: "group", "aria-label": "One-time password input", children: digits.map((digit, i) => (_jsx(OtpBox, { index: i, value: digit, isFocused: focusedIndex === i, hasError: error !== null, inputRef: (el) => { inputRefs.current[i] = el; }, onChange: handleChange, onKeyDown: handleKeyDown, onFocus: setFocusedIndex, onPaste: handlePaste }, i))) }), error && (_jsxs("div", { role: "alert", className: cn('mb-5 flex items-start gap-2.5 rounded-2xl px-4 py-3.5', 'bg-[#fdeaeb] ring-1 ring-[#d03238]/25'), children: [_jsx(AlertTriangle, { className: "h-4 w-4 shrink-0 mt-0.5 text-[#d03238]", strokeWidth: 2.5 }), _jsx("p", { className: "text-[14px] font-semibold leading-snug text-[#d03238]", children: error })] })), _jsx("button", { type: "submit", disabled: isPending || isLockedOut || !allFilled, className: cn('w-full h-[52px] rounded-full mb-5', 'bg-[#9fe870] text-[#163300] text-[16px] font-bold', 'border-none cursor-pointer', 'transition-transform duration-150 ease-out', 'hover:enabled:scale-[1.02] active:enabled:scale-[0.98]', 'disabled:opacity-50 disabled:cursor-not-allowed', 'focus-visible:outline-2 focus-visible:outline-[#163300] focus-visible:outline-offset-2'), children: isPending ? 'Verifying…' : 'Verify Code' }), _jsx("div", { className: "text-center", children: _jsxs("span", { className: "text-[14px] text-[#868685]", children: ["Didn't receive it?", ' ', cooldown > 0 ? (_jsxs("span", { className: "text-[#a3a3a3] font-semibold", children: ["Resend code (", Math.floor(cooldown / 60), ":", String(cooldown % 60).padStart(2, '0'), ")"] })) : (_jsx("button", { type: "button", onClick: handleResend, disabled: isLockedOut, className: cn('text-[#163300] font-semibold bg-transparent border-none', 'cursor-pointer p-0 hover:underline', 'disabled:opacity-50 disabled:cursor-not-allowed'), children: "Resend code" }))] }) }), _jsxs("p", { className: "text-[12px] text-[#a3a3a3] text-center mt-3", children: ["Code expires in 10 minutes \u00B7", ' ', _jsx("button", { type: "button", onClick: () => navigate('/admin/login', { replace: true }), className: "text-[#163300] bg-transparent border-none cursor-pointer p-0 text-[12px] hover:underline", children: "Sign out" })] })] }) })] }));
 }
