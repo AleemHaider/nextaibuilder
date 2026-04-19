@@ -713,6 +713,116 @@ export async function fetchAdminCourses(
   return res.json() as Promise<AdminCoursesResponse>
 }
 
+// ---- Wave 5 Story Y — Admin curriculum reorder (modules + lessons) ----
+
+export interface AdminModule {
+  id: string
+  title: string
+  order: number
+  lessonCount?: number
+}
+
+export interface AdminLesson {
+  id: string
+  title: string
+  order: number
+  type: 'VIDEO' | 'TEXT' | 'TOOL_SETUP'
+  estimatedMinutes: number
+  published: boolean
+}
+
+export interface ReorderResponse {
+  updated: number
+}
+
+// Fetch the modules for a cohort (via the admin course detail endpoint).
+// The detail payload includes lesson counts, which we surface as lessonCount
+// so the UI can render the "N lessons" pill without fetching every module's
+// lessons up-front.
+export async function fetchAdminCourseModules(
+  cohortId: string,
+): Promise<AdminModule[]> {
+  const res = await authFetch(`${BASE}/admin/courses/${cohortId}`)
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to fetch course modules')
+  }
+  const json = (await res.json()) as {
+    modules?: Array<{
+      id: string
+      title: string
+      order: number
+      lessonCount?: number
+      lessons?: unknown[]
+    }>
+  }
+  const modules = json.modules ?? []
+  return modules
+    .map((m) => ({
+      id: m.id,
+      title: m.title,
+      order: m.order,
+      lessonCount: m.lessonCount ?? (Array.isArray(m.lessons) ? m.lessons.length : 0),
+    }))
+    .sort((a, b) => a.order - b.order)
+}
+
+export async function fetchAdminModuleLessons(
+  cohortId: string,
+  moduleId: string,
+): Promise<AdminLesson[]> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/modules/${moduleId}/lessons`,
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to fetch lessons')
+  }
+  const json = (await res.json()) as { lessons?: AdminLesson[] }
+  const lessons = json.lessons ?? []
+  return [...lessons].sort((a, b) => a.order - b.order)
+}
+
+export async function reorderModules(
+  cohortId: string,
+  items: Array<{ id: string; order: number }>,
+): Promise<ReorderResponse> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/modules/reorder`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      // Endpoint accepts a bare array per Wave 3 Story P contract.
+      body: JSON.stringify(items),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to reorder modules')
+  }
+  return res.json() as Promise<ReorderResponse>
+}
+
+export async function reorderLessons(
+  cohortId: string,
+  moduleId: string,
+  items: Array<{ id: string; order: number }>,
+): Promise<ReorderResponse> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/modules/${moduleId}/lessons/reorder`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(items),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to reorder lessons')
+  }
+  return res.json() as Promise<ReorderResponse>
+}
+
 // ---- Screenshot submissions ----
 
 export interface ScreenshotSubmission {
