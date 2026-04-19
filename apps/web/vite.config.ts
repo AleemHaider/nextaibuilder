@@ -54,5 +54,10 @@ export default defineConfig({
   server: { port: 5173, proxy: { '/api': 'http://localhost:4000' } },
   resolve: {
     alias: { '@': '/src' },
+    // Prefer TS sources over .js compiled outputs. Without this, Vite's
+    // default order (.mjs, .js, .mts, .ts, .jsx, .tsx, .json) picks up
+    // stale .js siblings when they exist. Wave 10 deletes the siblings,
+    // but this flip makes the resolution deterministic going forward.
+    extensions: ['.tsx', '.ts', '.jsx', '.mjs', '.mts', '.js', '.json'],
   },
 })

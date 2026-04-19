@@ -3,3 +3,10 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+
+# Compiled .js siblings of .tsx/.ts sources. Wave 10 cleanup — Vite /
+# Vitest were sometimes resolving stale twins ahead of current sources.
+# Source of truth lives in .tsx / .ts. Regenerated outputs go under
+# dist/ which is already ignored at repo root.
+src/**/*.js
+src/**/*.jsx
