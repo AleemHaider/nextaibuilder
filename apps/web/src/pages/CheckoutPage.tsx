@@ -64,6 +64,60 @@ type CheckoutStatus =
   | 'manual_uploading'
   | 'manual_pending'
 
+// Sprint 2 Story 10 (GAP-025) — explicit Stripe error categorisation.
+// Previously the page only surfaced a terse "declined" banner; everything
+// else (network timeout, invalid plan, generic Stripe 500) fell back to
+// "Payment setup failed" with no path to recovery. We now discriminate on
+// the error message so the banner can tell the user what actually broke.
+export type StripeErrorKind =
+  | 'CARD_DECLINED'
+  | 'NETWORK_TIMEOUT'
+  | 'INVALID_PLAN'
+  | 'SESSION_FAILED'
+  | 'UNKNOWN'
+
+export interface StripeErrorState {
+  kind: StripeErrorKind
+  message: string
+}
+
+export function classifyStripeError(raw: unknown): StripeErrorState {
+  const msg = raw instanceof Error ? raw.message : String(raw ?? '')
+  const lower = msg.toLowerCase()
+
+  if (lower.includes('declined') || lower.includes('card_declined')) {
+    return {
+      kind:    'CARD_DECLINED',
+      message: 'Your card was declined. Please try a different card or payment method.',
+    }
+  }
+  if (lower.includes('timeout') || lower.includes('network') || lower.includes('fetch failed')) {
+    return {
+      kind:    'NETWORK_TIMEOUT',
+      message: 'We couldn\u2019t reach our payment provider. Please check your connection and try again.',
+    }
+  }
+  if (lower.includes('plan') && (lower.includes('not found') || lower.includes('invalid'))) {
+    return {
+      kind:    'INVALID_PLAN',
+      message: 'This payment plan is no longer available. Please refresh the page or contact support.',
+    }
+  }
+  if (lower.includes('already enrolled')) {
+    return {
+      kind:    'INVALID_PLAN',
+      message: 'You\u2019re already enrolled in this cohort.',
+    }
+  }
+  if (msg) {
+    return { kind: 'SESSION_FAILED', message: msg }
+  }
+  return {
+    kind:    'UNKNOWN',
+    message: 'Something went wrong setting up your payment. Please try again.',
+  }
+}
+
 interface UploadedFile {
   file: File
   name: string
@@ -406,15 +460,19 @@ interface CheckoutFormProps {
   onSwitchToManual: () => void
   status: CheckoutStatus
   declined: boolean
+  /** Sprint 2 Story 10 (GAP-025) — categorized Stripe error surface. */
+  stripeError: StripeErrorState | null
   sessionData: OneTimeCheckoutResponse | InstallmentCheckoutResponse | null
   onInitiatePayment: () => void
   onConfirmStubPayment: () => void
+  onDismissError: () => void
 }
 
 function CheckoutForm({
   cohort, tab, onTabChange, onSwitchToManual,
-  status, declined, sessionData,
+  status, declined, stripeError, sessionData,
   onInitiatePayment, onConfirmStubPayment,
+  onDismissError,
 }: CheckoutFormProps) {
   const isInstallment = (d: typeof sessionData): d is InstallmentCheckoutResponse =>
     d !== null && 'installmentAmount' in (d ?? {})
@@ -473,17 +531,44 @@ function CheckoutForm({
         ))}
       </div>
 
-      {/* Declined banner */}
-      {declined && (
-        <div style={{
-          display: 'flex', alignItems: 'flex-start', gap: 10,
-          background: '#fdeaeb', border: '1px solid rgba(208,50,56,0.2)',
-          borderRadius: 14, padding: '14px 16px', marginBottom: 16,
-        }} role="alert">
-          <span>⚠️</span>
-          <p style={{ fontSize: 14, color: '#d03238', margin: 0 }}>
-            Your card was declined. Please check your card details or try a different payment method.
-          </p>
+      {/* Sprint 2 Story 10 (GAP-025) — categorized Stripe error banner.
+          Shows for any Stripe failure — declined card, network timeout,
+          invalid plan, or a generic session-setup failure. Each category
+          gets a distinct headline so the student knows what action to take. */}
+      {stripeError && (
+        <div
+          data-testid="stripe-error-banner"
+          data-error-kind={stripeError.kind}
+          style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10,
+            background: '#fdeaeb', border: '1px solid rgba(208,50,56,0.2)',
+            borderRadius: 14, padding: '14px 16px', marginBottom: 16,
+          }}
+          role="alert"
+        >
+          <span aria-hidden="true">⚠️</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: '#d03238', margin: '0 0 2px' }}>
+              {stripeError.kind === 'CARD_DECLINED'    ? 'Card declined'
+                : stripeError.kind === 'NETWORK_TIMEOUT' ? 'Network error'
+                : stripeError.kind === 'INVALID_PLAN'    ? 'Payment plan unavailable'
+                : 'Payment failed'}
+            </p>
+            <p style={{ fontSize: 13, color: '#9a3412', margin: 0 }}>
+              {stripeError.message}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onDismissError}
+            aria-label="Dismiss error"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 18, color: '#d03238', lineHeight: 1, padding: 0,
+            }}
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -894,6 +979,8 @@ export default function CheckoutPage() {
   const [tab, setTab] = useState<PaymentTab>('full')
   const [view, setView] = useState<CheckoutView>('checkout')
   const [declined, setDeclined] = useState(false)
+  // Sprint 2 Story 10 (GAP-025) — categorized Stripe error surface.
+  const [stripeError, setStripeError] = useState<StripeErrorState | null>(null)
   const [sessionData, setSessionData] = useState<OneTimeCheckoutResponse | InstallmentCheckoutResponse | null>(null)
 
   useEffect(() => {
@@ -914,20 +1001,23 @@ export default function CheckoutPage() {
   }, [slug])
 
   const handleTabChange = (nextTab: PaymentTab) => {
-    setTab(nextTab); setSessionData(null); setDeclined(false); setStatus('ready')
+    setTab(nextTab); setSessionData(null); setDeclined(false); setStripeError(null); setStatus('ready')
   }
 
   const handleInitiatePayment = async () => {
     if (!cohort) return
-    setStatus('creating_session'); setDeclined(false)
+    setStatus('creating_session'); setDeclined(false); setStripeError(null)
     try {
       const data = tab === 'full'
         ? await createOneTimeCheckout(cohort.id, paymentPlanId)
         : await createInstallmentCheckout(cohort.id, paymentPlanId)
       setSessionData(data); setStatus('stripe_stub')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Payment setup failed'
-      if (msg.toLowerCase().includes('declined')) setDeclined(true)
+      // GAP-025 — funnel every Stripe failure through the classifier so the
+      // banner can render an actionable headline + message.
+      const classified = classifyStripeError(err)
+      if (classified.kind === 'CARD_DECLINED') setDeclined(true)
+      setStripeError(classified)
       setStatus('ready')
     }
   }
@@ -999,9 +1089,11 @@ export default function CheckoutPage() {
                 onSwitchToManual={() => setView('manual')}
                 status={status}
                 declined={declined}
+                stripeError={stripeError}
                 sessionData={sessionData}
                 onInitiatePayment={handleInitiatePayment}
                 onConfirmStubPayment={handleConfirmStubPayment}
+                onDismissError={() => { setStripeError(null); setDeclined(false) }}
               />
             </div>
 

@@ -25,6 +25,10 @@ import { StripePayment } from '../models/StripePayment.js'
 import { SlackInvite } from '../models/SlackInvite.js'
 import { EmailLog } from '../models/EmailLog.js'
 import { User } from '../models/User.js'
+// Sprint 2 Story 10 (GAP-036) — upstream idempotency guard
+import { ProcessedStripeEvent } from '../models/ProcessedStripeEvent.js'
+// Sprint 2 Story 10 (GAP-037) — installment reminder scheduling
+import { scheduleInstallmentReminders } from './installmentReminderWorker.js'
 import { Types } from 'mongoose'
 import type { StripeWebhookJobData } from '../routes/webhook-stripe.js'
 
@@ -385,6 +389,16 @@ async function handleInvoicePaymentSucceeded(
         idemKey(eventId, 'slack-invite'),
       )
     }
+
+    // Sprint 2 Story 10 (GAP-037) — schedule installment reminders on first
+    // successful installment payment. JobIds are deterministic so replays
+    // won't double-enqueue.
+    await scheduleInstallmentReminders(
+      enrollment._id as Types.ObjectId,
+      new Date(),
+    ).catch((err: unknown) =>
+      console.error('[Stripe Worker] Failed to schedule installment reminders:', err),
+    )
   }
 
   console.info(
@@ -495,6 +509,105 @@ async function handleSubscriptionDeleted(
   }
 }
 
+// ── Sprint 2 Story 10 (GAP-036) — upstream idempotency guard ─────────────
+// Check ProcessedStripeEvent FIRST. If the event already has a SUCCESS row,
+// return immediately — BullMQ considers this a success and no side effects
+// re-run. On exception, record with FAILED so operators can inspect, and
+// re-throw so BullMQ's retry-with-backoff logic still fires.
+async function processEventWithGuard(
+  eventId:   string,
+  eventType: string,
+  data:      Record<string, unknown>,
+  jobId:     string | undefined,
+): Promise<void> {
+  // ── Step 1: upstream dedup check ──────────────────────────────────────
+  const existing = await ProcessedStripeEvent.findOne({ stripeEventId: eventId }).lean()
+  if (existing && existing.outcome === 'SUCCESS') {
+    console.info(
+      `[Stripe Worker] Job ${jobId} SKIP — eventId=${eventId} already processed at ${
+        existing.processedAt instanceof Date
+          ? existing.processedAt.toISOString()
+          : String(existing.processedAt)
+      }`,
+    )
+    return
+  }
+
+  try {
+    switch (eventType) {
+      case 'payment_intent.succeeded':
+        await handlePaymentIntentSucceeded(eventId, data)
+        break
+
+      case 'invoice.payment_succeeded':
+        await handleInvoicePaymentSucceeded(eventId, data)
+        break
+
+      case 'invoice.payment_failed':
+        await handleInvoicePaymentFailed(eventId, data)
+        break
+
+      case 'customer.subscription.deleted':
+        await handleSubscriptionDeleted(data)
+        break
+
+      default:
+        // Log and discard unhandled event types gracefully. We still record a
+        // SUCCESS row so Stripe retries of the same event short-circuit.
+        console.info(`[Stripe Worker] Unhandled event type: ${eventType} — skipping`)
+    }
+
+    // ── Step 2: record SUCCESS ──────────────────────────────────────────
+    // Upsert-on-conflict via findOneAndUpdate handles the race where two
+    // workers see a missing row simultaneously — the second upsert flips the
+    // existing FAILED row to SUCCESS.
+    await ProcessedStripeEvent.findOneAndUpdate(
+      { stripeEventId: eventId },
+      {
+        $set: {
+          outcome:     'SUCCESS',
+          processedAt: new Date(),
+          eventType,
+        },
+        $setOnInsert: { stripeEventId: eventId },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    )
+
+    console.info(`[Stripe Worker] Job ${jobId} DONE — eventId=${eventId} type=${eventType}`)
+  } catch (err) {
+    // Record the failure so operators have a trail. We use an upsert so
+    // repeated failures don't explode with duplicate-key errors. BullMQ
+    // still sees the throw and retries per the configured policy.
+    try {
+      await ProcessedStripeEvent.findOneAndUpdate(
+        { stripeEventId: eventId },
+        {
+          $set: {
+            outcome:     'FAILED',
+            processedAt: new Date(),
+            eventType,
+          },
+          $setOnInsert: { stripeEventId: eventId },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      )
+    } catch (recordErr) {
+      // Swallow record-failure errors so we don't mask the original cause.
+      console.error(
+        `[Stripe Worker] Failed to record FAILED ProcessedStripeEvent for eventId=${eventId}:`,
+        recordErr,
+      )
+    }
+
+    console.error(
+      `[Stripe Worker] Job ${jobId} FAILED — eventId=${eventId} type=${eventType}:`,
+      err,
+    )
+    throw err
+  }
+}
+
 // ── Worker bootstrap ───────────────────────────────────────────────────────
 export function startStripeWebhookWorker() {
   // Startup connectivity check
@@ -513,35 +626,11 @@ export function startStripeWebhookWorker() {
 
       console.info(`[Stripe Worker] Job ${job.id} START — eventId=${eventId} type=${eventType}`)
 
-      try {
-        switch (eventType) {
-          case 'payment_intent.succeeded':
-            await handlePaymentIntentSucceeded(eventId, data)
-            break
-
-          case 'invoice.payment_succeeded':
-            await handleInvoicePaymentSucceeded(eventId, data)
-            break
-
-          case 'invoice.payment_failed':
-            await handleInvoicePaymentFailed(eventId, data)
-            break
-
-          case 'customer.subscription.deleted':
-            await handleSubscriptionDeleted(data)
-            break
-
-          default:
-            // Log and discard unhandled event types gracefully
-            console.info(`[Stripe Worker] Unhandled event type: ${eventType} — skipping`)
-        }
-
-        console.info(`[Stripe Worker] Job ${job.id} DONE — eventId=${eventId} type=${eventType}`)
-      } catch (err) {
-        // Re-throw so BullMQ applies the retry backoff strategy
-        console.error(`[Stripe Worker] Job ${job.id} FAILED — eventId=${eventId} type=${eventType}:`, err)
-        throw err
-      }
+      // Sprint 2 Story 10 (GAP-036) — upstream idempotency guard.
+      // Short-circuit before invoking handlers if we've already successfully
+      // processed this event. FAILED rows fall through so BullMQ's retry
+      // logic (3x exponential) can have another go.
+      await processEventWithGuard(eventId, eventType, data, job.id)
     },
     {
       connection:  bullMQConnection,
@@ -574,4 +663,6 @@ export const __testables = {
   handleInvoicePaymentFailed,
   handleSubscriptionDeleted,
   idemKey,
+  // Sprint 2 Story 10 (GAP-036) — upstream idempotency guard
+  processEventWithGuard,
 }

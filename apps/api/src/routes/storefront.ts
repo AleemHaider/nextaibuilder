@@ -318,6 +318,44 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ── GET /cohorts/by-id/:id ── Lookup cohort by Mongo ObjectId ──────────
+  // Sprint 2 Story 10 (GAP-030) — EnrollmentSuccessPage used to read the
+  // cohort name out of a `?cohort=` query param, which is trivially
+  // spoofable (XSS vector via URL-injected HTML + any future consumer that
+  // dumps it in innerHTML). The page now calls this endpoint with a
+  // trusted id and renders the server-returned title instead.
+  fastify.get<{ Params: { id: string } }>(
+    '/cohorts/by-id/:id',
+    async (request, reply) => {
+      const { id } = request.params
+
+      if (!Types.ObjectId.isValid(id)) {
+        return reply.code(400).send({
+          error:   'INVALID_ID',
+          message: 'id must be a valid ObjectId.',
+        })
+      }
+
+      const cohort = await Cohort.findOne(
+        { _id: new Types.ObjectId(id), isPublished: true },
+        { name: 1, slug: 1 },
+      ).lean({ virtuals: true })
+
+      if (!cohort) {
+        return reply.code(404).send({
+          error:   'NOT_FOUND',
+          message: 'Cohort not found.',
+        })
+      }
+
+      return reply.send({
+        id:    (cohort as typeof cohort & { _id: Types.ObjectId })._id.toString(),
+        title: cohort.name,
+        slug:  cohort.slug ?? '',
+      })
+    },
+  )
+
   // ── GET /certificate/:credentialId ── Public certificate verification ──
   // FIR-154 — Verify a certificate by credentialId (format: NAB-YYYY-NNNN)
   fastify.get<{ Params: { credentialId: string } }>(

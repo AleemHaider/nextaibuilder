@@ -1,19 +1,98 @@
 // FIR-157 — Enrollment success page shown after payment confirmation
+//
+// Sprint 2 Story 10:
+//   GAP-030: cohort name no longer comes from `?cohort=` query param
+//            (spoofable / XSS risk). It's fetched server-side by trusted
+//            Mongo ObjectId from `?cohortId=` (or a future session_id).
+//   GAP-031: "Check your email at X" CTA added, using the logged-in
+//            user's email via useAuth(), falling back to a generic
+//            message when unauthenticated.
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
+import { Mail } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { fetchCohortById, type CohortSummaryById } from '../lib/api'
+import { useAuth } from '../context/AuthContext'
+import { Button } from '../components/ui/Button'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
+import { EmptyState } from '../components/ui/EmptyState'
 
 // ---------------------------------------------------------------------------
-// CSS-only animated checkmark using Tailwind keyframe animation
-// The ring draws itself via a stroke-dashoffset trick on an SVG circle.
-// No external animation library required.
+// CSS-only animated checkmark — unchanged from FIR-157.
 // ---------------------------------------------------------------------------
+
+type LookupState =
+  | { status: 'loading' }
+  | { status: 'ready'; cohort: CohortSummaryById | null }
+  | { status: 'error'; message: string }
 
 export default function EnrollmentSuccessPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { user } = useAuth()
 
-  // Cohort name can be passed as a query param for a personalised message
-  const cohortName = searchParams.get('cohort') ?? 'your course'
+  // GAP-030: accept a trusted identifier only (Mongo ObjectId or Stripe
+  // session id). The legacy `cohort=` query is ignored even if present —
+  // the only way to render a cohort title is via a server lookup.
+  const cohortId = searchParams.get('cohortId') ?? ''
+
+  const [lookup, setLookup] = useState<LookupState>({ status: 'loading' })
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (!cohortId) {
+      // No id in the URL — fall back to the generic success message rather
+      // than blocking the page.
+      setLookup({ status: 'ready', cohort: null })
+      return
+    }
+
+    async function run() {
+      try {
+        const cohort = await fetchCohortById(cohortId)
+        if (cancelled) return
+        setLookup({ status: 'ready', cohort })
+      } catch {
+        if (cancelled) return
+        setLookup({
+          status:  'error',
+          message: 'We couldn\u2019t load your course details. Your enrollment is still confirmed.',
+        })
+      }
+    }
+    run()
+
+    return () => { cancelled = true }
+  }, [cohortId])
+
+  // GAP-031: show the user's email if we have one — the email CTA is the
+  // whole point of this confirmation view.
+  const userEmail = user?.email ?? null
+
+  if (lookup.status === 'loading') {
+    return (
+      <div className="min-h-screen bg-[#f8f9fb] flex items-center justify-center">
+        <LoadingSpinner size="lg" label="Loading enrollment" centered />
+      </div>
+    )
+  }
+
+  if (lookup.status === 'error') {
+    return (
+      <div className="min-h-screen bg-[#f8f9fb] flex items-center justify-center px-4">
+        <div className="bg-white rounded-[20px] w-full max-w-[520px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px]">
+          <EmptyState
+            title="You\u2019re enrolled!"
+            description={lookup.message}
+            action={{ label: 'Go to My Courses', onClick: () => navigate('/student/dashboard') }}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  const cohortTitle = lookup.cohort?.title ?? 'your course'
 
   return (
     <div
@@ -95,26 +174,54 @@ export default function EnrollmentSuccessPage() {
           You're enrolled!
         </h1>
 
-        <p className="text-[16px] text-[#717182] leading-relaxed mb-8">
+        <p className="text-[16px] text-[#717182] leading-relaxed mb-6">
           Your payment was successful. Welcome to{' '}
-          <span className="font-semibold text-[#1a2744]">{cohortName}</span>.
-          Check your email for access details.
+          {/*
+            GAP-030 — cohort name is the server-returned `title` from
+            /storefront/cohorts/by-id/:id. Rendered as a plain text node so
+            React's default escaping handles any residual characters.
+          */}
+          <span data-testid="cohort-title" className="font-semibold text-[#1a2744]">
+            {cohortTitle}
+          </span>
+          .
         </p>
 
-        {/* Primary CTA */}
-        <button
-          type="button"
+        {/* GAP-031: email CTA — only rendered when we actually have an
+            authenticated email to show. Otherwise we fall back to the
+            "check your email" generic line below. */}
+        {userEmail ? (
+          <div
+            data-testid="email-cta"
+            className={cn(
+              'flex items-center justify-center gap-2 mb-8 py-3 px-4 rounded-xl',
+              'bg-[#eef6fd] text-[#0d1a3a]',
+            )}
+          >
+            <Mail className="h-4 w-4" aria-hidden="true" />
+            <span className="text-[14px]">
+              Check your email at{' '}
+              <span className="font-semibold break-all">{userEmail}</span>
+            </span>
+          </div>
+        ) : (
+          <p className="text-[14px] text-[#717182] mb-8">
+            Check your email for access details.
+          </p>
+        )}
+
+        {/* Primary CTA — Wave 6 <Button> */}
+        <Button
+          variant="primary"
+          size="lg"
           onClick={() => navigate('/student/dashboard')}
-          className={cn(
-            'w-full h-14 rounded-full bg-[#4a9ad4] text-[#0d1a3a]',
-            'text-[16px] font-bold hover:opacity-90 transition-opacity cursor-pointer border-none mb-4',
-          )}
+          className="w-full mb-3"
         >
-          Go to My Courses →
-        </button>
+          Go to My Courses
+        </Button>
 
         {/* Secondary — receipt hint */}
-        <p className="text-[14px] text-[#717182]">
+        <p className="text-[13px] text-[#717182]">
           A receipt has been sent to your email address.
         </p>
       </div>

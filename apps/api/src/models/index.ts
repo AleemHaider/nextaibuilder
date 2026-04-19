@@ -26,3 +26,5 @@ export * from './ManualPaymentRequest.js'
 export * from './LiveSession.js'
 export * from './StudentLesson.js'
 export * from './SlackInvite.js'
+// Sprint 2 Story 10 — upstream Stripe webhook idempotency guard
+export * from './ProcessedStripeEvent.js'
