@@ -122,7 +122,38 @@ jobs:
         run: npm run build
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Job 3: Build & push Docker images (main branch only)
+# Job 3: Security audit — npm audit (parallel with CI jobs)
+# Scans production dependencies for known CVEs on both backend and frontend.
+# Uses --audit-level=high so only high/critical vulns fail the build.
+# Uses --omit=dev (equivalent to --production) to avoid dev-dep noise.
+# Runs in parallel with ci-frontend / ci-api so a vuln doesn't block their
+# status reporting — docker-build still gates only on ci-frontend + ci-api.
+# ─────────────────────────────────────────────────────────────────────────────
+  security-audit:
+    name: Security Audit (npm audit)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Security audit (backend)
+        working-directory: apps/api
+        run: npm audit --audit-level=high --omit=dev
+        continue-on-error: false   # fail the build on high/critical
+
+      - name: Security audit (frontend)
+        working-directory: nextaibuilder-app
+        run: npm audit --audit-level=high --omit=dev
+        continue-on-error: false   # fail the build on high/critical
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 4: Build & push Docker images (main branch only)
 # Runs after both CI jobs pass.
 # Images are pushed to GitHub Container Registry (GHCR).
 # ─────────────────────────────────────────────────────────────────────────────
@@ -197,7 +228,7 @@ jobs:
           cache-to: type=gha,mode=max
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Job 4: Deploy to EC2
+# Job 5: Deploy to EC2
 # Copies docker-compose.yml, pulls new images, restarts the stack.
 # ─────────────────────────────────────────────────────────────────────────────
   deploy:

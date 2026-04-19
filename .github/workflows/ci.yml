@@ -76,3 +76,31 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Security Audit — scans production deps for known CVEs on both the API
+  # and the frontend. Runs in parallel with the API lint/typecheck/test job
+  # so a vuln doesn't block visibility into those results.
+  # ───────────────────────────────────────────────────────────────────────────
+  security-audit:
+    name: Security Audit (npm audit)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Security audit (backend)
+        working-directory: apps/api
+        run: npm audit --audit-level=high --omit=dev
+        continue-on-error: false   # fail the build on high/critical
+
+      - name: Security audit (frontend — nextaibuilder-app)
+        working-directory: nextaibuilder-app
+        run: npm audit --audit-level=high --omit=dev
+        continue-on-error: false   # fail the build on high/critical
