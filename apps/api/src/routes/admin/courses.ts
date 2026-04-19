@@ -129,6 +129,13 @@ const publishLessonSchema = z.object({
   isPublished: z.boolean(),
 })
 
+const reorderLessonsSchema = z.array(
+  z.object({
+    id:    z.string().min(1),
+    order: z.number().int().min(0),
+  }),
+).min(1)
+
 // FIR-63 — live session
 const createSessionSchema = z.object({
   title:           z.string().min(1).max(200).trim(),
@@ -802,6 +809,71 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
       })
 
       return reply.code(201).send({ lesson: lesson.toJSON() })
+    },
+  )
+
+  // PATCH /courses/:cohortId/modules/:moduleId/lessons/reorder — must come BEFORE /:lessonId to avoid route shadowing
+  fastify.patch<{
+    Params: { cohortId: string; moduleId: string }
+    Body: z.infer<typeof reorderLessonsSchema>
+  }>(
+    '/:cohortId/modules/:moduleId/lessons/reorder',
+    { preHandler: requirePermission('courses:write') },
+    async (request, reply) => {
+      const { cohortId, moduleId } = request.params
+
+      if (!isValidOid(cohortId) || !isValidOid(moduleId)) {
+        return reply.code(400).send({ error: 'INVALID_ID', message: 'Invalid cohort or module ID.' })
+      }
+
+      const parsed = reorderLessonsSchema.safeParse(request.body)
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error:   'VALIDATION_ERROR',
+          message: parsed.error.errors[0]?.message ?? 'Invalid request body.',
+          details: parsed.error.flatten().fieldErrors,
+        })
+      }
+
+      const items = parsed.data
+
+      // Validate all IDs
+      for (const item of items) {
+        if (!isValidOid(item.id)) {
+          return reply.code(400).send({
+            error:   'INVALID_ID',
+            message: `Invalid lesson ID: ${item.id}`,
+          })
+        }
+      }
+
+      // Verify every lesson belongs to (moduleId, cohortId) — reject ID injection
+      const ids = items.map((i) => new Types.ObjectId(i.id))
+      const matchCount = await Lesson.countDocuments({
+        _id:      { $in: ids },
+        moduleId: new Types.ObjectId(moduleId),
+        cohortId: new Types.ObjectId(cohortId),
+      })
+      if (matchCount !== items.length) {
+        return reply.code(400).send({
+          error:   'LESSON_SCOPE_MISMATCH',
+          message: 'One or more lesson IDs do not belong to this module/cohort.',
+        })
+      }
+
+      const ops = items.map(({ id, order }) => ({
+        updateOne: {
+          filter: {
+            _id:      new Types.ObjectId(id),
+            moduleId: new Types.ObjectId(moduleId),
+            cohortId: new Types.ObjectId(cohortId),
+          },
+          update: { $set: { order } },
+        },
+      }))
+
+      const result = await Lesson.bulkWrite(ops)
+      return reply.send({ updated: result.modifiedCount })
     },
   )
 
