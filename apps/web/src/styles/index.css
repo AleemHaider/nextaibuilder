@@ -1,6 +1,17 @@
 @import "tailwindcss";
 
 @theme inline {
+  /*
+   * CANONICAL DESIGN TOKENS — Wise-inspired palette (Sprint 1, Wave 6).
+   * The `--color-wise-*`, `--radius-*`, and `--shadow-*` tokens below are the
+   * single source of truth every new component should consume. Navy/blue/orange
+   * tokens remain for legacy pages that have not been migrated yet; do not
+   * reference them in new work. Older aliases (`--color-wise-green`,
+   * `--color-wise-dark-green`, etc.) point at the canonical names so admin
+   * auth surfaces continue to render until rewritten.
+   */
+
+  /* Legacy navy palette — DO NOT USE for new components */
   --color-navy: #1a2744;
   --color-navy-dark: #0d1a3a;
   --color-blue: #4a9ad4;
@@ -13,6 +24,53 @@
   --color-border: rgba(26, 39, 68, 0.12);
   --color-border-subtle: rgba(26, 39, 68, 0.08);
   --font-sans: 'Inter', sans-serif;
+
+  /* Wise palette — canonical */
+  --color-wise-primary: #9fe870;
+  --color-wise-primary-hover: #cdffad;
+  --color-wise-primary-text: #163300;
+
+  --color-wise-text: #0e0f0c;
+  --color-wise-text-warm: #454745;
+  --color-wise-text-muted: #868685;
+
+  --color-wise-canvas: #fafaf8;
+  --color-wise-surface: #ffffff;
+  --color-wise-surface-soft: #e8ebe6;
+  --color-wise-mint: #e2f6d5;
+  --color-wise-dark: #0e0f0c;
+
+  --color-wise-ring: rgba(14, 15, 12, 0.12);
+  --color-wise-ring-strong: rgba(14, 15, 12, 0.2);
+
+  --color-wise-danger: #d03238;
+  --color-wise-danger-soft: #fdeaeb;
+  --color-wise-warning: #ffd11a;
+  --color-wise-warning-soft: rgba(255, 209, 26, 0.12);
+  --color-wise-success: #054d28;
+
+  /* Legacy Wise aliases — kept so AdminLoginPage/AdminOtpPage keep rendering.
+     Resolve to the same literal values as their canonical counterparts so
+     Tailwind 4's static @theme parser picks them up. */
+  --color-wise-green: #9fe870;
+  --color-wise-green-hover: #cdffad;
+  --color-wise-dark-green: #163300;
+  --color-wise-black: #0e0f0c;
+  --color-wise-warm-dark: #454745;
+  --color-wise-gray: #868685;
+
+  /* Radii — Wise scale */
+  --radius-sm: 16px;
+  --radius-md: 20px;
+  --radius-lg: 30px;
+  --radius-xl: 40px;
+  --radius-pill: 9999px;
+
+  /* Shadows */
+  --shadow-ring: 0 0 0 1px rgba(14, 15, 12, 0.12);
+  --shadow-ring-strong: 0 0 0 1px rgba(14, 15, 12, 0.18);
+  --shadow-card: 0 0 0 1px rgba(14, 15, 12, 0.08), 0 24px 60px -24px rgba(14, 15, 12, 0.18);
+  --shadow-focus: 0 0 0 3px rgba(159, 232, 112, 0.35);
 }
 
 *,
@@ -25,8 +83,12 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  background: #f8f9fb;
+  /* Canonical Wise canvas; legacy pages previously rendered on #f8f9fb. */
+  background: #fafaf8;
   color: #1a2744;
+  /* Enable Wise's contextual-alternates convention globally so components
+     don't have to opt in per-surface. */
+  font-feature-settings: "calt" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

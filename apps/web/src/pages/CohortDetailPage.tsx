@@ -7,6 +7,7 @@ import { Footer } from '../components/Footer'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { fetchCohortBySlug, fetchPreviewLessons } from '../lib/api'
 import type { CohortDetail, CohortLesson, PreviewLesson } from '../lib/api'
+import { sanitizeHtml } from '../lib/sanitize'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -383,7 +384,7 @@ export default function CohortDetailPage() {
             </p>
             <div
               style={{ fontSize: 16, color: '#4a5568', lineHeight: 1.75 }}
-              dangerouslySetInnerHTML={{ __html: cohort.description }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(cohort.description ?? '') }}
             />
           </section>
 

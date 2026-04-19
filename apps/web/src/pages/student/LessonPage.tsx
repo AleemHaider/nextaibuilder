@@ -9,6 +9,7 @@ import {
 } from '../../lib/api'
 import { useCourse } from './CoursePage'
 import { cn } from '../../lib/utils'
+import { sanitizeLessonHtml } from '../../lib/sanitize'
 
 // ---------------------------------------------------------------------------
 // Video embed — Loom iframe at 16:9
@@ -77,7 +78,7 @@ function TextLesson({ content }: { content: string }) {
     // eslint-disable-next-line react/no-danger
     <div
       className="prose mb-8"
-      dangerouslySetInnerHTML={{ __html: content }}
+      dangerouslySetInnerHTML={{ __html: sanitizeLessonHtml(content ?? '') }}
     />
   )
 }

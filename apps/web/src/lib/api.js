@@ -337,6 +337,62 @@ export async function fetchAdminCourses(q, page = 1) {
     }
     return res.json();
 }
+// Fetch the modules for a cohort (via the admin course detail endpoint).
+// The detail payload includes lesson counts, which we surface as lessonCount
+// so the UI can render the "N lessons" pill without fetching every module's
+// lessons up-front.
+export async function fetchAdminCourseModules(cohortId) {
+    const res = await authFetch(`${BASE}/admin/courses/${cohortId}`);
+    if (!res.ok) {
+        const body = (await res.json().catch(() => ({})));
+        throw new Error(body.message ?? 'Failed to fetch course modules');
+    }
+    const json = (await res.json());
+    const modules = json.modules ?? [];
+    return modules
+        .map((m) => ({
+        id: m.id,
+        title: m.title,
+        order: m.order,
+        lessonCount: m.lessonCount ?? (Array.isArray(m.lessons) ? m.lessons.length : 0),
+    }))
+        .sort((a, b) => a.order - b.order);
+}
+export async function fetchAdminModuleLessons(cohortId, moduleId) {
+    const res = await authFetch(`${BASE}/admin/courses/${cohortId}/modules/${moduleId}/lessons`);
+    if (!res.ok) {
+        const body = (await res.json().catch(() => ({})));
+        throw new Error(body.message ?? 'Failed to fetch lessons');
+    }
+    const json = (await res.json());
+    const lessons = json.lessons ?? [];
+    return [...lessons].sort((a, b) => a.order - b.order);
+}
+export async function reorderModules(cohortId, items) {
+    const res = await authFetch(`${BASE}/admin/courses/${cohortId}/modules/reorder`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        // Endpoint accepts a bare array per Wave 3 Story P contract.
+        body: JSON.stringify(items),
+    });
+    if (!res.ok) {
+        const body = (await res.json().catch(() => ({})));
+        throw new Error(body.message ?? 'Failed to reorder modules');
+    }
+    return res.json();
+}
+export async function reorderLessons(cohortId, moduleId, items) {
+    const res = await authFetch(`${BASE}/admin/courses/${cohortId}/modules/${moduleId}/lessons/reorder`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(items),
+    });
+    if (!res.ok) {
+        const body = (await res.json().catch(() => ({})));
+        throw new Error(body.message ?? 'Failed to reorder lessons');
+    }
+    return res.json();
+}
 // FIR-165 — Fetch screenshot submission queue
 export async function fetchScreenshotSubmissions(status, page = 1) {
     const params = new URLSearchParams();

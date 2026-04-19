@@ -6,6 +6,7 @@ import { useParams, useNavigate } from 'react-router';
 import { fetchLesson, markLessonComplete, } from '../../lib/api';
 import { useCourse } from './CoursePage';
 import { cn } from '../../lib/utils';
+import { sanitizeLessonHtml } from '../../lib/sanitize';
 // ---------------------------------------------------------------------------
 // Video embed — Loom iframe at 16:9
 // ---------------------------------------------------------------------------
@@ -27,7 +28,7 @@ function VideoPlayer({ lesson }) {
 function TextLesson({ content }) {
     return (
     // eslint-disable-next-line react/no-danger
-    _jsx("div", { className: "prose mb-8", dangerouslySetInnerHTML: { __html: content } }));
+    _jsx("div", { className: "prose mb-8", dangerouslySetInnerHTML: { __html: sanitizeLessonHtml(content ?? '') } }));
 }
 function ToolSetupLesson({ lesson }) {
     const [uploadedFile, setUploadedFile] = useState(null);
