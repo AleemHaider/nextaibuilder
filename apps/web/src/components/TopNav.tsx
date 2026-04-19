@@ -1,10 +1,17 @@
 // FIR-34 — Shared navigation — wired to auth state
-// Matches design from 01-homepage.html, 02-catalog.html, 03-cohort-detail.html
+// Sprint 3 Story 14 — Wise theme migration:
+//  · White/warm-white bar with subtle Wise ring border
+//  · Lucide <Menu>/<X> hamburger replacing ☰/✕ unicode glyphs
+//  · Wave 6 <Button> for Sign In / Get Started
+//  · Mint-on-hover pill nav links
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router'
+import { Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { cn } from '../lib/utils'
 import { NotificationBell } from './NotificationBell'
 import { Logo } from './Logo'
+import { Button } from './ui/Button'
 
 // ---------------------------------------------------------------------------
 // Avatar circle — initials derived from user name
@@ -40,20 +47,12 @@ function Avatar({ name, avatarUrl, size = 36 }: AvatarProps) {
   return (
     <div
       aria-hidden="true"
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-        background: '#4a9ad4',
-        color: '#0d1a3a',
-        fontWeight: 700,
-        fontSize: 13,
-        userSelect: 'none',
-      }}
+      className={cn(
+        'flex items-center justify-center rounded-full flex-shrink-0',
+        'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+        'font-bold text-[13px] select-none',
+      )}
+      style={{ width: size, height: size }}
     >
       {getInitials(name)}
     </div>
@@ -80,67 +79,46 @@ function UserDropdown({ items, onClose }: UserDropdownProps) {
     <div
       role="menu"
       aria-label="User menu"
-      style={{
-        position: 'absolute',
-        right: 0,
-        top: 'calc(100% + 8px)',
-        width: 192,
-        background: '#fff',
-        borderRadius: 16,
-        overflow: 'hidden',
-        boxShadow: '0 8px 32px rgba(26,39,68,0.14), 0 0 0 1px rgba(26,39,68,0.08)',
-        zIndex: 50,
-        paddingTop: 4,
-        paddingBottom: 4,
-      }}
+      className={cn(
+        'absolute right-0 top-[calc(100%+8px)] w-48 z-50 py-1',
+        'bg-white overflow-hidden',
+        'rounded-[var(--radius-md)] shadow-[var(--shadow-card)]',
+      )}
     >
-      {items.map((item) => (
-        <div key={item.label} role="none">
-          {item.to ? (
-            <Link
-              to={item.to}
-              role="menuitem"
-              onClick={onClose}
-              style={{
-                display: 'block',
-                padding: '10px 16px',
-                fontSize: 14,
-                fontWeight: 500,
-                textDecoration: 'none',
-                color: item.danger ? '#d03238' : '#1a2744',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#f8f9fb')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-            >
-              {item.label}
-            </Link>
-          ) : (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => { item.onClick?.(); onClose() }}
-              style={{
-                width: '100%',
-                textAlign: 'left',
-                padding: '10px 16px',
-                fontSize: 14,
-                fontWeight: 500,
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                color: item.danger ? '#d03238' : '#1a2744',
-                fontFamily: "'Inter', sans-serif",
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#f8f9fb')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-            >
-              {item.label}
-            </button>
-          )}
-        </div>
-      ))}
+      {items.map((item) => {
+        const baseClass = cn(
+          'block w-full text-left px-4 py-2.5 text-[14px] font-medium',
+          'no-underline cursor-pointer transition-colors',
+          'bg-transparent border-none',
+          'hover:bg-[var(--color-wise-mint)]',
+          item.danger
+            ? 'text-[var(--color-wise-danger)]'
+            : 'text-[var(--color-wise-text)] hover:text-[var(--color-wise-primary-text)]',
+        )
+        return (
+          <div key={item.label} role="none">
+            {item.to ? (
+              <Link
+                to={item.to}
+                role="menuitem"
+                onClick={onClose}
+                className={baseClass}
+              >
+                {item.label}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => { item.onClick?.(); onClose() }}
+                className={baseClass}
+              >
+                {item.label}
+              </button>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -187,6 +165,18 @@ export function TopNav() {
     (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN')
   const isStudent = isAuthenticated && user?.role === 'STUDENT'
 
+  // Pill-hover nav link style — shared between active + inactive states so
+  // only the font weight / colour flips when the route matches.
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      'inline-flex items-center rounded-full px-3 py-1.5 text-[15px]',
+      'no-underline transition-colors',
+      'hover:bg-[var(--color-wise-mint)] hover:text-[var(--color-wise-primary-text)]',
+      isActive
+        ? 'font-[700] text-[var(--color-wise-primary-text)] bg-[var(--color-wise-mint)]'
+        : 'font-[500] text-[var(--color-wise-text)]',
+    )
+
   return (
     <>
       <style>{`
@@ -203,62 +193,28 @@ export function TopNav() {
           top: 72px;
           left: 0;
           right: 0;
-          background: #fff;
-          box-shadow: 0 8px 24px rgba(26,39,68,0.12);
+          background: var(--color-wise-surface);
+          box-shadow: 0 8px 24px rgba(14,15,12,0.12);
           z-index: 99;
           padding: 16px 20px 24px;
           flex-direction: column;
           gap: 4px;
-          border-top: 1px solid rgba(26,39,68,0.08);
+          border-top: 1px solid var(--color-wise-ring);
         }
         .topnav-mobile-menu.open { display: flex; }
-        .topnav-mobile-link {
-          display: block;
-          padding: 12px 16px;
-          font-size: 16px;
-          font-weight: 600;
-          color: #1a2744;
-          text-decoration: none;
-          border-radius: 10px;
-          transition: background 0.15s;
-        }
-        .topnav-mobile-link:hover { background: #f0f4f8; }
-        .topnav-mobile-divider {
-          height: 1px;
-          background: rgba(26,39,68,0.08);
-          margin: 8px 0;
-        }
-        .topnav-mobile-btn {
-          display: block;
-          width: 100%;
-          padding: 12px 16px;
-          border-radius: 10px;
-          font-size: 15px;
-          font-weight: 700;
-          text-align: center;
-          text-decoration: none;
-          margin-top: 4px;
-          box-sizing: border-box;
-        }
       `}</style>
 
       <nav
         aria-label="Main navigation"
-        className="topnav-root"
-        style={{
-          height: 72,
-          background: '#fff',
-          boxShadow: 'inset 0 -1px 0 rgba(26,39,68,0.12)',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 80px',
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-        }}
+        className={cn(
+          'topnav-root sticky top-0 z-[100] flex items-center',
+          'h-[72px] bg-white',
+          'border-b border-[var(--color-wise-ring)]',
+        )}
+        style={{ padding: '0 80px' }}
       >
         {/* Logo */}
-        <Link to="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
+        <Link to="/" className="no-underline flex-shrink-0">
           <Logo size="md" variant="light" />
         </Link>
 
@@ -267,82 +223,51 @@ export function TopNav() {
           className="topnav-links"
           style={{
             display: 'flex',
-            gap: 32,
+            gap: 8,
             margin: '0 auto',
             listStyle: 'none',
             padding: 0,
           }}
         >
           <li>
-            <NavLink
-              to="/courses"
-              style={({ isActive }) => ({
-                fontSize: 16,
-                fontWeight: isActive ? 700 : 500,
-                color: isActive ? '#4a9ad4' : '#1a2744',
-                textDecoration: 'none',
-              })}
-            >
+            <NavLink to="/courses" className={navLinkClass}>
               Courses
             </NavLink>
           </li>
           <li>
-            <Link
-              to="/courses?type=live"
-              style={{ fontSize: 16, fontWeight: 500, color: '#1a2744', textDecoration: 'none' }}
-            >
+            <NavLink to="/courses?type=live" className={navLinkClass}>
               Live Cohorts
-            </Link>
+            </NavLink>
           </li>
           <li>
-            <Link
-              to="/about"
-              style={{ fontSize: 16, fontWeight: 500, color: '#1a2744', textDecoration: 'none' }}
-            >
+            <NavLink to="/about" className={navLinkClass}>
               About
-            </Link>
+            </NavLink>
           </li>
         </ul>
 
         {/* Right actions — hidden on mobile */}
-        <div className="topnav-actions" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div
+          className="topnav-actions"
+          style={{ display: 'flex', gap: 12, alignItems: 'center' }}
+        >
           {/* Unauthenticated */}
           {!isAuthenticated && (
             <>
-              <Link
-                to="/login"
-                style={{
-                  padding: '10px 22px',
-                  borderRadius: 9999,
-                  background: 'transparent',
-                  color: '#1a2744',
-                  fontSize: 15,
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontFamily: "'Inter', sans-serif",
-                }}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/login')}
               >
                 Sign In
-              </Link>
-              <Link
-                to="/login"
-                style={{
-                  padding: '10px 22px',
-                  borderRadius: 9999,
-                  background: '#4a9ad4',
-                  color: '#0d1a3a',
-                  fontSize: 15,
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontFamily: "'Inter', sans-serif",
-                }}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => navigate('/login')}
               >
                 Get Started
-              </Link>
+              </Button>
             </>
           )}
 
@@ -351,35 +276,29 @@ export function TopNav() {
             <>
               <Link
                 to="/admin/dashboard"
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: '#1a2744',
-                  textDecoration: 'none',
-                  padding: '8px 16px',
-                  borderRadius: 9999,
-                }}
+                className={cn(
+                  'inline-flex items-center rounded-full px-4 py-2',
+                  'text-[14px] font-[600] no-underline transition-colors',
+                  'text-[var(--color-wise-text)]',
+                  'hover:bg-[var(--color-wise-mint)]',
+                  'hover:text-[var(--color-wise-primary-text)]',
+                )}
               >
                 Admin Portal
               </Link>
 
-              <div style={{ position: 'relative' }} ref={dropdownRef}>
+              <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
                   onClick={() => setDropdownOpen((o) => !o)}
                   aria-expanded={dropdownOpen}
                   aria-haspopup="menu"
                   aria-label={`User menu for ${user.name}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    borderRadius: 9999,
-                    padding: 4,
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
+                  className={cn(
+                    'flex items-center gap-2 rounded-full p-1',
+                    'bg-transparent border-none cursor-pointer',
+                    'hover:bg-[var(--color-wise-mint)] transition-colors',
+                  )}
                 >
                   <Avatar name={user.name} avatarUrl={user.avatarUrl} />
                 </button>
@@ -399,35 +318,25 @@ export function TopNav() {
             <>
               <NotificationBell />
 
-              <div style={{ position: 'relative' }} ref={dropdownRef}>
+              <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
                   onClick={() => setDropdownOpen((o) => !o)}
                   aria-expanded={dropdownOpen}
                   aria-haspopup="menu"
                   aria-label={`User menu for ${user.name}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    borderRadius: 9999,
-                    padding: '4px 8px',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
+                  className={cn(
+                    'flex items-center gap-2 rounded-full py-1 px-2',
+                    'bg-transparent border-none cursor-pointer',
+                    'hover:bg-[var(--color-wise-mint)] transition-colors',
+                  )}
                 >
                   <Avatar name={user.name} avatarUrl={user.avatarUrl} />
                   <span
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: '#1a2744',
-                      maxWidth: 120,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
+                    className={cn(
+                      'text-[14px] font-[600] text-[var(--color-wise-text)]',
+                      'max-w-[120px] overflow-hidden whitespace-nowrap text-ellipsis',
+                    )}
                   >
                     {user.name.split(' ')[0]}
                   </span>
@@ -447,60 +356,109 @@ export function TopNav() {
         {/* Hamburger — shown only on mobile */}
         <button
           type="button"
-          className="topnav-hamburger"
+          className={cn(
+            'topnav-hamburger ml-auto items-center justify-center',
+            'w-9 h-9 rounded-full',
+            'bg-transparent border-none cursor-pointer',
+            'text-[var(--color-wise-text)]',
+            'hover:bg-[var(--color-wise-mint)] hover:text-[var(--color-wise-primary-text)]',
+            'transition-colors',
+          )}
           aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={mobileMenuOpen}
           onClick={() => setMobileMenuOpen((o) => !o)}
-          style={{
-            marginLeft: 'auto',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: 24,
-            color: '#1a2744',
-            padding: '4px 8px',
-            lineHeight: 1,
-          }}
         >
-          {mobileMenuOpen ? '✕' : '☰'}
+          {mobileMenuOpen ? (
+            <X size={22} strokeWidth={2.25} aria-hidden="true" />
+          ) : (
+            <Menu size={22} strokeWidth={2.25} aria-hidden="true" />
+          )}
         </button>
       </nav>
 
       {/* Mobile dropdown menu */}
-      <div className={`topnav-mobile-menu${mobileMenuOpen ? ' open' : ''}`} role="menu">
-        <Link to="/courses" className="topnav-mobile-link" onClick={() => setMobileMenuOpen(false)}>Courses</Link>
-        <Link to="/courses?type=live" className="topnav-mobile-link" onClick={() => setMobileMenuOpen(false)}>Live Cohorts</Link>
-        <Link to="/about" className="topnav-mobile-link" onClick={() => setMobileMenuOpen(false)}>About</Link>
-        <div className="topnav-mobile-divider" />
+      <div
+        className={`topnav-mobile-menu${mobileMenuOpen ? ' open' : ''}`}
+        role="menu"
+      >
+        <Link
+          to="/courses"
+          className={cn(
+            'block px-4 py-3 text-[16px] font-[600] no-underline rounded-[10px] transition-colors',
+            'text-[var(--color-wise-text)] hover:bg-[var(--color-wise-mint)]',
+          )}
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          Courses
+        </Link>
+        <Link
+          to="/courses?type=live"
+          className={cn(
+            'block px-4 py-3 text-[16px] font-[600] no-underline rounded-[10px] transition-colors',
+            'text-[var(--color-wise-text)] hover:bg-[var(--color-wise-mint)]',
+          )}
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          Live Cohorts
+        </Link>
+        <Link
+          to="/about"
+          className={cn(
+            'block px-4 py-3 text-[16px] font-[600] no-underline rounded-[10px] transition-colors',
+            'text-[var(--color-wise-text)] hover:bg-[var(--color-wise-mint)]',
+          )}
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          About
+        </Link>
+        <div className="h-px bg-[var(--color-wise-ring)] my-2" />
 
         {!isAuthenticated && (
-          <>
-            <Link
-              to="/login"
-              className="topnav-mobile-btn"
-              onClick={() => setMobileMenuOpen(false)}
-              style={{ background: 'transparent', color: '#1a2744', border: '1.5px solid rgba(26,39,68,0.15)' }}
+          <div className="flex flex-col gap-2 mt-1">
+            <Button
+              variant="outline"
+              size="md"
+              className="w-full"
+              onClick={() => {
+                setMobileMenuOpen(false)
+                navigate('/login')
+              }}
             >
               Sign In
-            </Link>
-            <Link
-              to="/login"
-              className="topnav-mobile-btn"
-              onClick={() => setMobileMenuOpen(false)}
-              style={{ background: '#4a9ad4', color: '#0d1a3a', border: 'none' }}
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              className="w-full"
+              onClick={() => {
+                setMobileMenuOpen(false)
+                navigate('/login')
+              }}
             >
               Get Started
-            </Link>
-          </>
+            </Button>
+          </div>
         )}
 
         {isAdmin && user && (
           <>
-            <Link to="/admin/dashboard" className="topnav-mobile-link" onClick={() => setMobileMenuOpen(false)}>Admin Portal</Link>
+            <Link
+              to="/admin/dashboard"
+              className={cn(
+                'block px-4 py-3 text-[16px] font-[600] no-underline rounded-[10px] transition-colors',
+                'text-[var(--color-wise-text)] hover:bg-[var(--color-wise-mint)]',
+              )}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Admin Portal
+            </Link>
             <button
               type="button"
-              className="topnav-mobile-link"
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: "'Inter', sans-serif", width: '100%', color: '#d03238', fontWeight: 600 }}
+              className={cn(
+                'block w-full text-left px-4 py-3 text-[16px] font-[600] rounded-[10px]',
+                'bg-transparent border-none cursor-pointer',
+                'text-[var(--color-wise-danger)] hover:bg-[var(--color-wise-danger-soft)]',
+              )}
               onClick={() => { setMobileMenuOpen(false); void handleLogout() }}
             >
               Sign Out
@@ -510,12 +468,33 @@ export function TopNav() {
 
         {isStudent && user && (
           <>
-            <Link to="/student/dashboard" className="topnav-mobile-link" onClick={() => setMobileMenuOpen(false)}>My Courses</Link>
-            <Link to="/student/settings" className="topnav-mobile-link" onClick={() => setMobileMenuOpen(false)}>Settings</Link>
+            <Link
+              to="/student/dashboard"
+              className={cn(
+                'block px-4 py-3 text-[16px] font-[600] no-underline rounded-[10px] transition-colors',
+                'text-[var(--color-wise-text)] hover:bg-[var(--color-wise-mint)]',
+              )}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              My Courses
+            </Link>
+            <Link
+              to="/student/settings"
+              className={cn(
+                'block px-4 py-3 text-[16px] font-[600] no-underline rounded-[10px] transition-colors',
+                'text-[var(--color-wise-text)] hover:bg-[var(--color-wise-mint)]',
+              )}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Settings
+            </Link>
             <button
               type="button"
-              className="topnav-mobile-link"
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: "'Inter', sans-serif", width: '100%', color: '#d03238', fontWeight: 600 }}
+              className={cn(
+                'block w-full text-left px-4 py-3 text-[16px] font-[600] rounded-[10px]',
+                'bg-transparent border-none cursor-pointer',
+                'text-[var(--color-wise-danger)] hover:bg-[var(--color-wise-danger-soft)]',
+              )}
               onClick={() => { setMobileMenuOpen(false); void handleLogout() }}
             >
               Sign Out

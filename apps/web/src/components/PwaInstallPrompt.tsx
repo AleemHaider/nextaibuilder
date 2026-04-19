@@ -1,7 +1,10 @@
 // FIR-74 — PWA install prompt: native beforeinstallprompt banner + iOS Safari instructions
+// Sprint 3 Story 14 — Wise theme: 30px radius surface, lime CTA, lucide
+// icons in place of the 🚀 emoji.
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { X } from 'lucide-react'
+import { Rocket, Share, X } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { Button } from './ui/Button'
 
 // ---------------------------------------------------------------------------
 // Browser-env helpers
@@ -44,62 +47,90 @@ function IosSheet({ onClose }: IosSheetProps) {
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-[rgba(13,26,58,0.45)]"
+        className="absolute inset-0 bg-[var(--color-wise-dark)]/50"
         aria-hidden="true"
         onClick={onClose}
       />
 
       {/* Sheet */}
-      <div className="relative z-10 bg-white rounded-t-[24px] px-6 pb-8 pt-5 max-w-[520px] w-full mx-auto shadow-[0_-8px_40px_rgba(26,39,68,0.2)]">
+      <div
+        className={cn(
+          'relative z-10 bg-white rounded-t-[var(--radius-lg)]',
+          'px-6 pb-8 pt-5 max-w-[520px] w-full mx-auto',
+          'shadow-[var(--shadow-card)]',
+        )}
+      >
         {/* Handle */}
-        <div className="w-9 h-1 bg-[#e8ecf4] rounded-full mx-auto mb-5" aria-hidden="true" />
+        <div className="w-9 h-1 bg-[var(--color-wise-ring)] rounded-full mx-auto mb-5" aria-hidden="true" />
 
-        <h2 className="text-[18px] font-[800] text-[#1a2744] text-center mb-5">
+        <h2 className="text-[18px] font-[800] text-[var(--color-wise-text)] text-center mb-5">
           Install on iPhone / iPad
         </h2>
 
         <ol className="space-y-4">
           <li className="flex items-start gap-3.5">
-            <span className="w-7 h-7 rounded-full bg-[#4a9ad4] text-white text-[13px] font-[700] flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span
+              className={cn(
+                'w-7 h-7 rounded-full bg-[var(--color-wise-primary)]',
+                'text-[var(--color-wise-primary-text)] text-[13px] font-[700]',
+                'flex items-center justify-center flex-shrink-0 mt-0.5',
+              )}
+            >
               1
             </span>
-            <p className="text-[15px] text-[#1a2744] leading-relaxed">
-              Tap the <strong>Share</strong> button at the bottom of Safari (the box with an arrow pointing up).
+            <p className="text-[15px] text-[var(--color-wise-text)] leading-relaxed">
+              Tap the <strong>Share</strong> button
+              <Share
+                size={14}
+                strokeWidth={2.25}
+                className="inline-block mx-1 -mt-0.5 text-[var(--color-wise-primary-text)]"
+                aria-hidden="true"
+              />
+              at the bottom of Safari.
             </p>
           </li>
           <li className="flex items-start gap-3.5">
-            <span className="w-7 h-7 rounded-full bg-[#4a9ad4] text-white text-[13px] font-[700] flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span
+              className={cn(
+                'w-7 h-7 rounded-full bg-[var(--color-wise-primary)]',
+                'text-[var(--color-wise-primary-text)] text-[13px] font-[700]',
+                'flex items-center justify-center flex-shrink-0 mt-0.5',
+              )}
+            >
               2
             </span>
-            <p className="text-[15px] text-[#1a2744] leading-relaxed">
+            <p className="text-[15px] text-[var(--color-wise-text)] leading-relaxed">
               Scroll down and tap <strong>"Add to Home Screen"</strong>.
             </p>
           </li>
           <li className="flex items-start gap-3.5">
-            <span className="w-7 h-7 rounded-full bg-[#4a9ad4] text-white text-[13px] font-[700] flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span
+              className={cn(
+                'w-7 h-7 rounded-full bg-[var(--color-wise-primary)]',
+                'text-[var(--color-wise-primary-text)] text-[13px] font-[700]',
+                'flex items-center justify-center flex-shrink-0 mt-0.5',
+              )}
+            >
               3
             </span>
-            <p className="text-[15px] text-[#1a2744] leading-relaxed">
+            <p className="text-[15px] text-[var(--color-wise-text)] leading-relaxed">
               Tap <strong>"Add"</strong> in the top-right corner.
             </p>
           </li>
         </ol>
 
-        <p className="text-[13px] text-[#a3a3a3] text-center mt-5">
+        <p className="text-[13px] text-[var(--color-wise-text-muted)] text-center mt-5">
           Open Safari → these steps only work in Safari on iOS
         </p>
 
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="lg"
           onClick={onClose}
-          className={cn(
-            'mt-5 w-full py-3.5 rounded-full text-[15px] font-[700]',
-            'bg-[#f0f0f0] text-[#717182] hover:bg-[#e8ecf4] transition-colors',
-            'border-none cursor-pointer',
-          )}
+          className="mt-5 w-full"
         >
           Got it
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -121,18 +152,21 @@ function Banner({ onInstall, onDismiss }: BannerProps) {
       aria-label="Install nextaibuilder app"
       className={cn(
         'fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-32px)] max-w-[720px]',
-        'rounded-[16px] px-5 py-4',
-        'bg-[linear-gradient(135deg,#1a2744,#2d4a8a)]',
-        'shadow-[0_8px_40px_rgba(13,26,58,0.3)]',
+        'rounded-[var(--radius-lg)] px-5 py-4',
+        'bg-[var(--color-wise-dark)] text-white',
+        'shadow-[var(--shadow-card)]',
         'flex items-center gap-4 sm:gap-5',
       )}
     >
-      {/* App icon */}
+      {/* App icon — lucide Rocket on a mint chip */}
       <div
-        className="w-[52px] h-[52px] rounded-[14px] bg-[rgba(255,255,255,0.15)] flex items-center justify-center text-[26px] flex-shrink-0"
+        className={cn(
+          'w-[52px] h-[52px] rounded-[14px] flex items-center justify-center flex-shrink-0',
+          'bg-[var(--color-wise-primary)]/20 text-[var(--color-wise-primary)]',
+        )}
         aria-hidden="true"
       >
-        🚀
+        <Rocket size={24} strokeWidth={2.25} />
       </div>
 
       {/* Text */}
@@ -140,7 +174,7 @@ function Banner({ onInstall, onDismiss }: BannerProps) {
         <p className="text-[15px] font-[700] text-white mb-0.5">
           Install nextaibuilder
         </p>
-        <p className="text-[13px] text-[rgba(255,255,255,0.65)] leading-snug">
+        <p className="text-[13px] text-white/65 leading-snug">
           Add to your home screen for a faster, app-like experience.
         </p>
       </div>
@@ -152,24 +186,21 @@ function Banner({ onInstall, onDismiss }: BannerProps) {
           onClick={onDismiss}
           className={cn(
             'px-4 py-2.5 rounded-full text-[13px] font-[600]',
-            'bg-transparent border border-[rgba(255,255,255,0.25)]',
-            'text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.1)] transition-colors',
+            'bg-transparent border border-white/25',
+            'text-white/70 hover:bg-white/10 transition-colors',
             'cursor-pointer',
           )}
         >
           Not now
         </button>
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="sm"
           onClick={onInstall}
-          className={cn(
-            'px-4 py-2.5 rounded-full text-[13px] font-[700]',
-            'bg-[#4a9ad4] text-[#0d1a3a]',
-            'hover:opacity-90 transition-opacity border-none cursor-pointer',
-          )}
+          className="px-5"
         >
           Install App
-        </button>
+        </Button>
       </div>
 
       {/* Close X */}
@@ -179,7 +210,7 @@ function Banner({ onInstall, onDismiss }: BannerProps) {
         aria-label="Dismiss install prompt"
         className={cn(
           'absolute top-2.5 right-2.5 w-7 h-7 rounded-full',
-          'text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[rgba(255,255,255,0.1)]',
+          'text-white/40 hover:text-white hover:bg-white/10',
           'transition-colors flex items-center justify-center border-none bg-transparent cursor-pointer',
         )}
       >

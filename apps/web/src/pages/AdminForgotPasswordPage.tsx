@@ -1,60 +1,86 @@
 // FIR-36 — Admin forgot password page (email submission + success state)
+// Sprint 3 Story 14 — Wise theme migration. Matches the AdminLoginPage
+// aesthetic: dark left panel, white right card, lime primary CTA, Wave 6
+// primitives (<Button>, <Input>, <FormField>, <LoadingSpinner>).
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { AlertTriangle, ArrowLeft, Mail, MailCheck } from 'lucide-react'
 import { adminForgotPassword } from '../lib/api'
 import { AdminLeftPanel } from './AdminLoginPage'
 import { cn } from '../lib/utils'
+import { Button } from '../components/ui/Button'
+import { FormField } from '../components/ui/FormField'
+import { Input } from '../components/ui/Input'
 
 // ---------------------------------------------------------------------------
 // Email sent success state
 // ---------------------------------------------------------------------------
-function EmailSentState({ email, onResend }: { email: string; onResend: () => void }) {
+function EmailSentState({
+  email,
+  isPending,
+  onResend,
+}: {
+  email: string
+  isPending: boolean
+  onResend: () => void
+}) {
   return (
     <div className="w-full max-w-[440px] text-center">
-      <p className="text-[56px] mb-5" aria-hidden="true">📧</p>
+      <div
+        className={cn(
+          'mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full',
+          'bg-[var(--color-wise-primary)]/15 text-[var(--color-wise-primary-text)]',
+        )}
+        aria-hidden="true"
+      >
+        <MailCheck size={26} strokeWidth={2.25} />
+      </div>
       <h1
         className={cn(
-          'text-[36px] font-black text-[#1a2744]',
+          'text-[36px] font-black text-[var(--color-wise-text)]',
           'tracking-[-1px] leading-[0.9] mb-2',
         )}
       >
         Check your inbox
       </h1>
-      <p className="text-[15px] text-[#717182] mb-2">
+      <p className="text-[15px] text-[var(--color-wise-text-muted)] mb-2">
         We sent a password reset link to
       </p>
-      <p className="text-[16px] font-bold text-[#1a2744] mb-7">{email}</p>
+      <p className="text-[16px] font-bold text-[var(--color-wise-text)] mb-7">
+        {email}
+      </p>
 
       <div
         className={cn(
           'rounded-xl px-4 py-3.5 mb-6 text-left',
-          'bg-[#f8f9fb] text-[13px] text-[#717182] leading-relaxed',
+          'bg-[var(--color-wise-canvas)] text-[13px] leading-relaxed',
+          'text-[var(--color-wise-text-muted)]',
         )}
       >
         The link expires in{' '}
-        <strong className="text-[#1a2744]">10 minutes</strong>. Check your spam
-        folder if you don't see it.
+        <strong className="text-[var(--color-wise-text)]">10 minutes</strong>.
+        Check your spam folder if you don't see it.
       </div>
 
-      <button
-        type="button"
+      <Button
+        variant="outline"
+        size="lg"
+        isLoading={isPending}
         onClick={onResend}
-        className={cn(
-          'w-full h-[52px] rounded-full mb-3',
-          'bg-[#f0f0f0] text-[#1a2744] text-[16px] font-bold',
-          'border-none cursor-pointer hover:bg-[#e8e8e8] transition-colors',
-          'focus-visible:outline-2 focus-visible:outline-[#4a9ad4] focus-visible:outline-offset-2',
-        )}
+        className="w-full mb-3"
       >
         Resend Email
-      </button>
+      </Button>
 
-      <p className="text-[14px] text-[#717182]">
-        ←{' '}
+      <p className="text-[14px] text-[var(--color-wise-text-muted)]">
         <Link
           to="/admin/login"
-          className="text-[#4a9ad4] font-semibold hover:underline"
+          className={cn(
+            'inline-flex items-center gap-1.5',
+            'text-[var(--color-wise-primary-text)] font-semibold hover:underline',
+          )}
         >
+          <ArrowLeft size={14} strokeWidth={2.5} aria-hidden="true" />
           Back to Sign In
         </Link>
       </p>
@@ -100,34 +126,38 @@ export default function AdminForgotPasswordPage() {
     }
   }
 
+  const hasError = error !== null
+
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex min-h-screen w-full bg-[var(--color-wise-canvas)]">
       <AdminLeftPanel tagline="Course administration made simple." />
 
-      <div
-        className={cn(
-          'flex-1 flex items-center justify-center',
-          'px-6 py-16 bg-[#f8f9fb]',
-        )}
-      >
+      <div className="flex flex-1 items-center justify-center px-6 py-16">
         {submitted ? (
-          <EmailSentState email={email} onResend={handleResend} />
+          <EmailSentState
+            email={email}
+            isPending={isPending}
+            onResend={handleResend}
+          />
         ) : (
           <form
             onSubmit={handleSubmit}
             noValidate
-            className="w-full max-w-[420px]"
+            className={cn(
+              'w-full max-w-[460px] rounded-[30px] bg-white p-10',
+              'shadow-[var(--shadow-card)]',
+            )}
             aria-label="Forgot password form"
           >
             <h1
               className={cn(
-                'text-[36px] font-black text-[#1a2744]',
+                'text-[36px] font-black text-[var(--color-wise-text)]',
                 'tracking-[-1px] mb-1.5',
               )}
             >
               Reset password
             </h1>
-            <p className="text-[16px] text-[#717182] mb-9">
+            <p className="text-[16px] text-[var(--color-wise-text-muted)] mb-9">
               Enter your email and we'll send you a reset link
             </p>
 
@@ -135,66 +165,55 @@ export default function AdminForgotPasswordPage() {
               <div
                 role="alert"
                 className={cn(
-                  'flex items-start gap-2.5 mb-6',
-                  'bg-[#fdeaeb] border border-[rgba(208,50,56,0.25)]',
-                  'rounded-xl px-4 py-3.5',
+                  'flex items-start gap-2.5 mb-6 rounded-2xl px-4 py-3.5',
+                  'bg-[var(--color-wise-danger-soft)]',
+                  'ring-1 ring-[var(--color-wise-danger)]/25',
                 )}
               >
-                <span className="text-base flex-shrink-0 mt-0.5" aria-hidden="true">
-                  ⚠️
-                </span>
-                <p className="text-[14px] text-[#d03238] font-medium leading-snug">
+                <AlertTriangle
+                  className="h-4 w-4 shrink-0 mt-0.5 text-[var(--color-wise-danger)]"
+                  strokeWidth={2.5}
+                  aria-hidden="true"
+                />
+                <p className="text-[14px] font-semibold leading-snug text-[var(--color-wise-danger)]">
                   {error}
                 </p>
               </div>
             )}
 
-            <div className="mb-6">
-              <label
-                htmlFor="forgot-email"
-                className="block text-[14px] font-semibold text-[#1a2744] mb-1.5"
-              >
-                Email address
-              </label>
-              <input
-                id="forgot-email"
+            <FormField id="forgot-email" label="Email address" className="mb-6">
+              <Input
                 type="email"
                 autoComplete="email"
                 placeholder="admin@nextaibuilder.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className={cn(
-                  'w-full h-12 rounded-xl px-4',
-                  'text-[15px] text-[#1a2744]',
-                  'border-[1.5px] border-[rgba(26,39,68,0.15)] bg-[#f3f3f5]',
-                  'outline-none transition-[border-color,background,box-shadow]',
-                  'focus:border-[#4a9ad4] focus:bg-white focus:shadow-[0_0_0_3px_rgba(74,154,212,0.12)]',
-                )}
+                inputSize="lg"
+                hasError={hasError}
+                leftIcon={<Mail size={16} strokeWidth={2.25} />}
               />
-            </div>
+            </FormField>
 
-            <button
+            <Button
               type="submit"
-              disabled={isPending}
-              className={cn(
-                'w-full h-[52px] rounded-full',
-                'bg-[#4a9ad4] text-[#0d1a3a] text-[16px] font-bold',
-                'border-none cursor-pointer',
-                'hover:opacity-90 transition-opacity',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-                'focus-visible:outline-2 focus-visible:outline-[#4a9ad4] focus-visible:outline-offset-2',
-              )}
+              variant="primary"
+              size="lg"
+              isLoading={isPending}
+              className="w-full"
             >
               {isPending ? 'Sending…' : 'Send Reset Link'}
-            </button>
+            </Button>
 
-            <p className="text-[14px] text-[#717182] mt-5">
-              ←{' '}
+            <p className="text-[14px] text-[var(--color-wise-text-muted)] mt-5 text-center">
               <Link
                 to="/admin/login"
-                className="text-[#4a9ad4] font-semibold hover:underline"
+                className={cn(
+                  'inline-flex items-center gap-1.5',
+                  'text-[var(--color-wise-primary-text)] font-semibold hover:underline',
+                )}
               >
+                <ArrowLeft size={14} strokeWidth={2.5} aria-hidden="true" />
                 Back to Sign In
               </Link>
             </p>

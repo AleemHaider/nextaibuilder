@@ -1,6 +1,10 @@
 // FIR-169 — Notification dropdown panel (max 5 items, mark all read, view all link)
+// Sprint 3 Story 14 — Wise theme migration. Emoji type icons replaced with
+// lucide icons; all navy/sky palette hex values swapped for Wise tokens.
 import { useRef, useEffect } from 'react'
 import { Link } from 'react-router'
+import { Award, Bell, GraduationCap, Megaphone, Zap } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { cn } from '../lib/utils'
 import type { Notification } from '../lib/api'
 
@@ -21,14 +25,26 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-function typeIcon(type: string): string {
-  switch (type) {
-    case 'enrollment_confirmed': return '🎓'
-    case 'payment_approved': return '✅'
-    case 're_engagement': return '⚡'
-    case 'broadcast': return '📢'
-    default: return '🔔'
-  }
+// Lucide mapping for notification types. Keeps icons consistent with the
+// rest of Wave 6 instead of coloured emoji that look out-of-palette on the
+// Wise canvas.
+const TYPE_ICON: Record<string, LucideIcon> = {
+  enrollment_confirmed: GraduationCap,
+  payment_approved: Award,
+  re_engagement: Zap,
+  broadcast: Megaphone,
+}
+
+function TypeIcon({ type }: { type: string }) {
+  const Icon = TYPE_ICON[type] ?? Bell
+  return (
+    <Icon
+      size={16}
+      strokeWidth={2.25}
+      className="text-[var(--color-wise-primary-text)]"
+      aria-hidden="true"
+    />
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -50,9 +66,9 @@ function NotificationItem({ notification, onRead }: NotificationItemProps) {
   const content = (
     <div
       className={cn(
-        'flex items-start gap-3 px-4 py-3 border-b border-[rgba(26,39,68,0.06)]',
-        'transition-colors hover:bg-[#f8f9fb] cursor-pointer',
-        !isRead && 'bg-[#f0f7ff]',
+        'flex items-start gap-3 px-4 py-3 border-b border-[var(--color-wise-ring)]',
+        'transition-colors hover:bg-[var(--color-wise-canvas)] cursor-pointer',
+        !isRead && 'bg-[var(--color-wise-mint)]/40',
       )}
       onClick={handleClick}
       role="button"
@@ -62,27 +78,36 @@ function NotificationItem({ notification, onRead }: NotificationItemProps) {
       {/* Unread dot */}
       <div className="flex-shrink-0 mt-1.5">
         {!isRead ? (
-          <div className="w-2 h-2 rounded-full bg-[#4a9ad4]" aria-label="Unread" />
+          <div className="w-2 h-2 rounded-full bg-[var(--color-wise-primary)]" aria-label="Unread" />
         ) : (
           <div className="w-2 h-2 rounded-full bg-transparent" aria-hidden="true" />
         )}
       </div>
 
-      {/* Icon */}
-      <div className="text-[18px] flex-shrink-0 leading-none mt-0.5">
-        {typeIcon(type)}
+      {/* Icon — lucide replacement for emoji */}
+      <div
+        className={cn(
+          'flex-shrink-0 mt-0.5 flex items-center justify-center',
+          'w-7 h-7 rounded-full bg-[var(--color-wise-mint)]',
+        )}
+      >
+        <TypeIcon type={type} />
       </div>
 
       {/* Text */}
       <div className="flex-1 min-w-0">
         <p className={cn(
-          'text-[13px] text-[#1a2744] leading-snug mb-0.5',
+          'text-[13px] text-[var(--color-wise-text)] leading-snug mb-0.5',
           !isRead ? 'font-[700]' : 'font-[500]',
         )}>
           {title}
         </p>
-        <p className="text-[12px] text-[#717182] leading-snug line-clamp-2">{body}</p>
-        <p className="text-[11px] text-[#a3a3a3] mt-1">{relativeTime(createdAt)}</p>
+        <p className="text-[12px] text-[var(--color-wise-text-muted)] leading-snug line-clamp-2">
+          {body}
+        </p>
+        <p className="text-[11px] text-[var(--color-wise-text-muted)] mt-1 opacity-80">
+          {relativeTime(createdAt)}
+        </p>
       </div>
     </div>
   )
@@ -149,21 +174,23 @@ export function NotificationDropdown({
       aria-label="Notifications"
       className={cn(
         'absolute right-0 top-[calc(100%+8px)] w-[360px]',
-        'bg-white rounded-[20px] overflow-hidden z-50',
-        'shadow-[0_8px_40px_rgba(26,39,68,0.18),0_0_0_1px_rgba(26,39,68,0.08)]',
+        'bg-white rounded-[var(--radius-md)] overflow-hidden z-50',
+        'shadow-[var(--shadow-card)]',
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3.5 border-b border-[rgba(26,39,68,0.08)]">
-        <h2 className="text-[15px] font-[800] text-[#1a2744]">Notifications</h2>
+      <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--color-wise-ring)]">
+        <h2 className="text-[15px] font-[800] text-[var(--color-wise-text)]">Notifications</h2>
         {hasUnread && (
           <button
             type="button"
             onClick={onMarkAllRead}
             disabled={isMarkingAll}
             className={cn(
-              'text-[12px] font-[700] text-[#4a9ad4] hover:text-[#1a2744] transition-colors',
-              'disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border-none cursor-pointer',
+              'text-[12px] font-[700] text-[var(--color-wise-primary-text)]',
+              'hover:underline transition-colors',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'bg-transparent border-none cursor-pointer',
             )}
           >
             {isMarkingAll ? 'Marking…' : 'Mark all read'}
@@ -174,8 +201,20 @@ export function NotificationDropdown({
       {/* Items */}
       <div className="max-h-[380px] overflow-y-auto">
         {preview.length === 0 ? (
-          <div className="py-10 text-center text-[14px] text-[#717182]">
-            <div className="text-[32px] mb-2">🔔</div>
+          <div className="py-10 text-center text-[14px] text-[var(--color-wise-text-muted)] flex flex-col items-center gap-2">
+            <div
+              className={cn(
+                'w-12 h-12 rounded-full flex items-center justify-center',
+                'bg-[var(--color-wise-mint)]',
+              )}
+            >
+              <Bell
+                size={22}
+                strokeWidth={2}
+                className="text-[var(--color-wise-primary-text)]"
+                aria-hidden="true"
+              />
+            </div>
             You're all caught up!
           </div>
         ) : (
@@ -191,13 +230,13 @@ export function NotificationDropdown({
 
       {/* Footer */}
       {notifications.length > 0 && (
-        <div className="px-4 py-3 border-t border-[rgba(26,39,68,0.08)] text-center">
+        <div className="px-4 py-3 border-t border-[var(--color-wise-ring)] text-center">
           <Link
             to="/student/notifications"
             onClick={onClose}
             className={cn(
-              'text-[13px] font-[700] text-[#4a9ad4]',
-              'hover:text-[#1a2744] transition-colors no-underline',
+              'text-[13px] font-[700] text-[var(--color-wise-primary-text)]',
+              'hover:underline transition-colors no-underline',
             )}
           >
             View all notifications →

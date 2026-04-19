@@ -1,28 +1,24 @@
 // FIR-34 — Route guards for authenticated and role-based access
+// Sprint 3 Story 14 — Wise theme migration: swap hand-rolled spinner for
+// the Wave 6 <LoadingSpinner> primitive so every route guard shares the
+// same aria contract and Wise palette.
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../context/AuthContext'
+import { LoadingSpinner } from './ui/LoadingSpinner'
 import { cn } from '../lib/utils'
 
 // ---------------------------------------------------------------------------
-// LoadingSpinner — shown while auth state is being restored from cookie
+// GuardSpinner — Wise-themed full-page loading state
 // ---------------------------------------------------------------------------
-function LoadingSpinner() {
+function GuardSpinner() {
   return (
     <div
       className={cn(
         'min-h-screen flex items-center justify-center',
-        'bg-[#f8f9fb]',
+        'bg-[var(--color-wise-canvas)]',
       )}
-      role="status"
-      aria-label="Loading"
     >
-      <div
-        className={cn(
-          'w-10 h-10 rounded-full border-4',
-          'border-[rgba(26,39,68,0.1)] border-t-[#4a9ad4]',
-          'animate-spin',
-        )}
-      />
+      <LoadingSpinner centered size="lg" label="Checking your session…" />
     </div>
   )
 }
@@ -34,7 +30,7 @@ export function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth()
   const location = useLocation()
 
-  if (isLoading) return <LoadingSpinner />
+  if (isLoading) return <GuardSpinner />
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />
@@ -50,7 +46,7 @@ export function StudentRoute() {
   const { user, isLoading } = useAuth()
   const location = useLocation()
 
-  if (isLoading) return <LoadingSpinner />
+  if (isLoading) return <GuardSpinner />
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />
@@ -71,7 +67,7 @@ export function AdminRoute() {
   const { user, isLoading } = useAuth()
   const location = useLocation()
 
-  if (isLoading) return <LoadingSpinner />
+  if (isLoading) return <GuardSpinner />
 
   if (!user) {
     return <Navigate to="/admin/login" state={{ from: location }} replace />

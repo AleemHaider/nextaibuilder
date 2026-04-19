@@ -1,8 +1,17 @@
 // FIR-155 — Student sign-up page (email + password self-serve)
+// Sprint 3 Story 14 — Wise theme migration. Left hero + right form both
+// re-skinned to match AdminLoginPage / StudentLoginPage: dark-green panel,
+// white 30px card, Wave 6 primitives, lucide icons.
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { AlertTriangle, Check, Mail, Star, User } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { loginWithGoogle, registerStudent } from '../lib/api'
+import { cn } from '../lib/utils'
+import { Button } from '../components/ui/Button'
+import { FormField } from '../components/ui/FormField'
+import { Input } from '../components/ui/Input'
+import { Logo } from '../components/Logo'
 
 function GoogleIcon() {
   return (
@@ -16,38 +25,12 @@ function GoogleIcon() {
   )
 }
 
-const AVATARS = [
-  { initials: 'AK', bg: '#4a9ad4' },
-  { initials: 'SR', bg: '#ff8c5a' },
-  { initials: 'MJ', bg: '#7bb8e0' },
-  { initials: 'PL', bg: '#2d5a8e' },
-  { initials: 'TW', bg: '#4a9ad4' },
-]
-
 const PERKS = [
-  { text: 'Project-first curriculum — ship something real' },
-  { text: 'AI-validated tool setup and workflow' },
-  { text: 'Live instructor Q&A every week' },
-  { text: 'Certificate of completion + LinkedIn badge' },
+  'Project-first curriculum — ship something real',
+  'AI-validated tool setup and workflow',
+  'Live instructor Q&A every week',
+  'Certificate of completion + LinkedIn badge',
 ]
-
-function inputStyle(focused: boolean): React.CSSProperties {
-  return {
-    width: '100%',
-    height: 48,
-    borderRadius: 12,
-    border: `1.5px solid ${focused ? '#4a9ad4' : 'rgba(26,39,68,0.1)'}`,
-    background: focused ? '#fff' : '#f9fafb',
-    padding: '0 14px',
-    fontSize: 14,
-    color: '#1a2744',
-    fontFamily: "'Inter', sans-serif",
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-    transition: 'border-color 0.15s, background 0.15s, box-shadow 0.15s',
-    boxShadow: focused ? '0 0 0 3px rgba(74,154,212,0.12)' : 'none',
-  }
-}
 
 export default function StudentSignupPage() {
   const { isAuthenticated, isLoading, login } = useAuth()
@@ -55,20 +38,12 @@ export default function StudentSignupPage() {
 
   const [error, setError] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
-  const [googleHov, setGoogleHov] = useState(false)
-  const [submitHov, setSubmitHov] = useState(false)
 
   // Form fields
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-
-  // Focus state for each input
-  const [f1, setF1] = useState(false)
-  const [f2, setF2] = useState(false)
-  const [f3, setF3] = useState(false)
-  const [f4, setF4] = useState(false)
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) navigate('/student/dashboard', { replace: true })
@@ -113,12 +88,11 @@ export default function StudentSignupPage() {
 
   if (isLoading) return null
 
+  const hasError = error !== null
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: "'Inter', -apple-system, sans-serif" }}>
+    <div className="flex min-h-screen w-full bg-[var(--color-wise-canvas)]">
       <style>{`
-        @keyframes pulse-glow { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        .signup-left-perk { transition: background 0.2s; }
-        .signup-left-perk:hover { background: rgba(255,255,255,0.07) !important; }
         @media (max-width: 768px) {
           .signup-left-panel { display: none !important; }
           .signup-right-panel { min-width: 0 !important; width: 100% !important; }
@@ -132,246 +106,126 @@ export default function StudentSignupPage() {
       {/* LEFT PANEL                                                           */}
       {/* ================================================================== */}
       <div
-        className="signup-left-panel"
-        style={{
-          width: '50%',
-          minWidth: 520,
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          padding: '48px 56px 52px',
-          minHeight: '100vh',
-          position: 'relative',
-          overflow: 'hidden',
-          background: '#040e24',
-        }}
+        className={cn(
+          'signup-left-panel relative flex w-[500px] shrink-0 flex-col',
+          'justify-between overflow-hidden px-14 py-14 min-h-screen',
+          'bg-[var(--color-wise-dark)] text-white',
+        )}
       >
-        {/* Layered radial gradients */}
+        {/* Lime blobs */}
         <div
           aria-hidden="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'radial-gradient(ellipse 100% 80% at -10% 50%, rgba(74,154,212,0.25) 0%, transparent 60%),' +
-              'radial-gradient(ellipse 70% 60% at 110% 80%, rgba(255,140,90,0.12) 0%, transparent 55%)',
-            pointerEvents: 'none',
-          }}
+          className={cn(
+            'pointer-events-none absolute -bottom-24 -right-24',
+            'h-[420px] w-[420px] rounded-full',
+            'bg-[var(--color-wise-primary)]/15 blur-3xl',
+          )}
         />
-        {/* Grid texture */}
         <div
           aria-hidden="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
-            backgroundSize: '48px 48px',
-            pointerEvents: 'none',
-          }}
+          className={cn(
+            'pointer-events-none absolute -top-20 -left-20',
+            'h-[240px] w-[240px] rounded-full',
+            'bg-[var(--color-wise-primary)]/5 blur-2xl',
+          )}
         />
 
         {/* Top */}
-        <div style={{ position: 'relative', zIndex: 2 }}>
-          {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 64 }}>
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                background: 'linear-gradient(135deg, #4a9ad4, #1a2744)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 16px rgba(74,154,212,0.4)',
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <path d="M4 15 L10 5 L16 15" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M7 11 L13 11" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
-              </svg>
-            </div>
-            <span style={{ fontSize: 15, fontWeight: 800, color: '#fff', letterSpacing: -0.2 }}>Product Builder Academy</span>
+        <div className="relative z-10 max-w-[380px]">
+          <div className="mb-12">
+            <Logo size="md" variant="dark" />
           </div>
 
-          {/* Headline */}
-          <h1
-            style={{
-              fontSize: 'clamp(42px, 4vw, 56px)',
-              fontWeight: 900,
-              color: '#fff',
-              lineHeight: 1.0,
-              letterSpacing: -2,
-              marginBottom: 0,
-              marginTop: 64,
-            }}
-          >
-            Start your builder
-          </h1>
-          <h1
-            style={{
-              fontSize: 'clamp(42px, 4vw, 56px)',
-              fontWeight: 900,
-              lineHeight: 1.0,
-              letterSpacing: -2,
-              marginBottom: 16,
-              background: 'linear-gradient(90deg, #4a9ad4, #7bb8e0)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            journey.
-          </h1>
-
-          {/* Pill badge */}
           <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              background: 'rgba(74,154,212,0.12)',
-              border: '1px solid rgba(74,154,212,0.25)',
-              borderRadius: 9999,
-              padding: '5px 14px',
-              marginBottom: 20,
-            }}
+            className={cn(
+              'mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5',
+              'bg-[var(--color-wise-primary)]/15',
+              'text-[var(--color-wise-primary)]',
+              'ring-1 ring-[var(--color-wise-primary)]/25',
+              'text-[13px] font-semibold',
+            )}
           >
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#4a9ad4', letterSpacing: 0.8 }}>FREE TO JOIN</span>
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: '#4a9ad4',
-                display: 'inline-block',
-                boxShadow: '0 0 6px #4a9ad4',
-                animation: 'pulse-glow 2s ease-in-out infinite',
-              }}
-            />
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>No credit card needed</span>
+            FREE TO JOIN
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-wise-primary)]" aria-hidden="true" />
+            <span className="text-white/60 font-medium">No credit card needed</span>
           </div>
 
-          <p
-            style={{
-              fontSize: 15,
-              color: 'rgba(255,255,255,0.5)',
-              lineHeight: 1.65,
-              marginBottom: 36,
-              maxWidth: 340,
-            }}
+          <h1
+            className={cn(
+              'text-[44px] leading-[0.9] tracking-[-1.5px] mb-5 font-black text-white',
+            )}
+            style={{ fontFeatureSettings: '"calt"' }}
           >
-            Create a free account to browse courses, watch preview lessons, and join a cohort when you're ready.
+            Start your builder journey.
+          </h1>
+          <p className="text-[17px] leading-[1.55] text-white/55 mb-10">
+            Create a free account to browse courses, watch preview lessons, and
+            join a cohort when you're ready.
           </p>
 
           {/* Perks list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <ul className="flex flex-col gap-2 list-none p-0 m-0">
             {PERKS.map((p) => (
-              <div
-                key={p.text}
-                className="signup-left-perk"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '10px 14px',
-                  borderRadius: 12,
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                }}
+              <li
+                key={p}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl px-3.5 py-2.5',
+                  'bg-white/5 border border-white/10',
+                )}
               >
-                <div
-                  style={{
-                    width: 26,
-                    height: 26,
-                    borderRadius: '50%',
-                    background: 'rgba(74,154,212,0.2)',
-                    border: '1px solid rgba(74,154,212,0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
+                <span
+                  className={cn(
+                    'flex h-6 w-6 items-center justify-center rounded-full flex-shrink-0',
+                    'bg-[var(--color-wise-primary)]/20 text-[var(--color-wise-primary)]',
+                    'border border-[var(--color-wise-primary)]/40',
+                  )}
+                  aria-hidden="true"
                 >
-                  <svg width="11" height="9" viewBox="0 0 11 9" fill="none" aria-hidden="true">
-                    <path d="M1 4.5L4 7.5L10 1.5" stroke="#4a9ad4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.4, fontWeight: 500 }}>{p.text}</span>
-              </div>
+                  <Check size={12} strokeWidth={2.75} />
+                </span>
+                <span className="text-[13px] font-medium text-white/75 leading-[1.4]">
+                  {p}
+                </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
 
-        {/* Bottom: trust stats */}
-        <div
-          style={{
-            position: 'relative',
-            zIndex: 2,
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 16,
-            padding: '20px 22px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <div style={{ display: 'flex' }}>
-              {AVATARS.map((a, i) => (
-                <div
-                  key={a.initials}
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    background: a.bg,
-                    border: '2px solid rgba(4,14,36,0.8)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 9,
-                    fontWeight: 700,
-                    color: '#fff',
-                    marginLeft: i === 0 ? 0 : -10,
-                    zIndex: AVATARS.length - i,
-                    position: 'relative',
-                  }}
-                >
-                  {a.initials}
-                </div>
+        {/* Bottom — trust stats */}
+        <div className="relative z-10">
+          <div
+            className={cn(
+              'rounded-[var(--radius-md)] px-5 py-4',
+              'bg-white/[0.06] border border-white/10',
+            )}
+          >
+            <div className="flex items-center gap-1 mb-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Star
+                  key={i}
+                  size={13}
+                  className="text-[var(--color-wise-primary)]"
+                  fill="currentColor"
+                  strokeWidth={0}
+                  aria-hidden="true"
+                />
               ))}
+              <span className="ml-1.5 text-[12px] text-white/60 font-semibold">
+                4.9/5 — 500+ builders joined
+              </span>
             </div>
-            <div>
-              <p style={{ fontSize: 12, fontWeight: 700, color: '#fff', lineHeight: 1 }}>500+ builders joined</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3 }}>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <svg key={i} width="10" height="10" viewBox="0 0 12 12" fill="#FFB800" aria-hidden="true">
-                    <path d="M6 0l1.5 4.5H12L8.25 7.25l1.5 4.5L6 9.25l-3.75 2.5 1.5-4.5L0 4.5h4.5z" />
-                  </svg>
-                ))}
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginLeft: 3 }}>4.9/5 rating</span>
-              </div>
-            </div>
-          </div>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 14 }}>
-            <div style={{ display: 'flex', gap: 0 }}>
+            <div className="grid grid-cols-4 gap-2 border-t border-white/10 pt-3">
               {[
                 { val: '500+', label: 'Students' },
                 { val: '12', label: 'Cohorts' },
                 { val: '98%', label: 'Satisfaction' },
-                { val: '4.9★', label: 'Rating' },
-              ].map((s, i) => (
-                <div
-                  key={s.label}
-                  style={{
-                    flex: 1,
-                    textAlign: 'center',
-                    borderRight: i < 3 ? '1px solid rgba(255,255,255,0.06)' : undefined,
-                  }}
-                >
-                  <p style={{ fontSize: 17, fontWeight: 900, color: '#fff', letterSpacing: -0.5, lineHeight: 1 }}>{s.val}</p>
-                  <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{s.label}</p>
+                { val: '4.9', label: 'Rating' },
+              ].map((s) => (
+                <div key={s.label} className="text-center">
+                  <p className="text-[17px] font-[900] text-white tracking-[-0.5px] leading-none">
+                    {s.val}
+                  </p>
+                  <p className="text-[10px] text-white/40 mt-1">{s.label}</p>
                 </div>
               ))}
             </div>
@@ -382,269 +236,196 @@ export default function StudentSignupPage() {
       {/* ================================================================== */}
       {/* RIGHT PANEL — Sign Up Form                                          */}
       {/* ================================================================== */}
-      <div className="signup-right-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+      <div className="signup-right-panel flex flex-1 flex-col bg-[var(--color-wise-canvas)]">
         {/* Top bar */}
         <div
-          className="signup-topbar"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '20px 40px',
-            borderBottom: '1px solid rgba(26,39,68,0.07)',
-          }}
+          className={cn(
+            'signup-topbar flex items-center justify-between bg-white',
+            'border-b border-[var(--color-wise-ring)]',
+          )}
+          style={{ padding: '20px 40px' }}
         >
-          <span style={{ fontSize: 13, color: '#717182' }}>Already have an account?</span>
-          <Link
-            to="/login"
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: '#1a2744',
-              textDecoration: 'none',
-              padding: '8px 18px',
-              borderRadius: 10,
-              border: '1.5px solid rgba(26,39,68,0.12)',
-              background: '#fff',
-              boxShadow: '0 1px 3px rgba(26,39,68,0.06)',
-            }}
-          >
+          <span className="text-[13px] text-[var(--color-wise-text-muted)]">
+            Already have an account?
+          </span>
+          <Button variant="outline" size="sm" onClick={() => navigate('/login')}>
             Sign in
-          </Link>
+          </Button>
         </div>
 
         {/* Form */}
         <div
-          className="signup-right-inner"
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '40px 48px',
-          }}
+          className="signup-right-inner flex flex-1 flex-col items-center justify-center"
+          style={{ padding: '40px 48px' }}
         >
-          <div style={{ width: '100%', maxWidth: 420 }}>
-
-            <h2
-              style={{
-                fontSize: 34,
-                fontWeight: 900,
-                color: '#1a2744',
-                letterSpacing: -1.5,
-                lineHeight: 1.1,
-                marginBottom: 6,
-              }}
+          <div
+            className={cn(
+              'w-full max-w-[480px] rounded-[30px] bg-white p-10',
+              'shadow-[var(--shadow-card)]',
+            )}
+          >
+            <h1
+              className={cn(
+                'text-[36px] font-black text-[var(--color-wise-text)]',
+                'tracking-[-1px] mb-1.5',
+              )}
+              style={{ fontFeatureSettings: '"calt"' }}
             >
               Create your account
-            </h2>
-            <p style={{ fontSize: 14, color: '#717182', marginBottom: 28, lineHeight: 1.5 }}>
+            </h1>
+            <p className="text-[15px] text-[var(--color-wise-text-muted)] mb-7 leading-[1.5]">
               Free to join — no credit card required.
             </p>
 
             {/* Error */}
-            {error && (
+            {hasError && (
               <div
                 role="alert"
-                style={{
-                  marginBottom: 20,
-                  background: '#fff5f5',
-                  border: '1px solid #fca5a5',
-                  borderRadius: 12,
-                  padding: '12px 16px',
-                }}
+                className={cn(
+                  'mb-6 flex items-start gap-2.5 rounded-2xl px-4 py-3.5',
+                  'bg-[var(--color-wise-danger-soft)]',
+                  'ring-1 ring-[var(--color-wise-danger)]/25',
+                )}
               >
-                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>
-                  <p style={{ fontSize: 13, color: '#dc2626', lineHeight: 1.4 }}>{error}</p>
-                </div>
-                {error.toLowerCase().includes('already exists') && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #fecaca' }}>
+                <AlertTriangle
+                  className="h-4 w-4 shrink-0 mt-0.5 text-[var(--color-wise-danger)]"
+                  strokeWidth={2.5}
+                  aria-hidden="true"
+                />
+                <div className="flex-1">
+                  <p className="text-[14px] font-semibold leading-snug text-[var(--color-wise-danger)]">
+                    {error}
+                  </p>
+                  {error!.toLowerCase().includes('already exists') && (
                     <Link
                       to="/login"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: '#fff',
-                        background: '#1a2744',
-                        padding: '7px 16px',
-                        borderRadius: 8,
-                        textDecoration: 'none',
-                      }}
+                      className={cn(
+                        'mt-3 inline-flex items-center gap-1.5 rounded-full',
+                        'bg-[var(--color-wise-primary)] px-4 py-1.5',
+                        'text-[13px] font-[700] text-[var(--color-wise-primary-text)]',
+                        'no-underline hover:bg-[var(--color-wise-primary-hover)] transition-colors',
+                      )}
                     >
                       Sign in to your account
                     </Link>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
 
             {/* Google button */}
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="lg"
               onClick={handleGoogleSignup}
               disabled={isPending}
-              onMouseEnter={() => setGoogleHov(true)}
-              onMouseLeave={() => setGoogleHov(false)}
-              style={{
-                width: '100%',
-                height: 50,
-                borderRadius: 12,
-                border: `1.5px solid ${googleHov ? '#c8d4e0' : 'rgba(26,39,68,0.1)'}`,
-                background: googleHov ? '#f9fafb' : '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                fontSize: 14,
-                fontWeight: 600,
-                color: '#1a2744',
-                cursor: isPending ? 'not-allowed' : 'pointer',
-                opacity: isPending ? 0.5 : 1,
-                transition: 'all 0.15s',
-                fontFamily: "'Inter', sans-serif",
-                marginBottom: 20,
-                boxShadow: '0 1px 3px rgba(26,39,68,0.06)',
-              }}
+              leftIcon={<GoogleIcon />}
+              className="w-full mb-5"
             >
-              <GoogleIcon />
               Continue with Google
-            </button>
+            </Button>
 
             {/* Divider */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-              <div style={{ flex: 1, height: 1, background: 'rgba(26,39,68,0.08)' }} />
-              <span style={{ fontSize: 12, color: '#a3a3b8', fontWeight: 500, letterSpacing: 0.8, textTransform: 'uppercase' }}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="flex-1 h-px bg-[var(--color-wise-ring)]" />
+              <span className="text-[11px] uppercase tracking-[0.8px] font-semibold text-[var(--color-wise-text-muted)]">
                 or sign up with email
               </span>
-              <div style={{ flex: 1, height: 1, background: 'rgba(26,39,68,0.08)' }} />
+              <div className="flex-1 h-px bg-[var(--color-wise-ring)]" />
             </div>
 
             {/* Registration form */}
-            <form onSubmit={handleEmailSignup}>
+            <form onSubmit={handleEmailSignup} noValidate>
               {/* Name row */}
-              <div className="signup-name-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-                <div>
-                  <label
-                    htmlFor="first-name"
-                    style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#1a2744', marginBottom: 6 }}
-                  >
-                    First name <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <input
-                    id="first-name"
+              <div className="signup-name-row grid grid-cols-2 gap-3 mb-3.5">
+                <FormField id="first-name" label="First name" required>
+                  <Input
                     type="text"
                     autoComplete="given-name"
                     placeholder="Alex"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    onFocus={() => setF1(true)}
-                    onBlur={() => setF1(false)}
-                    style={inputStyle(f1)}
+                    inputSize="lg"
+                    leftIcon={<User size={16} strokeWidth={2.25} />}
                   />
-                </div>
-                <div>
-                  <label
-                    htmlFor="last-name"
-                    style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#1a2744', marginBottom: 6 }}
-                  >
-                    Last name
-                  </label>
-                  <input
-                    id="last-name"
+                </FormField>
+                <FormField id="last-name" label="Last name">
+                  <Input
                     type="text"
                     autoComplete="family-name"
                     placeholder="Kim"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    onFocus={() => setF2(true)}
-                    onBlur={() => setF2(false)}
-                    style={inputStyle(f2)}
+                    inputSize="lg"
                   />
-                </div>
+                </FormField>
               </div>
 
               {/* Email */}
-              <div style={{ marginBottom: 14 }}>
-                <label
-                  htmlFor="signup-email"
-                  style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#1a2744', marginBottom: 6 }}
-                >
-                  Email address <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  id="signup-email"
+              <FormField
+                id="signup-email"
+                label="Email address"
+                required
+                className="mb-3.5"
+              >
+                <Input
                   type="email"
                   autoComplete="email"
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  onFocus={() => setF3(true)}
-                  onBlur={() => setF3(false)}
-                  style={inputStyle(f3)}
+                  inputSize="lg"
+                  hasError={hasError}
+                  leftIcon={<Mail size={16} strokeWidth={2.25} />}
                 />
-              </div>
+              </FormField>
 
               {/* Password */}
-              <div style={{ marginBottom: 8 }}>
-                <label
-                  htmlFor="signup-password"
-                  style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#1a2744', marginBottom: 6 }}
-                >
-                  Password <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  id="signup-password"
+              <FormField
+                id="signup-password"
+                label="Password"
+                required
+                helperText="Must be 8+ characters with 1 uppercase letter and 1 number."
+                className="mb-6"
+              >
+                <Input
                   type="password"
                   autoComplete="new-password"
                   placeholder="Min. 8 chars, 1 uppercase, 1 number"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  onFocus={() => setF4(true)}
-                  onBlur={() => setF4(false)}
-                  style={inputStyle(f4)}
+                  inputSize="lg"
+                  hasError={hasError}
                 />
-                <p style={{ fontSize: 11, color: '#a3a3b8', marginTop: 6, lineHeight: 1.4 }}>
-                  Must be 8+ characters with 1 uppercase letter and 1 number.
-                </p>
-              </div>
+              </FormField>
 
               {/* Submit */}
-              <button
+              <Button
                 type="submit"
-                disabled={isPending}
-                onMouseEnter={() => setSubmitHov(true)}
-                onMouseLeave={() => setSubmitHov(false)}
-                style={{
-                  width: '100%',
-                  height: 52,
-                  borderRadius: 12,
-                  background: submitHov ? '#e87040' : '#ff8c5a',
-                  color: '#fff',
-                  fontSize: 15,
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: isPending ? 'not-allowed' : 'pointer',
-                  opacity: isPending ? 0.7 : 1,
-                  fontFamily: "'Inter', sans-serif",
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 4px 16px rgba(255,140,90,0.3)',
-                  marginTop: 20,
-                  marginBottom: 16,
-                }}
+                variant="primary"
+                size="lg"
+                isLoading={isPending}
+                className="w-full"
               >
                 {isPending ? 'Creating account…' : 'Create Account →'}
-              </button>
+              </Button>
 
-              <p style={{ fontSize: 11, color: '#a3a3b8', textAlign: 'center', lineHeight: 1.6 }}>
+              <p className="text-[11px] text-[var(--color-wise-text-muted)] text-center leading-[1.6] mt-4">
                 By signing up, you agree to our{' '}
-                <a href="#" style={{ color: '#717182', textDecoration: 'underline' }}>Terms of Service</a>{' '}
+                <a
+                  href="#"
+                  className="text-[var(--color-wise-text-warm)] underline"
+                >
+                  Terms of Service
+                </a>{' '}
                 and{' '}
-                <a href="#" style={{ color: '#717182', textDecoration: 'underline' }}>Privacy Policy</a>
+                <a
+                  href="#"
+                  className="text-[var(--color-wise-text-warm)] underline"
+                >
+                  Privacy Policy
+                </a>
               </p>
             </form>
           </div>
@@ -652,17 +433,18 @@ export default function StudentSignupPage() {
 
         {/* Bottom bar */}
         <div
-          style={{
-            padding: '16px 40px',
-            borderTop: '1px solid rgba(26,39,68,0.07)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          className={cn(
+            'flex items-center justify-center bg-white',
+            'border-t border-[var(--color-wise-ring)]',
+          )}
+          style={{ padding: '16px 40px' }}
         >
-          <p style={{ fontSize: 12, color: '#a3a3b8' }}>
+          <p className="text-[12px] text-[var(--color-wise-text-muted)]">
             Admin?{' '}
-            <Link to="/admin/login" style={{ color: '#717182', fontWeight: 600, textDecoration: 'none' }}>
+            <Link
+              to="/admin/login"
+              className="font-semibold hover:underline"
+            >
               Sign in to admin portal
             </Link>
           </p>

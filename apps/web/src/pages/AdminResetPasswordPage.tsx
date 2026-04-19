@@ -1,9 +1,16 @@
 // FIR-36 — Admin reset password page (reads token from URL query param)
+// Sprint 3 Story 14 — Wise theme migration: matches AdminLoginPage card
+// (white 30px-radius form over canvas + dark left panel), uses Wave 6
+// <Button>, <Input>, <FormField>, and lucide icons in place of emoji.
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
+import { AlertTriangle, ArrowLeft, Lock } from 'lucide-react'
 import { adminResetPassword } from '../lib/api'
 import { AdminLeftPanel } from './AdminLoginPage'
 import { cn } from '../lib/utils'
+import { Button } from '../components/ui/Button'
+import { FormField } from '../components/ui/FormField'
+import { Input } from '../components/ui/Input'
 
 const MIN_PASSWORD_LENGTH = 8
 
@@ -57,30 +64,28 @@ export default function AdminResetPasswordPage() {
     confirmPassword.length > 0 && password !== confirmPassword
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex min-h-screen w-full bg-[var(--color-wise-canvas)]">
       <AdminLeftPanel tagline="Course administration made simple." />
 
-      <div
-        className={cn(
-          'flex-1 flex items-center justify-center',
-          'px-6 py-16 bg-[#f8f9fb]',
-        )}
-      >
+      <div className="flex flex-1 items-center justify-center px-6 py-16">
         <form
           onSubmit={handleSubmit}
           noValidate
-          className="w-full max-w-[420px]"
+          className={cn(
+            'w-full max-w-[460px] rounded-[30px] bg-white p-10',
+            'shadow-[var(--shadow-card)]',
+          )}
           aria-label="Reset password form"
         >
           <h1
             className={cn(
-              'text-[36px] font-black text-[#1a2744]',
+              'text-[36px] font-black text-[var(--color-wise-text)]',
               'tracking-[-1px] mb-1.5',
             )}
           >
             New password
           </h1>
-          <p className="text-[16px] text-[#717182] mb-9">
+          <p className="text-[16px] text-[var(--color-wise-text-muted)] mb-9">
             Choose a strong password for your account
           </p>
 
@@ -88,30 +93,25 @@ export default function AdminResetPasswordPage() {
             <div
               role="alert"
               className={cn(
-                'flex items-start gap-2.5 mb-6',
-                'bg-[#fdeaeb] border border-[rgba(208,50,56,0.25)]',
-                'rounded-xl px-4 py-3.5',
+                'flex items-start gap-2.5 mb-6 rounded-2xl px-4 py-3.5',
+                'bg-[var(--color-wise-danger-soft)]',
+                'ring-1 ring-[var(--color-wise-danger)]/25',
               )}
             >
-              <span className="text-base flex-shrink-0 mt-0.5" aria-hidden="true">
-                ⚠️
-              </span>
-              <p className="text-[14px] text-[#d03238] font-medium leading-snug">
+              <AlertTriangle
+                className="h-4 w-4 shrink-0 mt-0.5 text-[var(--color-wise-danger)]"
+                strokeWidth={2.5}
+                aria-hidden="true"
+              />
+              <p className="text-[14px] font-semibold leading-snug text-[var(--color-wise-danger)]">
                 {error}
               </p>
             </div>
           )}
 
           {/* New password */}
-          <div className="mb-[18px]">
-            <label
-              htmlFor="new-password"
-              className="block text-[14px] font-semibold text-[#1a2744] mb-1.5"
-            >
-              New password
-            </label>
-            <input
-              id="new-password"
+          <FormField id="new-password" label="New password" className="mb-[18px]">
+            <Input
               type="password"
               autoComplete="new-password"
               placeholder="Min. 8 characters"
@@ -119,78 +119,51 @@ export default function AdminResetPasswordPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={MIN_PASSWORD_LENGTH}
-              className={cn(
-                'w-full h-12 rounded-xl px-4',
-                'text-[15px] text-[#1a2744]',
-                'border-[1.5px] bg-[#f3f3f5] outline-none',
-                'transition-[border-color,background,box-shadow]',
-                'border-[rgba(26,39,68,0.15)]',
-                'focus:border-[#4a9ad4] focus:bg-white focus:shadow-[0_0_0_3px_rgba(74,154,212,0.12)]',
-              )}
+              inputSize="lg"
+              leftIcon={<Lock size={16} strokeWidth={2.25} />}
             />
-          </div>
+          </FormField>
 
           {/* Confirm password */}
-          <div className="mb-6">
-            <label
-              htmlFor="confirm-password"
-              className="block text-[14px] font-semibold text-[#1a2744] mb-1.5"
-            >
-              Confirm new password
-            </label>
-            <input
-              id="confirm-password"
+          <FormField
+            id="confirm-password"
+            label="Confirm new password"
+            errorText={passwordMismatch ? 'Passwords do not match.' : undefined}
+            className="mb-6"
+          >
+            <Input
               type="password"
               autoComplete="new-password"
               placeholder="Repeat your password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              aria-invalid={passwordMismatch}
-              aria-describedby={passwordMismatch ? 'confirm-password-error' : undefined}
-              className={cn(
-                'w-full h-12 rounded-xl px-4',
-                'text-[15px] text-[#1a2744]',
-                'border-[1.5px] bg-[#f3f3f5] outline-none',
-                'transition-[border-color,background,box-shadow]',
-                passwordMismatch
-                  ? 'border-[#d03238] bg-[#fef2f2]'
-                  : 'border-[rgba(26,39,68,0.15)]',
-                'focus:border-[#4a9ad4] focus:bg-white focus:shadow-[0_0_0_3px_rgba(74,154,212,0.12)]',
-              )}
+              inputSize="lg"
+              hasError={passwordMismatch}
+              leftIcon={<Lock size={16} strokeWidth={2.25} />}
             />
-            {passwordMismatch && (
-              <p
-                id="confirm-password-error"
-                role="alert"
-                className="text-[13px] text-[#d03238] mt-1.5"
-              >
-                Passwords do not match.
-              </p>
-            )}
-          </div>
+          </FormField>
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            size="lg"
+            isLoading={isPending}
             disabled={isPending || !token}
-            className={cn(
-              'w-full h-[52px] rounded-full',
-              'bg-[#4a9ad4] text-[#0d1a3a] text-[16px] font-bold',
-              'border-none cursor-pointer',
-              'hover:opacity-90 transition-opacity',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              'focus-visible:outline-2 focus-visible:outline-[#4a9ad4] focus-visible:outline-offset-2',
-            )}
+            className="w-full"
           >
             {isPending ? 'Saving…' : 'Set New Password'}
-          </button>
+          </Button>
 
-          <p className="text-[14px] text-[#717182] mt-5">
-            ←{' '}
+          <p className="text-[14px] text-[var(--color-wise-text-muted)] mt-5 text-center">
             <Link
               to="/admin/login"
-              className="text-[#4a9ad4] font-semibold hover:underline"
+              className={cn(
+                'inline-flex items-center gap-1.5',
+                'text-[var(--color-wise-primary-text)] font-semibold hover:underline',
+              )}
             >
+              <ArrowLeft size={14} strokeWidth={2.5} aria-hidden="true" />
               Back to Sign In
             </Link>
           </p>
