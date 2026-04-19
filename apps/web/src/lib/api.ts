@@ -307,6 +307,22 @@ export async function fetchPreviewLessons(slug: string): Promise<PreviewLesson[]
   return res.json()
 }
 
+// Sprint 2 Story 10 (GAP-030) — Trusted cohort lookup by Mongo id.
+// Returned payload is a narrow subset — EnrollmentSuccessPage renders the
+// server-returned title rather than trusting a URL query param.
+export interface CohortSummaryById {
+  id: string
+  title: string
+  slug: string
+}
+
+export async function fetchCohortById(id: string): Promise<CohortSummaryById | null> {
+  const res = await fetch(`${BASE}/storefront/cohorts/by-id/${encodeURIComponent(id)}`)
+  if (res.status === 404 || res.status === 400) return null
+  if (!res.ok) throw new Error('Failed to fetch cohort')
+  return res.json() as Promise<CohortSummaryById>
+}
+
 // ---------------------------------------------------------------------------
 // Checkout API — FIR-157
 // ---------------------------------------------------------------------------
@@ -428,6 +444,26 @@ export async function submitManualPaymentRequest(
     throw new Error(body.message ?? 'Failed to submit payment receipt')
   }
   return res.json() as Promise<ManualPaymentRequestResponse>
+}
+
+// FIR-158 — Student: poll manual payment request status
+export interface ManualPaymentStatusResponse {
+  requestId: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  rejectionReason?: string
+  createdAt?: string
+  reviewedAt?: string
+}
+
+export async function fetchManualPaymentStatus(
+  requestId: string,
+): Promise<ManualPaymentStatusResponse> {
+  const res = await authFetch(`${BASE}/student/manual-payment/${requestId}`)
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to fetch payment status')
+  }
+  return res.json() as Promise<ManualPaymentStatusResponse>
 }
 
 // FIR-47 — Admin: list manual payment requests with optional status filter + pagination
@@ -620,6 +656,126 @@ export async function fetchLesson(slug: string, lessonId: string): Promise<Lesso
     throw new Error(body.message ?? 'Failed to fetch lesson')
   }
   return res.json() as Promise<LessonResponse>
+}
+
+// ---------------------------------------------------------------------------
+// Sprint 2 Story 12 — Tool-setup screenshot validation (LMS adapter)
+// Backend: apps/api/src/routes/student/lms.ts
+// Worker:  apps/api/src/workers/screenshotValidationWorker.ts (Claude Vision)
+// ---------------------------------------------------------------------------
+
+export type ToolSetupValidationStatus =
+  | 'VALIDATING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'UNDER_REVIEW'
+
+export interface ToolSetupPresignResponse {
+  presignedUrl: string
+  s3Key: string
+  contentType: string
+}
+
+export interface ToolSetupSubmitResponse {
+  submissionId: string
+  status: 'VALIDATING'
+}
+
+export interface ToolSetupLatestSubmission {
+  id: string
+  status: ToolSetupValidationStatus
+  rawStatus: string
+  mlFeedback: string | null
+  mlScore: number | null
+  screenshotUrl: string | null
+  createdAt: string
+  reviewedAt: string | null
+}
+
+export interface ToolSetupLatestResponse {
+  submission: ToolSetupLatestSubmission | null
+}
+
+/**
+ * Ask the API for a presigned PUT URL so the browser can upload the
+ * screenshot binary directly to S3 (or to the local dev upload endpoint).
+ */
+export async function presignToolSetupUpload(
+  lessonId: string,
+  contentType: string,
+): Promise<ToolSetupPresignResponse> {
+  const res = await authFetch(
+    `${BASE}/student/lessons/${lessonId}/tool-setup-submission/presign`,
+    {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ contentType }),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to prepare upload')
+  }
+  return res.json() as Promise<ToolSetupPresignResponse>
+}
+
+/**
+ * PUT the file bytes to the presigned URL. Presigned URLs are
+ * self-authenticating, so no Bearer token is attached here.
+ */
+export async function uploadToolSetupScreenshot(
+  presignedUrl: string,
+  file: File,
+): Promise<void> {
+  const res = await fetch(presignedUrl, {
+    method:  'PUT',
+    headers: { 'Content-Type': file.type || 'image/png' },
+    body:    file,
+  })
+  if (!res.ok) {
+    throw new Error('Failed to upload screenshot')
+  }
+}
+
+/**
+ * Confirm the upload and enqueue the Claude Vision validation job. The
+ * client then polls `fetchLatestToolSetupSubmission` until a terminal
+ * status (APPROVED / REJECTED / UNDER_REVIEW) is reached.
+ */
+export async function submitToolSetupScreenshot(
+  lessonId: string,
+  s3Key: string,
+): Promise<ToolSetupSubmitResponse> {
+  const res = await authFetch(
+    `${BASE}/student/lessons/${lessonId}/tool-setup-submission`,
+    {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ s3Key }),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to submit screenshot')
+  }
+  return res.json() as Promise<ToolSetupSubmitResponse>
+}
+
+/**
+ * Poll endpoint — returns the most recent submission for the given lesson,
+ * or `{ submission: null }` when the student has never submitted.
+ */
+export async function fetchLatestToolSetupSubmission(
+  lessonId: string,
+): Promise<ToolSetupLatestResponse> {
+  const res = await authFetch(
+    `${BASE}/student/lessons/${lessonId}/tool-setup-submission/latest`,
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to load submission status')
+  }
+  return res.json() as Promise<ToolSetupLatestResponse>
 }
 
 // FIR-53 — Mark a lesson as complete
@@ -1418,4 +1574,339 @@ export async function fetchCohortPerformance(): Promise<CohortPerformanceRespons
     throw new Error(body.message ?? 'Failed to fetch cohort performance')
   }
   return res.json() as Promise<CohortPerformanceResponse>
+}
+
+// ---------------------------------------------------------------------------
+// Sprint 2 Story 11 — Admin Course Builder write surface
+//
+// These helpers back the CourseBuilderPage handleSave / pricing / live-session
+// CRUD wiring. Request shapes mirror the Zod schemas in
+// apps/api/src/routes/admin/courses.ts so the contract is exact.
+// ---------------------------------------------------------------------------
+
+// ---- Cohort create / update / publish ----
+
+export type AdminCourseType = 'RECORDED' | 'LIVE' | 'COMBINED'
+
+export interface CreateCoursePayload {
+  title: string
+  type?: AdminCourseType
+  tagline?: string
+  description?: string
+  maxSeats?: number
+  liveStartDate?: string
+  liveEndDate?: string
+}
+
+export type UpdateCoursePayload = Partial<CreateCoursePayload>
+
+export interface AdminCohortDetail {
+  id: string
+  title: string
+  slug: string
+  type?: AdminCourseType | null
+  tagline?: string | null
+  isPublished: boolean
+  status?: string
+}
+
+function normaliseCohort(c: Record<string, unknown>): AdminCohortDetail {
+  return {
+    id: (c._id ?? c.id) as string,
+    title: (c.name ?? c.title) as string,
+    slug: c.slug as string,
+    type: (c.type as AdminCourseType | null) ?? null,
+    tagline: (c.tagline as string | null) ?? null,
+    isPublished: Boolean(c.isPublished),
+    status: c.status as string | undefined,
+  }
+}
+
+export async function createAdminCourse(
+  payload: CreateCoursePayload,
+): Promise<AdminCohortDetail> {
+  const res = await authFetch(`${BASE}/admin/courses`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to create course')
+  }
+  const json = (await res.json()) as { cohort: Record<string, unknown> }
+  return normaliseCohort(json.cohort)
+}
+
+export async function updateAdminCourse(
+  cohortId: string,
+  payload: UpdateCoursePayload,
+): Promise<AdminCohortDetail> {
+  const res = await authFetch(`${BASE}/admin/courses/${cohortId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to update course')
+  }
+  const json = (await res.json()) as { cohort: Record<string, unknown> }
+  return normaliseCohort(json.cohort)
+}
+
+export async function publishAdminCourse(
+  cohortId: string,
+  isPublished: boolean,
+): Promise<{ isPublished: boolean }> {
+  const res = await authFetch(`${BASE}/admin/courses/${cohortId}/publish`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isPublished }),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to toggle publish')
+  }
+  return res.json() as Promise<{ isPublished: boolean }>
+}
+
+// ---- Payment plans ----
+
+export type AdminPaymentPlanType = 'ONE_TIME' | 'INSTALLMENT'
+
+export interface AdminPaymentPlan {
+  id: string
+  name: string
+  type: AdminPaymentPlanType
+  totalAmount: number
+  currency: string
+  intervalDays?: number
+  isActive: boolean
+  installments?: Array<{
+    number: number
+    amount: number
+    dueDate: string
+    status: string
+  }>
+}
+
+export interface CreatePaymentPlanPayload {
+  name: string
+  type: AdminPaymentPlanType
+  totalAmount: number
+  currency?: string
+  intervalDays?: number
+}
+
+export interface UpdatePaymentPlanPayload {
+  name?: string
+  totalAmount?: number
+  currency?: string
+  intervalDays?: number
+}
+
+function normalisePlan(raw: Record<string, unknown>): AdminPaymentPlan {
+  return {
+    id: (raw.id ?? raw._id) as string,
+    name: raw.name as string,
+    type: raw.type as AdminPaymentPlanType,
+    totalAmount: raw.totalAmount as number,
+    currency: (raw.currency as string) ?? 'usd',
+    intervalDays: raw.intervalDays as number | undefined,
+    isActive: Boolean(raw.isActive),
+    installments: raw.installments as AdminPaymentPlan['installments'],
+  }
+}
+
+export async function fetchAdminPaymentPlans(
+  cohortId: string,
+): Promise<AdminPaymentPlan[]> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/payment-plans`,
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to fetch payment plans')
+  }
+  const json = (await res.json()) as { plans?: Array<Record<string, unknown>> }
+  return (json.plans ?? []).map(normalisePlan)
+}
+
+export async function createAdminPaymentPlan(
+  cohortId: string,
+  payload: CreatePaymentPlanPayload,
+): Promise<AdminPaymentPlan> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/payment-plans`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to create payment plan')
+  }
+  const json = (await res.json()) as { plan: Record<string, unknown> }
+  return normalisePlan(json.plan)
+}
+
+export async function updateAdminPaymentPlan(
+  cohortId: string,
+  planId: string,
+  payload: UpdatePaymentPlanPayload,
+): Promise<AdminPaymentPlan> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/payment-plans/${planId}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to update payment plan')
+  }
+  const json = (await res.json()) as { plan: Record<string, unknown> }
+  return normalisePlan(json.plan)
+}
+
+// The backend does not expose a DELETE for payment plans — the existing model
+// supports deactivation via the `/toggle` endpoint instead (this preserves
+// historic plans already sold to existing enrolments). The CourseBuilder
+// surfaces the "delete" affordance against this toggle so the admin UI stays
+// intuitive while respecting the existing data contract.
+export async function toggleAdminPaymentPlan(
+  cohortId: string,
+  planId: string,
+): Promise<{ isActive: boolean }> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/payment-plans/${planId}/toggle`,
+    { method: 'PATCH' },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to toggle payment plan')
+  }
+  return res.json() as Promise<{ isActive: boolean }>
+}
+
+// ---- Live sessions (admin) ----
+//
+// Back-end path is `/courses/:cohortId/sessions` (see routes/admin/courses.ts
+// FIR-63). The student-facing `fetchLiveSessions` helper above uses the
+// public cohort path; these admin helpers are kept separate to keep the two
+// contracts from drifting.
+
+export interface AdminLiveSession {
+  id: string
+  title: string
+  description?: string
+  scheduledAt: string
+  durationMinutes: number
+  zoomUrl: string
+  zoomMeetingId?: string
+  recordingUrl?: string
+  order?: number
+  isPublished?: boolean
+}
+
+export interface CreateLiveSessionPayload {
+  title: string
+  description?: string
+  scheduledAt: string
+  durationMinutes?: number
+  zoomUrl: string
+  zoomMeetingId?: string
+  order?: number
+}
+
+export type UpdateLiveSessionPayload = Partial<CreateLiveSessionPayload>
+
+function normaliseSession(raw: Record<string, unknown>): AdminLiveSession {
+  return {
+    id: (raw.id ?? raw._id) as string,
+    title: raw.title as string,
+    description: raw.description as string | undefined,
+    scheduledAt:
+      typeof raw.scheduledAt === 'string'
+        ? raw.scheduledAt
+        : new Date(raw.scheduledAt as string | number | Date).toISOString(),
+    durationMinutes: (raw.durationMinutes as number) ?? 90,
+    zoomUrl: (raw.zoomUrl as string) ?? '',
+    zoomMeetingId: raw.zoomMeetingId as string | undefined,
+    recordingUrl: raw.recordingUrl as string | undefined,
+    order: raw.order as number | undefined,
+    isPublished: raw.isPublished as boolean | undefined,
+  }
+}
+
+export async function fetchAdminLiveSessions(
+  cohortId: string,
+): Promise<AdminLiveSession[]> {
+  const res = await authFetch(`${BASE}/admin/courses/${cohortId}/sessions`)
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to fetch live sessions')
+  }
+  const json = (await res.json()) as { sessions?: Array<Record<string, unknown>> }
+  return (json.sessions ?? []).map(normaliseSession)
+}
+
+export async function createAdminLiveSession(
+  cohortId: string,
+  payload: CreateLiveSessionPayload,
+): Promise<AdminLiveSession> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/sessions`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to create live session')
+  }
+  const json = (await res.json()) as { session: Record<string, unknown> }
+  return normaliseSession(json.session)
+}
+
+export async function updateAdminLiveSession(
+  cohortId: string,
+  sessionId: string,
+  payload: UpdateLiveSessionPayload,
+): Promise<AdminLiveSession> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/sessions/${sessionId}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to update live session')
+  }
+  const json = (await res.json()) as { session: Record<string, unknown> }
+  return normaliseSession(json.session)
+}
+
+export async function deleteAdminLiveSession(
+  cohortId: string,
+  sessionId: string,
+): Promise<void> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/sessions/${sessionId}`,
+    { method: 'DELETE' },
+  )
+  if (!res.ok && res.status !== 204) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to delete live session')
+  }
 }

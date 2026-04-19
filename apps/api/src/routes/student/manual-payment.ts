@@ -245,4 +245,43 @@ export async function studentManualPaymentRoutes(fastify: FastifyInstance) {
       })
     },
   )
+
+  // FIR-158 — GET /:requestId
+  // Returns the current review status for a student's own manual payment
+  // request. Used by the receipt upload page to poll for admin approval.
+  fastify.get(
+    '/:requestId',
+    { preHandler: requireStudent },
+    async (request, reply) => {
+      const { sub: studentId } = request.user as JwtPayload
+      const { requestId } = request.params as { requestId: string }
+
+      if (!Types.ObjectId.isValid(requestId)) {
+        return reply.code(400).send({
+          error:   'VALIDATION_ERROR',
+          message: 'Invalid requestId.',
+        })
+      }
+
+      const doc = await ManualPaymentRequest.findOne({
+        _id:       new Types.ObjectId(requestId),
+        studentId: new Types.ObjectId(studentId),
+      }).lean()
+
+      if (!doc) {
+        return reply.code(404).send({
+          error:   'NOT_FOUND',
+          message: 'Manual payment request not found.',
+        })
+      }
+
+      return reply.send({
+        requestId:       doc._id.toString(),
+        status:          doc.status,
+        rejectionReason: doc.rejectionReason,
+        createdAt:       doc.createdAt,
+        reviewedAt:      doc.reviewedAt,
+      })
+    },
+  )
 }

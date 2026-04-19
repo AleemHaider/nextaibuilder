@@ -1,28 +1,85 @@
-// FIR-158 — Student manual receipt upload page
+// FIR-158 / Sprint 2 Story 8 — Public manual payment receipt upload page.
+//
+// Flow:
+//   - URL is /manual-payment/:slug (public, no auth wrapper on the route).
+//   - Fetch cohort detail by slug to render course title + pricing context.
+//   - Render form: Full name, Email (auto-filled when logged in), Payment
+//     method (select), Transaction reference (optional), Receipt file
+//     (jpg/png/pdf, ≤10 MB), Notes (optional).
+//   - Submit: POST multipart to /api/v1/student/manual-payment/request. The
+//     backend requires student auth, so if the visitor is not signed in we
+//     bounce them to /login with a return-to.
+//   - After a successful submit we show an <EmptyState icon={CircleCheck}>
+//     confirmation and poll /api/v1/student/manual-payment/:requestId every
+//     5 s (only while the tab is visible) for status transitions.
+//
+// Components: Button, Input, FormField, LoadingSpinner, EmptyState (Wave 6).
+// Icons: lucide-react only. Colors: Wise token CSS custom properties.
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
-  type DragEvent,
+  type FormEvent,
 } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import {
+  ArrowLeft,
+  CircleCheck,
+  CircleX,
+  Clock3,
+  FileText,
+  Upload,
+} from 'lucide-react'
 import {
   fetchCohortBySlug,
+  fetchManualPaymentStatus,
   submitManualPaymentRequest,
   type CohortDetail,
+  type ManualPaymentStatusResponse,
 } from '../lib/api'
+import { useAuth } from '../context/AuthContext'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
+import { FormField } from '../components/ui/FormField'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
+import { EmptyState } from '../components/ui/EmptyState'
 import { cn } from '../lib/utils'
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const MAX_FILE_BYTES = 10 * 1024 * 1024 // 10 MB
+export const MAX_FILE_BYTES = 10 * 1024 * 1024 // 10 MB
+export const ACCEPTED_MIME_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'application/pdf',
+] as const
+const ACCEPTED_ACCEPT_ATTR = 'image/jpeg,image/jpg,image/png,application/pdf'
+const POLL_INTERVAL_MS = 5000
 const MAX_NOTE_CHARS = 500
-const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-const ACCEPTED_ACCEPT_ATTR = 'image/jpeg,image/png,image/webp,application/pdf'
+
+type PaymentMethod = 'BANK_TRANSFER' | 'WIRE' | 'OTHER'
+
+interface FormState {
+  fullName: string
+  email: string
+  paymentMethod: PaymentMethod
+  transactionRef: string
+  notes: string
+  file: File | null
+}
+
+interface FieldErrors {
+  fullName?: string
+  email?: string
+  file?: string
+  notes?: string
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -37,451 +94,304 @@ function formatMoney(amount: number, currency = 'USD'): string {
   }).format(amount)
 }
 
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+function isValidEmail(email: string): boolean {
+  // Pragmatic email regex — good enough for inline client validation.
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 }
 
-function getFileTypeLabel(mime: string): string {
-  if (mime === 'application/pdf') return 'PDF'
-  if (mime === 'image/jpeg') return 'JPG'
-  if (mime === 'image/png') return 'PNG'
-  if (mime === 'image/webp') return 'WEBP'
-  return 'FILE'
+function validate(form: FormState): FieldErrors {
+  const errs: FieldErrors = {}
+
+  if (!form.fullName.trim()) {
+    errs.fullName = 'Please enter your full name.'
+  }
+
+  if (!form.email.trim()) {
+    errs.email = 'Please enter your email.'
+  } else if (!isValidEmail(form.email)) {
+    errs.email = 'Please enter a valid email address.'
+  }
+
+  if (!form.file) {
+    errs.file = 'Please upload a receipt (JPG, PNG, or PDF).'
+  } else {
+    if (!ACCEPTED_MIME_TYPES.includes(form.file.type as typeof ACCEPTED_MIME_TYPES[number])) {
+      errs.file = 'Receipt must be a JPG, PNG, or PDF file.'
+    } else if (form.file.size > MAX_FILE_BYTES) {
+      errs.file = 'Receipt must be 10 MB or smaller.'
+    }
+  }
+
+  if (form.notes.length > MAX_NOTE_CHARS) {
+    errs.notes = `Notes must be ${MAX_NOTE_CHARS} characters or fewer.`
+  }
+
+  return errs
 }
 
 // ---------------------------------------------------------------------------
-// Sub-types
+// Status badge
 // ---------------------------------------------------------------------------
 
-type PageState =
-  | 'loading_cohort'
-  | 'error_cohort'
-  | 'idle'
-  | 'uploading'
-  | 'pending'
-  | 'error_upload'
+function StatusBadge({ status }: { status: ManualPaymentStatusResponse['status'] }) {
+  const map = {
+    PENDING: {
+      icon: Clock3,
+      label: 'Pending review',
+      // Wise warning token; fall back to muted surface if absent.
+      className:
+        'bg-[var(--color-wise-warning-soft,#fff4d6)] text-[var(--color-wise-warning-text,#7a5a00)]',
+    },
+    APPROVED: {
+      icon: CircleCheck,
+      label: 'Approved',
+      className:
+        'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+    },
+    REJECTED: {
+      icon: CircleX,
+      label: 'Rejected',
+      className:
+        'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)]',
+    },
+  } as const
 
-interface UploadedFile {
-  file: File
-  previewUrl: string | null // null for PDFs
-  label: string
-  sizeLabel: string
-  typeLabel: string
-}
+  const entry = map[status]
+  const Icon = entry.icon
 
-// ---------------------------------------------------------------------------
-// Spinner
-// ---------------------------------------------------------------------------
-function Spinner({ className }: { className?: string }) {
   return (
-    <div
+    <span
+      data-testid="manual-payment-status-badge"
+      data-status={status}
       className={cn(
-        'w-5 h-5 rounded-full border-[3px]',
-        'border-[rgba(13,26,58,0.3)] border-t-[#0d1a3a]',
-        'animate-spin',
-        className,
+        'inline-flex items-center gap-2 rounded-full px-4 py-1.5',
+        'text-[13px] font-semibold',
+        entry.className,
       )}
-      aria-hidden="true"
-    />
+    >
+      <Icon className="h-4 w-4" aria-hidden="true" />
+      {entry.label}
+    </span>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Nav
+// Polling hook
 // ---------------------------------------------------------------------------
-function ManualPaymentNav({ backSlug }: { backSlug: string }) {
+
+/**
+ * Poll the manual payment status every `intervalMs` while:
+ *   - `requestId` is provided
+ *   - status is still PENDING
+ *   - document.visibilityState === 'visible'
+ *
+ * Stops on APPROVED / REJECTED or when the component unmounts.
+ */
+export function useManualPaymentStatus(
+  requestId: string | null,
+  intervalMs: number = POLL_INTERVAL_MS,
+) {
+  const [status, setStatus] = useState<ManualPaymentStatusResponse | null>(null)
+
+  useEffect(() => {
+    if (!requestId) return
+    let cancelled = false
+    let timerId: ReturnType<typeof setInterval> | null = null
+
+    async function tick() {
+      if (cancelled) return
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return
+      }
+      try {
+        const data = await fetchManualPaymentStatus(requestId as string)
+        if (cancelled) return
+        setStatus(data)
+        if (data.status !== 'PENDING' && timerId !== null) {
+          clearInterval(timerId)
+          timerId = null
+        }
+      } catch {
+        // Swallow — polling is best-effort; the user can refresh.
+      }
+    }
+
+    // Fire immediately, then on interval.
+    void tick()
+    timerId = setInterval(() => { void tick() }, intervalMs)
+
+    return () => {
+      cancelled = true
+      if (timerId !== null) clearInterval(timerId)
+    }
+  }, [requestId, intervalMs])
+
+  return status
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function PageHeader({ slug }: { slug: string }) {
   return (
     <nav
-      className={cn(
-        'h-[72px] bg-white flex items-center px-20',
-        'shadow-[inset_0_-1px_0_rgba(26,39,68,0.12)]',
-      )}
       aria-label="Manual payment navigation"
+      className={cn(
+        'h-[72px] bg-[var(--color-wise-surface)] flex items-center',
+        'px-4 sm:px-10 md:px-20',
+        'shadow-[inset_0_-1px_0_var(--color-wise-ring)]',
+      )}
     >
-      <span className="text-[22px] font-black text-[#1a2744]">nextaibuilder</span>
+      <span className="text-[20px] sm:text-[22px] font-black text-[var(--color-wise-text)]">
+        nextaibuilder
+      </span>
       <Link
-        to={`/courses/${backSlug}`}
+        to={`/courses/${slug}`}
         className={cn(
-          'ml-auto flex items-center gap-1.5 text-[14px] text-[#717182]',
-          'hover:text-[#1a2744] transition-colors no-underline',
+          'ml-auto inline-flex items-center gap-1.5 text-[14px]',
+          'text-[var(--color-wise-text-muted)] hover:text-[var(--color-wise-text)]',
+          'transition-colors no-underline',
         )}
       >
-        ← Back to course
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        Back to course
       </Link>
     </nav>
   )
 }
 
-// ---------------------------------------------------------------------------
-// CohortHeaderCard
-// ---------------------------------------------------------------------------
 function CohortHeaderCard({ cohort }: { cohort: CohortDetail }) {
-  const priceLabel = `Pay in full · ${formatMoney(cohort.price)}`
-
   return (
     <div
+      data-testid="cohort-header-card"
       className={cn(
-        'bg-white rounded-[20px] p-7 mb-5',
-        'shadow-[rgba(26,39,68,0.12)_0_0_0_1px]',
-        'flex items-center gap-5',
+        'bg-[var(--color-wise-surface)] rounded-2xl p-5 sm:p-7 mb-5',
+        'shadow-[inset_0_0_0_1px_var(--color-wise-ring)]',
+        'flex items-center gap-4 sm:gap-5',
       )}
     >
       <div
-        className="w-20 h-16 rounded-[12px] flex-shrink-0"
+        className="w-16 h-14 sm:w-20 sm:h-16 rounded-xl flex-shrink-0"
         style={{
-          background: cohort.coverGradient ?? 'linear-gradient(135deg, #cc4a00, #ff8c5a)',
+          background: cohort.coverGradient ?? 'linear-gradient(135deg,#1a2744,#4a9ad4)',
         }}
         aria-hidden="true"
       />
-      <div>
-        <div className="text-[12px] text-[#717182] mb-1">Enrolling in</div>
-        <div className="text-[18px] font-bold text-[#1a2744] mb-1">{cohort.title}</div>
-        <div className="text-[14px] font-semibold text-[#ff8c5a]">{priceLabel}</div>
+      <div className="min-w-0">
+        <div className="text-[12px] text-[var(--color-wise-text-muted)] mb-1">
+          Enrolling in
+        </div>
+        <div
+          className="text-[16px] sm:text-[18px] font-bold text-[var(--color-wise-text)] mb-1 truncate"
+          data-testid="cohort-title"
+        >
+          {cohort.title}
+        </div>
+        <div className="text-[14px] font-semibold text-[var(--color-wise-primary-text)]">
+          Pay in full · {formatMoney(cohort.price)}
+        </div>
       </div>
     </div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// BankInstructionsCard
-// ---------------------------------------------------------------------------
-function BankInstructionsCard({ amount }: { amount: number }) {
-  return (
-    <div
-      className={cn(
-        'bg-[#eef6fd] border-l-4 border-[#4a9ad4]',
-        'rounded-r-[16px] p-5 mb-5',
-      )}
-    >
-      <div className="text-[15px] font-bold text-[#1a2744] mb-3">Bank Transfer Instructions</div>
-
-      {[
-        { label: 'Bank name', value: 'HSBC Pakistan' },
-        { label: 'Account name', value: 'NextAI Builder Ltd' },
-        { label: 'Account number', value: 'PK36 SCBL 0000 0011 2345 6700' },
-        { label: 'Amount', value: `${formatMoney(amount)} USD equivalent` },
-      ].map(({ label, value }) => (
-        <div key={label} className="flex items-center justify-between mb-2">
-          <span className="text-[13px] text-[#717182] font-medium">{label}</span>
-          <span
-            className={cn(
-              'font-mono text-[14px] font-bold text-[#1a2744]',
-              'bg-[rgba(26,39,68,0.05)] px-2.5 py-1 rounded-[6px]',
-            )}
-          >
-            {value}
-          </span>
-        </div>
-      ))}
-
-      <p className="text-[13px] text-[#717182] mt-3 leading-relaxed">
-        Transfer the amount shown above and upload your receipt below. Access will be activated
-        within 24 hours of approval.
-      </p>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// UploadZone — idle state
-// ---------------------------------------------------------------------------
-interface UploadZoneProps {
-  onFileSelected: (file: File) => void
-  dragActive: boolean
-  onDragEnter: (e: DragEvent<HTMLDivElement>) => void
-  onDragOver: (e: DragEvent<HTMLDivElement>) => void
-  onDragLeave: (e: DragEvent<HTMLDivElement>) => void
-  onDrop: (e: DragEvent<HTMLDivElement>) => void
+interface ReceiptFileInputProps {
+  file: File | null
+  error?: string
+  onChange: (file: File | null) => void
   inputRef: React.RefObject<HTMLInputElement | null>
-  error: string | null
 }
 
-function UploadZone({
-  onFileSelected,
-  dragActive,
-  onDragEnter,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  inputRef,
-  error,
-}: UploadZoneProps) {
-  function handleInputChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) onFileSelected(file)
-    // Reset input so re-selecting same file triggers onChange
+function ReceiptFileInput({ file, error, onChange, inputRef }: ReceiptFileInputProps) {
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    const next = e.target.files?.[0] ?? null
+    onChange(next)
+    // Reset so re-selecting the same file fires onChange again
     e.target.value = ''
   }
 
   return (
-    <div className="mb-5">
+    <div className="flex flex-col gap-1.5">
+      <label
+        htmlFor="receipt-file"
+        className="text-[14px] font-semibold text-[var(--color-wise-text)]"
+      >
+        Payment receipt
+        <span aria-hidden="true" className="ml-0.5 text-[var(--color-wise-danger)]">*</span>
+      </label>
+
       <div
-        role="button"
-        tabIndex={0}
-        aria-label="Upload payment receipt — click or drag and drop"
-        onClick={() => inputRef.current?.click()}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click()
-        }}
-        onDragEnter={onDragEnter}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
         className={cn(
-          'border-2 border-dashed rounded-[24px]',
-          'bg-[#f8fbff] px-10 py-14 text-center cursor-pointer',
-          'transition-all duration-150',
-          dragActive
-            ? 'border-[#1a2744] bg-[#eef6fd] scale-[1.01]'
-            : error
-              ? 'border-[#d03238] bg-[#fef2f2]'
-              : 'border-[#4a9ad4] hover:bg-[#eef6fd] hover:border-[#1a2744]',
-          'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#4a9ad4]/40',
+          'rounded-xl border-2 border-dashed p-4 flex items-center gap-3',
+          'bg-[var(--color-wise-surface-soft)]',
+          error
+            ? 'border-[var(--color-wise-danger)]'
+            : 'border-[var(--color-wise-ring-strong)]',
         )}
       >
-        <div className="text-[48px] mb-4" aria-hidden="true">
-          📤
-        </div>
-        <div className="text-[18px] font-bold text-[#1a2744] mb-2">
-          Upload your payment receipt
-        </div>
-        <div className="text-[15px] text-[#717182] mb-1.5">Drag & drop your receipt here, or</div>
-        <span className="text-[15px] font-semibold text-[#4a9ad4]">Browse files</span>
-        <div className="text-[12px] text-[#a3a3a3] mt-3">
-          Accepted formats: PDF, JPG, PNG · Max size: 10MB
-        </div>
-      </div>
-      {error && (
-        <p className="text-[13px] text-[#d03238] font-medium mt-2 ml-1" role="alert">
-          {error}
-        </p>
-      )}
-      <input
-        ref={inputRef}
-        type="file"
-        accept={ACCEPTED_ACCEPT_ATTR}
-        className="sr-only"
-        aria-hidden="true"
-        tabIndex={-1}
-        onChange={handleInputChange}
-      />
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// UploadingZone — progress state
-// ---------------------------------------------------------------------------
-function UploadingZone({ progress }: { progress: number }) {
-  return (
-    <div
-      className={cn(
-        'border-2 border-dashed border-[#4a9ad4] rounded-[24px] mb-5',
-        'px-10 py-14 text-center',
-        'bg-gradient-to-r from-[#eef6fd] via-[#f0f8ff] to-[#eef6fd]',
-        'bg-[length:200%_100%] animate-[shimmer_1.5s_infinite]',
-      )}
-      style={{
-        backgroundSize: '200% 100%',
-        animation: 'shimmer-upload 1.5s infinite',
-      }}
-      aria-live="polite"
-      aria-label={`Uploading receipt, ${progress}% complete`}
-    >
-      <style>{`
-        @keyframes shimmer-upload {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-      `}</style>
-      <div className="text-[48px] mb-4" aria-hidden="true">
-        ⏳
-      </div>
-      <div className="text-[18px] font-bold text-[#1a2744] mb-3">Uploading receipt...</div>
-      <div className="h-1.5 bg-[#c8dff4] rounded-full mx-auto max-w-[200px] mb-2">
         <div
-          className="h-full bg-[#4a9ad4] rounded-full transition-all duration-300"
-          style={{ width: `${progress}%` }}
+          className={cn(
+            'h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0',
+            'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+          )}
+          aria-hidden="true"
+        >
+          {file ? <FileText className="h-5 w-5" /> : <Upload className="h-5 w-5" />}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          {file ? (
+            <>
+              <div className="text-[14px] font-semibold text-[var(--color-wise-text)] truncate">
+                {file.name}
+              </div>
+              <div className="text-[12px] text-[var(--color-wise-text-muted)]">
+                {(file.size / 1024 / 1024).toFixed(2)} MB
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-[14px] font-semibold text-[var(--color-wise-text)]">
+                Upload a receipt
+              </div>
+              <div className="text-[12px] text-[var(--color-wise-text-muted)]">
+                JPG, PNG, or PDF · Max 10 MB
+              </div>
+            </>
+          )}
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => inputRef.current?.click()}
+        >
+          {file ? 'Change' : 'Choose file'}
+        </Button>
+
+        <input
+          ref={inputRef}
+          id="receipt-file"
+          type="file"
+          accept={ACCEPTED_ACCEPT_ATTR}
+          className="sr-only"
+          onChange={handleChange}
+          aria-describedby={error ? 'receipt-file-error' : undefined}
+          aria-invalid={error ? true : undefined}
         />
       </div>
-      <div className="text-[14px] font-semibold text-[#4a9ad4]">{progress}%</div>
-    </div>
-  )
-}
 
-// ---------------------------------------------------------------------------
-// UploadedFilePreview — file confirmed state
-// ---------------------------------------------------------------------------
-interface UploadedFilePreviewProps {
-  uploadedFile: UploadedFile
-  onRemove: () => void
-}
-
-function UploadedFilePreview({ uploadedFile, onRemove }: UploadedFilePreviewProps) {
-  return (
-    <div
-      className={cn(
-        'border-2 border-[rgba(5,77,40,0.3)] rounded-[24px]',
-        'bg-[#e6f4ec] p-6 flex items-center gap-4 mb-5',
-      )}
-    >
-      {/* Thumbnail */}
-      <div
-        className={cn(
-          'w-16 h-16 bg-white rounded-[12px] flex items-center justify-center',
-          'shadow-[rgba(26,39,68,0.12)_0_0_0_1px] flex-shrink-0 overflow-hidden',
-        )}
-      >
-        {uploadedFile.previewUrl ? (
-          <img
-            src={uploadedFile.previewUrl}
-            alt="Receipt preview"
-            className="w-full h-full object-cover rounded-[12px]"
-          />
-        ) : (
-          <span className="text-[28px]" aria-hidden="true">
-            📄
-          </span>
-        )}
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="text-[16px] font-bold text-[#1a2744] truncate mb-0.5">
-          {uploadedFile.label}
-        </div>
-        <div className="text-[13px] text-[#717182]">
-          {uploadedFile.sizeLabel} · {uploadedFile.typeLabel}
-        </div>
-      </div>
-
-      {/* Check icon */}
-      <div
-        className={cn(
-          'w-8 h-8 rounded-full bg-[#054d28] flex items-center justify-center',
-          'text-white text-[16px] font-bold flex-shrink-0',
-        )}
-        aria-label="File selected successfully"
-      >
-        ✓
-      </div>
-
-      {/* Remove */}
-      <button
-        type="button"
-        onClick={onRemove}
-        className={cn(
-          'text-[13px] font-semibold text-[#d03238] bg-none border-none cursor-pointer',
-          'hover:opacity-70 transition-opacity ml-3 flex-shrink-0',
-        )}
-        aria-label={`Remove ${uploadedFile.label}`}
-      >
-        Remove
-      </button>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// PendingStatusCard — post-submit success state
-// ---------------------------------------------------------------------------
-interface PendingStatusCardProps {
-  requestId: string
-  onGoToCourses: () => void
-}
-
-function PendingStatusCard({ requestId, onGoToCourses }: PendingStatusCardProps) {
-  return (
-    <div
-      className={cn(
-        'bg-white rounded-[24px] p-12 text-center',
-        'shadow-[rgba(26,39,68,0.12)_0_0_0_1px]',
-      )}
-    >
-      <div className="text-[64px] mb-5" aria-hidden="true">
-        ⏳
-      </div>
-      <div
-        className={cn(
-          'inline-flex items-center gap-2 text-[15px] font-bold',
-          'px-5 py-2.5 rounded-full bg-[#fff8e6] text-[#8a5a00] mb-6',
-        )}
-      >
-        <span aria-hidden="true">🕐</span> Under Review
-      </div>
-      <div className="text-[28px] font-extrabold text-[#1a2744] mb-2">Receipt submitted!</div>
-      <div className="text-[16px] text-[#717182] leading-relaxed mb-4 max-w-sm mx-auto">
-        Your payment receipt is being reviewed by our team. You'll receive an email confirmation
-        within 24 hours once approved.
-      </div>
-      <div className="text-[13px] text-[#a3a3a3] mb-8">
-        Reference:{' '}
-        <span className="font-mono font-bold text-[#1a2744]">{requestId}</span>
-      </div>
-      <button
-        type="button"
-        onClick={onGoToCourses}
-        className={cn(
-          'px-9 py-4 rounded-full font-bold text-[16px] cursor-pointer border-none',
-          'bg-[#f8f9fb] text-[#1a2744] border-[1.5px] border-[rgba(26,39,68,0.15)]',
-          'hover:bg-[#eef6fd] transition-colors',
-        )}
-      >
-        Browse Courses
-      </button>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// ErrorStatusCard — upload error state
-// ---------------------------------------------------------------------------
-interface ErrorStatusCardProps {
-  message: string
-  onRetry: () => void
-}
-
-function ErrorStatusCard({ message, onRetry }: ErrorStatusCardProps) {
-  return (
-    <div
-      className={cn(
-        'bg-white rounded-[24px] p-12 text-center',
-        'shadow-[rgba(26,39,68,0.12)_0_0_0_1px]',
-      )}
-    >
-      <div className="text-[64px] mb-5" aria-hidden="true">
-        ⚠️
-      </div>
-      <div
-        className={cn(
-          'inline-flex items-center gap-2 text-[15px] font-bold',
-          'px-5 py-2.5 rounded-full bg-[#fdeaeb] text-[#d03238] mb-6',
-        )}
-      >
-        Submission Failed
-      </div>
-      <div className="text-[28px] font-extrabold text-[#1a2744] mb-2">Something went wrong</div>
-      <div
-        className={cn(
-          'bg-[#fdeaeb] rounded-[14px] px-5 py-4 mb-8 text-left max-w-sm mx-auto',
-        )}
-      >
-        <div className="text-[12px] font-bold text-[#d03238] uppercase tracking-wide mb-1.5">
-          Error
-        </div>
-        <div className="text-[15px] text-[#d03238] leading-relaxed">{message}</div>
-      </div>
-      <button
-        type="button"
-        onClick={onRetry}
-        className={cn(
-          'px-9 py-4 rounded-full font-bold text-[16px] cursor-pointer border-none',
-          'bg-[#d03238] text-white hover:opacity-90 transition-opacity',
-        )}
-      >
-        Try Again
-      </button>
+      {error ? (
+        <p
+          id="receipt-file-error"
+          role="alert"
+          className="text-[12px] font-semibold text-[var(--color-wise-danger)]"
+        >
+          {error}
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -489,334 +399,464 @@ function ErrorStatusCard({ message, onRetry }: ErrorStatusCardProps) {
 // ---------------------------------------------------------------------------
 // Main page component
 // ---------------------------------------------------------------------------
+
 export default function ManualPaymentPage() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const { user, isAuthenticated } = useAuth()
 
-  // ---- Data ----
+  // ── Cohort state ────────────────────────────────────────────────────────
   const [cohort, setCohort] = useState<CohortDetail | null>(null)
-  const [pageState, setPageState] = useState<PageState>('loading_cohort')
+  const [loadingCohort, setLoadingCohort] = useState(true)
   const [cohortError, setCohortError] = useState<string | null>(null)
 
-  // ---- File upload ----
-  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null)
-  const [fileError, setFileError] = useState<string | null>(null)
-  const [dragActive, setDragActive] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const inputRef = useRef<HTMLInputElement | null>(null)
-  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // ── Form state ──────────────────────────────────────────────────────────
+  const [form, setForm] = useState<FormState>({
+    fullName: user?.name ?? '',
+    email: user?.email ?? '',
+    paymentMethod: 'BANK_TRANSFER',
+    transactionRef: '',
+    notes: '',
+    file: null,
+  })
+  const [errors, setErrors] = useState<FieldErrors>({})
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  // ---- Form fields ----
-  const [note, setNote] = useState('')
-
-  // ---- Result ----
+  // ── Result state ────────────────────────────────────────────────────────
   const [requestId, setRequestId] = useState<string | null>(null)
-  const [uploadError, setUploadError] = useState<string | null>(null)
 
-  // Cleanup object URLs on unmount to avoid memory leaks
-  const previewUrlRef = useRef<string | null>(null)
-
+  // Auto-fill email/name once auth hydrates.
   useEffect(() => {
-    return () => {
-      if (previewUrlRef.current) {
-        URL.revokeObjectURL(previewUrlRef.current)
-      }
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current)
-      }
+    if (user) {
+      setForm((prev) => ({
+        ...prev,
+        fullName: prev.fullName || user.name || '',
+        email: prev.email || user.email || '',
+      }))
     }
-  }, [])
+  }, [user])
 
-  // Fetch cohort on mount
+  // Fetch cohort on mount.
   useEffect(() => {
     if (!slug) {
       setCohortError('No cohort slug provided.')
-      setPageState('error_cohort')
+      setLoadingCohort(false)
       return
     }
-
     let cancelled = false
-
-    async function load() {
+    ;(async () => {
       try {
-        const data = await fetchCohortBySlug(slug as string)
+        const data = await fetchCohortBySlug(slug)
         if (cancelled) return
         if (!data) {
           setCohortError('Course not found.')
-          setPageState('error_cohort')
         } else {
           setCohort(data)
-          setPageState('idle')
         }
       } catch {
         if (cancelled) return
-        setCohortError('Failed to load course details. Please refresh and try again.')
-        setPageState('error_cohort')
+        setCohortError('Failed to load course. Please refresh and try again.')
+      } finally {
+        if (!cancelled) setLoadingCohort(false)
       }
-    }
-
-    load()
+    })()
     return () => {
       cancelled = true
     }
   }, [slug])
 
-  // ---- File validation + selection ----
-  const handleFileSelected = useCallback((file: File) => {
-    setFileError(null)
+  // Status polling (only after a successful submit).
+  const polledStatus = useManualPaymentStatus(requestId)
+  const currentStatus: ManualPaymentStatusResponse['status'] =
+    polledStatus?.status ?? 'PENDING'
 
-    if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
-      setFileError('Invalid file type. Please upload a PDF, JPG, or PNG.')
+  // ── Handlers ────────────────────────────────────────────────────────────
+
+  const setField = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
+    // Clear the inline error for that field as the user edits.
+    setErrors((prev) => ({ ...prev, [key]: undefined }))
+  }, [])
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setSubmitError(null)
+
+    const validation = validate(form)
+    setErrors(validation)
+    if (Object.keys(validation).length > 0) return
+
+    if (!cohort) return
+
+    // The backend POST requires student auth. If the visitor is not signed
+    // in, bounce them to /login with a return path back here.
+    if (!isAuthenticated) {
+      navigate(
+        `/login?next=${encodeURIComponent(location.pathname + location.search)}`,
+      )
       return
     }
-    if (file.size > MAX_FILE_BYTES) {
-      setFileError('File is too large. Maximum size is 10 MB.')
-      return
-    }
 
-    // Revoke previous preview URL if any
-    if (previewUrlRef.current) {
-      URL.revokeObjectURL(previewUrlRef.current)
-      previewUrlRef.current = null
-    }
-
-    let previewUrl: string | null = null
-    if (file.type !== 'application/pdf') {
-      previewUrl = URL.createObjectURL(file)
-      previewUrlRef.current = previewUrl
-    }
-
-    setUploadedFile({
-      file,
-      previewUrl,
-      label: file.name,
-      sizeLabel: formatFileSize(file.size),
-      typeLabel: getFileTypeLabel(file.type),
-    })
-  }, [])
-
-  const handleRemoveFile = useCallback(() => {
-    if (previewUrlRef.current) {
-      URL.revokeObjectURL(previewUrlRef.current)
-      previewUrlRef.current = null
-    }
-    setUploadedFile(null)
-    setFileError(null)
-  }, [])
-
-  // ---- Drag handlers ----
-  const handleDragEnter = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(true)
-  }, [])
-
-  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-  }, [])
-
-  const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-  }, [])
-
-  const handleDrop = useCallback(
-    (e: DragEvent<HTMLDivElement>) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setDragActive(false)
-      const file = e.dataTransfer.files[0]
-      if (file) handleFileSelected(file)
-    },
-    [handleFileSelected],
-  )
-
-  // ---- Submit ----
-  async function handleSubmit() {
-    if (!uploadedFile || !cohort) return
-
-    setPageState('uploading')
-    setUploadProgress(0)
-
-    // Simulate progress while the real upload runs
-    progressIntervalRef.current = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 90) {
-          if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
-          return 90
-        }
-        return prev + Math.floor(Math.random() * 12) + 5
-      })
-    }, 300)
-
+    setSubmitting(true)
     try {
-      const formData = new FormData()
-      formData.append('cohortId', cohort.id)
-      formData.append('file', uploadedFile.file)
-      if (note.trim()) formData.append('note', note.trim())
+      const fd = new FormData()
+      fd.append('cohortId', cohort.id)
+      fd.append('file', form.file as File)
+      fd.append('fullName', form.fullName.trim())
+      fd.append('email', form.email.trim())
+      fd.append('paymentMethod', form.paymentMethod)
+      if (form.transactionRef.trim()) {
+        fd.append('transactionRef', form.transactionRef.trim())
+      }
+      const combinedNote = [
+        form.transactionRef.trim() ? `Ref: ${form.transactionRef.trim()}` : '',
+        form.notes.trim(),
+      ]
+        .filter(Boolean)
+        .join(' — ')
+      if (combinedNote) fd.append('note', combinedNote)
 
-      const result = await submitManualPaymentRequest(formData)
-
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
-      setUploadProgress(100)
-
-      // Brief pause so 100% is visible before transition
-      await new Promise<void>((resolve) => setTimeout(resolve, 400))
-
+      const result = await submitManualPaymentRequest(fd)
       setRequestId(result.requestId)
-      setPageState('pending')
     } catch (err) {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
-      setUploadError(err instanceof Error ? err.message : 'An unexpected error occurred.')
-      setPageState('error_upload')
+      setSubmitError(
+        err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+      )
+    } finally {
+      setSubmitting(false)
     }
   }
 
-  function handleRetry() {
-    setUploadError(null)
-    setUploadedFile(null)
-    setNote('')
-    setPageState('idle')
-  }
+  const submitDisabled = submitting || loadingCohort || cohort == null
 
-  // ---- Loading skeleton ----
-  if (pageState === 'loading_cohort') {
+  // Merged status when available — the polled feed is the source of truth.
+  const confirmationDescription = useMemo(() => {
+    if (currentStatus === 'APPROVED') {
+      return 'Your payment was approved — you now have access to the course. Check your email for confirmation.'
+    }
+    if (currentStatus === 'REJECTED') {
+      return (
+        polledStatus?.rejectionReason ??
+        'Your submission was rejected. Please contact support with your reference ID.'
+      )
+    }
     return (
-      <div className="min-h-screen bg-[#f8f9fb]">
-        <nav className="h-[72px] bg-white shadow-[inset_0_-1px_0_rgba(26,39,68,0.12)] flex items-center px-20">
-          <span className="text-[22px] font-black text-[#1a2744]">nextaibuilder</span>
-        </nav>
-        <div className="flex items-center justify-center min-h-[calc(100vh-72px)]">
-          <Spinner className="w-10 h-10 border-4 border-[rgba(26,39,68,0.1)] border-t-[#4a9ad4]" />
-        </div>
+      'Our team will review your payment within 24–48 hours. ' +
+      "You'll receive an email once approved."
+    )
+  }, [currentStatus, polledStatus?.rejectionReason])
+
+  const confirmationIcon =
+    currentStatus === 'APPROVED'
+      ? CircleCheck
+      : currentStatus === 'REJECTED'
+        ? CircleX
+        : CircleCheck
+
+  // ── Loading skeleton ────────────────────────────────────────────────────
+  if (loadingCohort) {
+    return (
+      <div className="min-h-screen bg-[var(--color-wise-surface-soft)]">
+        <PageHeader slug={slug ?? ''} />
+        <main className="px-4 sm:px-10 md:px-20 py-12">
+          <div className="max-w-[640px] mx-auto">
+            <LoadingSpinner centered label="Loading course details" size="lg" />
+          </div>
+        </main>
       </div>
     )
   }
 
-  // ---- Cohort error ----
-  if (pageState === 'error_cohort' || !cohort) {
+  // ── Cohort error ────────────────────────────────────────────────────────
+  if (cohortError || !cohort) {
     return (
-      <div className="min-h-screen bg-[#f8f9fb]">
-        <nav className="h-[72px] bg-white shadow-[inset_0_-1px_0_rgba(26,39,68,0.12)] flex items-center px-20">
-          <span className="text-[22px] font-black text-[#1a2744]">nextaibuilder</span>
-        </nav>
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-72px)] gap-4 px-6 text-center">
-          <div className="text-[48px]" aria-hidden="true">⚠️</div>
-          <div className="text-[22px] font-bold text-[#1a2744]">{cohortError ?? 'Course not found'}</div>
-          <Link
-            to="/courses"
+      <div className="min-h-screen bg-[var(--color-wise-surface-soft)]">
+        <PageHeader slug={slug ?? ''} />
+        <main className="px-4 sm:px-10 md:px-20 py-12">
+          <div className="max-w-[640px] mx-auto">
+            <EmptyState
+              icon={CircleX}
+              title="Course not found"
+              description={cohortError ?? 'We could not load the cohort.'}
+              action={{ label: 'Browse courses', href: '/courses' }}
+            />
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  // ── Confirmation state ──────────────────────────────────────────────────
+  if (requestId) {
+    return (
+      <div className="min-h-screen bg-[var(--color-wise-surface-soft)]">
+        <PageHeader slug={slug} />
+        <main className="px-4 sm:px-10 md:px-20 py-12">
+          <div className="max-w-[640px] mx-auto">
+            <div
+              className={cn(
+                'bg-[var(--color-wise-surface)] rounded-2xl p-6 sm:p-10',
+                'shadow-[inset_0_0_0_1px_var(--color-wise-ring)]',
+              )}
+            >
+              <EmptyState
+                icon={confirmationIcon}
+                title="Receipt submitted"
+                description={confirmationDescription}
+              >
+                <div className="flex flex-col items-center gap-3 mt-2">
+                  <StatusBadge status={currentStatus} />
+                  <p className="text-[12px] text-[var(--color-wise-text-muted)]">
+                    Reference ID:{' '}
+                    <span
+                      data-testid="manual-payment-request-id"
+                      className="font-mono font-semibold text-[var(--color-wise-text)]"
+                    >
+                      {requestId}
+                    </span>
+                  </p>
+                  <div className="flex gap-3 mt-2">
+                    <Link
+                      to={`/manual-payment/${slug}/status/${requestId}`}
+                      data-testid="manual-payment-status-link"
+                      className={cn(
+                        'text-[14px] font-semibold underline',
+                        'text-[var(--color-wise-text-muted)] hover:text-[var(--color-wise-text)]',
+                      )}
+                    >
+                      View request status
+                    </Link>
+                    <Link
+                      to="/courses"
+                      className={cn(
+                        'text-[14px] font-semibold underline',
+                        'text-[var(--color-wise-text-muted)] hover:text-[var(--color-wise-text)]',
+                      )}
+                    >
+                      Browse more courses
+                    </Link>
+                  </div>
+                </div>
+              </EmptyState>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  // ── Uploading overlay ───────────────────────────────────────────────────
+  if (submitting) {
+    return (
+      <div className="min-h-screen bg-[var(--color-wise-surface-soft)]">
+        <PageHeader slug={slug} />
+        <main className="px-4 sm:px-10 md:px-20 py-12">
+          <div className="max-w-[640px] mx-auto">
+            <div
+              className={cn(
+                'bg-[var(--color-wise-surface)] rounded-2xl p-10',
+                'shadow-[inset_0_0_0_1px_var(--color-wise-ring)]',
+                'flex flex-col items-center gap-4',
+              )}
+            >
+              <LoadingSpinner centered size="xl" label="Uploading receipt" />
+              <p className="text-[15px] font-medium text-[var(--color-wise-text)]">
+                Uploading receipt…
+              </p>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  // ── Main form ───────────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-[var(--color-wise-surface-soft)]">
+      <PageHeader slug={slug} />
+      <main className="px-4 sm:px-10 md:px-20 py-8 sm:py-12">
+        <div className="max-w-[640px] mx-auto">
+          <CohortHeaderCard cohort={cohort} />
+
+          <form
+            data-testid="manual-payment-form"
+            onSubmit={handleSubmit}
+            noValidate
             className={cn(
-              'px-7 py-3 rounded-full bg-[#4a9ad4] text-[#0d1a3a]',
-              'text-[15px] font-bold hover:opacity-90 transition-opacity no-underline',
+              'bg-[var(--color-wise-surface)] rounded-2xl p-5 sm:p-7',
+              'shadow-[inset_0_0_0_1px_var(--color-wise-ring)]',
+              'flex flex-col gap-5',
             )}
           >
-            Browse Courses
-          </Link>
-        </div>
-      </div>
-    )
-  }
+            <div>
+              <h1 className="text-[20px] sm:text-[22px] font-black text-[var(--color-wise-text)] tracking-[-0.3px]">
+                Upload your payment receipt
+              </h1>
+              <p className="text-[14px] text-[var(--color-wise-text-muted)] mt-1">
+                Submit proof of your bank transfer or wire. Our team will review it
+                within 24–48 hours.
+              </p>
+            </div>
 
-  const canSubmit = uploadedFile !== null && pageState === 'idle'
-
-  return (
-    <div className="min-h-screen bg-[#f8f9fb]">
-      <ManualPaymentNav backSlug={slug ?? ''} />
-
-      <main className="px-20 py-12">
-        <div className="max-w-[640px] mx-auto">
-
-          {/* --- Upload form states --- */}
-          {(pageState === 'idle' || pageState === 'uploading') && (
-            <>
-              <CohortHeaderCard cohort={cohort} />
-              <BankInstructionsCard amount={cohort.price} />
-
-              {/* Upload zone or uploading progress */}
-              {pageState === 'uploading' ? (
-                <UploadingZone progress={uploadProgress} />
-              ) : uploadedFile ? (
-                <UploadedFilePreview
-                  uploadedFile={uploadedFile}
-                  onRemove={handleRemoveFile}
-                />
-              ) : (
-                <UploadZone
-                  onFileSelected={handleFileSelected}
-                  dragActive={dragActive}
-                  onDragEnter={handleDragEnter}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  inputRef={inputRef}
-                  error={fileError}
-                />
-              )}
-
-              {/* Note textarea */}
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value.slice(0, MAX_NOTE_CHARS))}
-                placeholder="Optional: Add a note about your payment (e.g., transaction reference number)"
-                maxLength={MAX_NOTE_CHARS}
-                rows={4}
-                disabled={pageState === 'uploading'}
-                aria-label="Optional payment note"
-                className={cn(
-                  'w-full rounded-[16px] border-[1.5px] border-[rgba(26,39,68,0.15)]',
-                  'bg-white px-4 py-4 text-[15px] text-[#1a2744]',
-                  'font-sans resize-none outline-none mb-5',
-                  'placeholder:text-[#a3a3a3]',
-                  'focus:border-[#4a9ad4] transition-colors',
-                  pageState === 'uploading' && 'opacity-50 cursor-not-allowed',
-                )}
+            <FormField
+              id="full-name"
+              label="Full name"
+              required
+              errorText={errors.fullName}
+            >
+              <Input
+                name="fullName"
+                autoComplete="name"
+                value={form.fullName}
+                onChange={(e) => setField('fullName', e.target.value)}
+                placeholder="Jane Doe"
               />
-              {note.length > 0 && (
-                <div className="text-[12px] text-[#a3a3a3] text-right -mt-4 mb-4">
-                  {note.length}/{MAX_NOTE_CHARS}
-                </div>
-              )}
+            </FormField>
 
-              {/* Submit button */}
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={!canSubmit}
-                aria-disabled={!canSubmit}
+            <FormField
+              id="email"
+              label="Email address"
+              required
+              helperText={
+                isAuthenticated
+                  ? 'Pre-filled from your account.'
+                  : 'We will use this email to contact you about your payment.'
+              }
+              errorText={errors.email}
+            >
+              <Input
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={form.email}
+                onChange={(e) => setField('email', e.target.value)}
+                placeholder="you@example.com"
+              />
+            </FormField>
+
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="payment-method"
+                className="text-[14px] font-semibold text-[var(--color-wise-text)]"
+              >
+                Payment method
+              </label>
+              <select
+                id="payment-method"
+                name="paymentMethod"
+                value={form.paymentMethod}
+                onChange={(e) => setField('paymentMethod', e.target.value as PaymentMethod)}
                 className={cn(
-                  'w-full h-14 rounded-full font-bold text-[17px] border-none cursor-pointer',
-                  'transition-opacity font-sans',
-                  canSubmit
-                    ? 'bg-[#4a9ad4] text-[#0d1a3a] hover:opacity-90'
-                    : 'bg-[#4a9ad4] text-[#0d1a3a] opacity-50 cursor-not-allowed',
-                  pageState === 'uploading' && 'opacity-50 cursor-not-allowed',
+                  'h-11 px-4 rounded-xl border bg-white text-[15px] font-medium',
+                  'text-[var(--color-wise-text)]',
+                  'border-[var(--color-wise-ring)] hover:border-[var(--color-wise-ring-strong)]',
+                  'focus:border-[var(--color-wise-text)] focus:ring-4 focus:ring-[var(--color-wise-primary)]/25',
+                  'outline-none transition-[border-color,box-shadow]',
                 )}
               >
-                {pageState === 'uploading' ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Spinner /> Uploading...
-                  </span>
-                ) : (
-                  'Submit Receipt'
-                )}
-              </button>
-            </>
-          )}
+                <option value="BANK_TRANSFER">Bank transfer</option>
+                <option value="WIRE">Wire</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
 
-          {/* --- Pending / success state --- */}
-          {pageState === 'pending' && requestId && (
-            <PendingStatusCard
-              requestId={requestId}
-              onGoToCourses={() => navigate('/courses')}
+            <FormField
+              id="transaction-ref"
+              label="Transaction reference"
+              helperText="Optional — the reference number from your bank."
+            >
+              <Input
+                name="transactionRef"
+                value={form.transactionRef}
+                onChange={(e) => setField('transactionRef', e.target.value)}
+                placeholder="e.g. TXN-48293"
+              />
+            </FormField>
+
+            <ReceiptFileInput
+              file={form.file}
+              error={errors.file}
+              onChange={(f) => setField('file', f)}
+              inputRef={fileInputRef}
             />
-          )}
 
-          {/* --- Error state --- */}
-          {pageState === 'error_upload' && uploadError && (
-            <ErrorStatusCard message={uploadError} onRetry={handleRetry} />
-          )}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="notes"
+                className="text-[14px] font-semibold text-[var(--color-wise-text)]"
+              >
+                Notes
+                <span className="text-[var(--color-wise-text-muted)] font-medium ml-1">
+                  (optional)
+                </span>
+              </label>
+              <textarea
+                id="notes"
+                name="notes"
+                rows={4}
+                maxLength={MAX_NOTE_CHARS}
+                value={form.notes}
+                onChange={(e) => setField('notes', e.target.value)}
+                placeholder="Anything our team should know about this payment?"
+                aria-invalid={errors.notes ? true : undefined}
+                className={cn(
+                  'rounded-xl border px-4 py-3 text-[15px] font-medium resize-y',
+                  'bg-white text-[var(--color-wise-text)]',
+                  'placeholder:text-[var(--color-wise-text-muted)]',
+                  errors.notes
+                    ? 'border-[var(--color-wise-danger)]'
+                    : 'border-[var(--color-wise-ring)] hover:border-[var(--color-wise-ring-strong)] focus:border-[var(--color-wise-text)]',
+                  'focus:ring-4 focus:ring-[var(--color-wise-primary)]/25 outline-none',
+                  'transition-[border-color,box-shadow]',
+                )}
+              />
+              {errors.notes ? (
+                <p
+                  role="alert"
+                  className="text-[12px] font-semibold text-[var(--color-wise-danger)]"
+                >
+                  {errors.notes}
+                </p>
+              ) : (
+                <p className="text-[12px] text-[var(--color-wise-text-muted)] text-right">
+                  {form.notes.length}/{MAX_NOTE_CHARS}
+                </p>
+              )}
+            </div>
+
+            {submitError ? (
+              <p
+                role="alert"
+                data-testid="manual-payment-submit-error"
+                className={cn(
+                  'rounded-xl px-4 py-3 text-[13px] font-semibold',
+                  'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)]',
+                )}
+              >
+                {submitError}
+              </p>
+            ) : null}
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              disabled={submitDisabled}
+              isLoading={submitting}
+              className="w-full"
+            >
+              Submit receipt
+            </Button>
+
+            {!isAuthenticated ? (
+              <p className="text-[12px] text-[var(--color-wise-text-muted)] text-center">
+                You will be asked to sign in before the receipt is submitted.
+              </p>
+            ) : null}
+          </form>
         </div>
       </main>
     </div>

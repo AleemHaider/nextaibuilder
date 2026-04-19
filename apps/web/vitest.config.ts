@@ -13,6 +13,10 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: { '@': resolve(__dirname, 'src') },
+    // Prefer TS sources over compiled .js siblings during test runs so tests
+    // always exercise the current source. Without this, Vite's default order
+    // (`.js` before `.tsx`) picks up stale build artefacts in `src/`.
+    extensions: ['.tsx', '.ts', '.jsx', '.mjs', '.js', '.mts', '.json'],
   },
   test: {
     environment: 'jsdom',
