@@ -1,4 +1,11 @@
 // FIR-213/214/215 — Admin can manage all enrollments
+//
+// Sprint 4 Story 22: inline-style → Tailwind conversion.
+// Colors still flow through the Wise token system introduced in Sprint 3
+// Story 16; only the `style={{...}}` wrapper pattern is removed. Dynamic
+// values (gradient avatars, progress bar widths, status pill background
+// tints that use rgba tints without a dedicated token) remain inline since
+// they cannot be expressed as static classes.
 import { useState, useEffect, useRef } from 'react'
 import { Search, ChevronLeft, ChevronRight, X, MoreVertical } from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
@@ -142,6 +149,9 @@ const MOCK_COHORTS: Cohort[] = [
 // Constants
 // ---------------------------------------------------------------------------
 
+// Avatar gradients still flow through inline `background` — Tailwind cannot
+// express an arbitrary gradient via a class reliably. The token references
+// are preserved from Sprint 3.
 const AVATAR_GRADIENTS = [
   'linear-gradient(135deg,var(--color-wise-primary-text),var(--color-wise-primary-text))',
   'linear-gradient(135deg,var(--color-wise-warning),var(--color-wise-warning))',
@@ -150,6 +160,8 @@ const AVATAR_GRADIENTS = [
   'linear-gradient(135deg,var(--color-wise-danger),var(--color-wise-danger))',
 ]
 
+// Status / payment pill configs use rgba tints (not tokens) so the
+// background/color fields stay inline. Labels and dot colors are tokenized.
 const STATUS_CFG: Record<
   EnrollmentStatus,
   { bg: string; color: string; dot: string; label: string }
@@ -187,30 +199,17 @@ function StatusPill({
   color: string
   dot?: string
 }) {
+  // bg/color are dynamic rgba tints (per status), so remain inline. Layout +
+  // typography come from the class string.
   return (
     <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        fontSize: 11,
-        fontWeight: 700,
-        padding: '4px 10px',
-        borderRadius: 20,
-        background: bg,
-        color,
-        whiteSpace: 'nowrap',
-      }}
+      className="inline-flex items-center gap-[5px] px-[10px] py-1 rounded-[20px] text-[11px] font-bold whitespace-nowrap"
+      style={{ background: bg, color }}
     >
       {dot && (
         <span
-          style={{
-            width: 5,
-            height: 5,
-            borderRadius: '50%',
-            background: dot,
-            flexShrink: 0,
-          }}
+          className="w-[5px] h-[5px] rounded-full shrink-0"
+          style={{ background: dot }}
         />
       )}
       {label}
@@ -219,6 +218,8 @@ function StatusPill({
 }
 
 function ProgressBar({ value }: { value: number }) {
+  // Fill bar background is dynamic (solid vs. gradient) based on value, and
+  // the width itself is data-driven — both remain inline.
   const bg =
     value === 100
       ? 'linear-gradient(90deg,var(--color-wise-success),var(--color-wise-success))'
@@ -226,22 +227,14 @@ function ProgressBar({ value }: { value: number }) {
       ? 'var(--color-wise-ring)'
       : 'linear-gradient(90deg,var(--color-wise-primary-text),var(--color-wise-primary-text))'
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div
-        style={{
-          width: 72,
-          height: 5,
-          background: 'var(--color-wise-canvas)',
-          borderRadius: 99,
-          overflow: 'hidden',
-          flexShrink: 0,
-        }}
-      >
+    <div className="flex items-center gap-2">
+      <div className="w-[72px] h-[5px] bg-[var(--color-wise-canvas)] rounded-[99px] overflow-hidden shrink-0">
         <div
-          style={{ height: '100%', borderRadius: 99, width: `${value}%`, background: bg }}
+          className="h-full rounded-[99px]"
+          style={{ width: `${value}%`, background: bg }}
         />
       </div>
-      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-wise-text-muted)', flexShrink: 0 }}>
+      <span className="text-[11px] font-bold text-[var(--color-wise-text-muted)] shrink-0">
         {value}%
       </span>
     </div>
@@ -252,18 +245,7 @@ function Th({ children }: { children?: React.ReactNode }) {
   return (
     <th
       scope="col"
-      style={{
-        textAlign: 'left',
-        fontSize: 10,
-        fontWeight: 700,
-        color: 'var(--color-wise-text-muted)',
-        padding: '10px 16px',
-        textTransform: 'uppercase',
-        letterSpacing: '0.8px',
-        borderBottom: '1px solid var(--color-wise-ring)',
-        whiteSpace: 'nowrap',
-        background: 'var(--color-wise-canvas)',
-      }}
+      className="text-left text-[10px] font-bold text-[var(--color-wise-text-muted)] px-4 py-[10px] uppercase tracking-[0.8px] border-b border-[var(--color-wise-ring)] whitespace-nowrap bg-[var(--color-wise-canvas)]"
     >
       {children}
     </th>
@@ -298,26 +280,21 @@ function ActionsMenu({
   }, [open])
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={ref} className="relative inline-block">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="true"
         aria-expanded={open}
         aria-label="Row actions"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 28,
-          height: 28,
-          borderRadius: 7,
-          border: '1px solid rgba(26,39,68,0.09)',
-          background: open ? 'var(--color-wise-surface-soft)' : 'var(--color-wise-surface)',
-          color: 'var(--color-wise-text-muted)',
-          cursor: 'pointer',
-          flexShrink: 0,
-        }}
+        className={[
+          'flex items-center justify-center w-7 h-7 rounded-[7px]',
+          'border border-[rgba(26,39,68,0.09)] text-[var(--color-wise-text-muted)]',
+          'cursor-pointer shrink-0',
+          open
+            ? 'bg-[var(--color-wise-surface-soft)]'
+            : 'bg-[var(--color-wise-surface)]',
+        ].join(' ')}
       >
         <MoreVertical size={13} />
       </button>
@@ -325,19 +302,7 @@ function ActionsMenu({
       {open && (
         <div
           role="menu"
-          style={{
-            position: 'absolute',
-            top: '100%',
-            right: 0,
-            marginTop: 4,
-            background: 'var(--color-wise-surface)',
-            borderRadius: 10,
-            border: '1px solid rgba(26,39,68,0.09)',
-            boxShadow: '0 8px 24px var(--color-wise-ring)',
-            minWidth: 156,
-            zIndex: 50,
-            overflow: 'hidden',
-          }}
+          className="absolute top-full right-0 mt-1 bg-[var(--color-wise-surface)] rounded-[10px] border border-[rgba(26,39,68,0.09)] shadow-[0_8px_24px_var(--color-wise-ring)] min-w-[156px] z-50 overflow-hidden"
         >
           <button
             type="button"
@@ -346,26 +311,11 @@ function ActionsMenu({
               setOpen(false)
               onTransfer(enrollment)
             }}
-            style={{
-              display: 'block',
-              width: '100%',
-              textAlign: 'left',
-              padding: '9px 14px',
-              fontSize: 12,
-              fontWeight: 600,
-              color: 'var(--color-wise-text)',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-wise-canvas)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            className="block w-full text-left px-[14px] py-[9px] text-[12px] font-semibold text-[var(--color-wise-text)] bg-transparent border-none cursor-pointer hover:bg-[var(--color-wise-canvas)]"
           >
             Transfer Cohort
           </button>
-          <div
-            style={{ height: 1, background: 'var(--color-wise-ring)', margin: '0 8px' }}
-          />
+          <div className="h-px bg-[var(--color-wise-ring)] mx-2" />
           <button
             type="button"
             role="menuitem"
@@ -373,20 +323,7 @@ function ActionsMenu({
               setOpen(false)
               onCancel(enrollment.id)
             }}
-            style={{
-              display: 'block',
-              width: '100%',
-              textAlign: 'left',
-              padding: '9px 14px',
-              fontSize: 12,
-              fontWeight: 600,
-              color: 'var(--color-wise-danger)',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-wise-danger-soft)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            className="block w-full text-left px-[14px] py-[9px] text-[12px] font-semibold text-[var(--color-wise-danger)] bg-transparent border-none cursor-pointer hover:bg-[var(--color-wise-danger-soft)]"
           >
             Cancel Enrollment
           </button>
@@ -415,98 +352,50 @@ function TransferModal({
 }) {
   const [selectedCohort, setSelectedCohort] = useState('')
 
+  // We keep the bespoke modal rather than swap to <Modal>: the dialog has a
+  // form-shaped body (label + select + action row) that would require custom
+  // footer slotting to match pixel-for-pixel; a later pass can migrate
+  // wholesale. The inline-style wrapper pattern is still removed here.
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Transfer cohort"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-      }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6"
     >
       {/* Backdrop */}
       <div
         aria-hidden="true"
         onClick={onClose}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(14,15,12,0.45)',
-          backdropFilter: 'blur(3px)',
-        }}
+        className="absolute inset-0 bg-[rgba(14,15,12,0.45)] backdrop-blur-[3px]"
       />
 
       {/* Dialog */}
-      <div
-        style={{
-          position: 'relative',
-          background: 'var(--color-wise-surface)',
-          borderRadius: 18,
-          boxShadow: '0 24px 60px rgba(13,26,58,0.25)',
-          padding: '28px 28px 24px',
-          width: '100%',
-          maxWidth: 420,
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 20,
-          }}
-        >
-          <h2
-            style={{
-              fontSize: 16,
-              fontWeight: 800,
-              color: 'var(--color-wise-text)',
-              margin: 0,
-              letterSpacing: '-0.3px',
-            }}
-          >
+      <div className="relative bg-[var(--color-wise-surface)] rounded-[18px] shadow-[0_24px_60px_rgba(13,26,58,0.25)] px-7 pt-7 pb-6 w-full max-w-[420px]">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-[16px] font-extrabold text-[var(--color-wise-text)] m-0 tracking-[-0.3px]">
             Transfer Cohort
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 28,
-              height: 28,
-              borderRadius: 7,
-              border: '1px solid rgba(26,39,68,0.09)',
-              background: 'var(--color-wise-canvas)',
-              color: 'var(--color-wise-text-muted)',
-              cursor: 'pointer',
-            }}
+            className="flex items-center justify-center w-7 h-7 rounded-[7px] border border-[rgba(26,39,68,0.09)] bg-[var(--color-wise-canvas)] text-[var(--color-wise-text-muted)] cursor-pointer"
           >
             <X size={14} />
           </button>
         </div>
 
-        <p style={{ fontSize: 13, color: 'var(--color-wise-text-muted)', marginBottom: 20, lineHeight: 1.6 }}>
-          Transfer <strong style={{ color: 'var(--color-wise-text)' }}>{enrollment.studentName}</strong> from{' '}
-          <strong style={{ color: 'var(--color-wise-text)' }}>{enrollment.cohortTitle}</strong> to a new cohort.
+        <p className="text-[13px] text-[var(--color-wise-text-muted)] mb-5 leading-[1.6]">
+          Transfer{' '}
+          <strong className="text-[var(--color-wise-text)]">{enrollment.studentName}</strong>{' '}
+          from{' '}
+          <strong className="text-[var(--color-wise-text)]">{enrollment.cohortTitle}</strong>{' '}
+          to a new cohort.
         </p>
 
         <label
-          style={{
-            display: 'block',
-            fontSize: 12,
-            fontWeight: 700,
-            color: 'var(--color-wise-text)',
-            marginBottom: 6,
-          }}
+          className="block text-[12px] font-bold text-[var(--color-wise-text)] mb-[6px]"
           htmlFor="cohort-select"
         >
           Select New Cohort
@@ -515,18 +404,7 @@ function TransferModal({
           id="cohort-select"
           value={selectedCohort}
           onChange={(e) => setSelectedCohort(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '9px 12px',
-            borderRadius: 9,
-            border: '1px solid var(--color-wise-ring)',
-            fontSize: 13,
-            color: 'var(--color-wise-text)',
-            background: 'var(--color-wise-canvas)',
-            outline: 'none',
-            marginBottom: 20,
-            cursor: 'pointer',
-          }}
+          className="w-full px-3 py-[9px] rounded-[9px] border border-[var(--color-wise-ring)] text-[13px] text-[var(--color-wise-text)] bg-[var(--color-wise-canvas)] outline-none mb-5 cursor-pointer"
         >
           <option value="">-- Choose a cohort --</option>
           {cohorts.map((c) => (
@@ -536,20 +414,11 @@ function TransferModal({
           ))}
         </select>
 
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <div className="flex gap-[10px] justify-end">
           <button
             type="button"
             onClick={onClose}
-            style={{
-              padding: '8px 18px',
-              borderRadius: 9,
-              border: '1px solid var(--color-wise-ring)',
-              background: 'var(--color-wise-surface)',
-              fontSize: 13,
-              fontWeight: 600,
-              color: 'var(--color-wise-text-muted)',
-              cursor: 'pointer',
-            }}
+            className="px-[18px] py-2 rounded-[9px] border border-[var(--color-wise-ring)] bg-[var(--color-wise-surface)] text-[13px] font-semibold text-[var(--color-wise-text-muted)] cursor-pointer"
           >
             Cancel
           </button>
@@ -557,17 +426,14 @@ function TransferModal({
             type="button"
             disabled={!selectedCohort || loading}
             onClick={() => onConfirm(enrollment.id, selectedCohort)}
-            style={{
-              padding: '8px 18px',
-              borderRadius: 9,
-              border: 'none',
-              background: !selectedCohort || loading ? 'var(--color-wise-text-muted)' : 'var(--color-wise-text)',
-              fontSize: 13,
-              fontWeight: 700,
-              color: 'var(--color-wise-surface)',
-              cursor: !selectedCohort || loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-            }}
+            className={[
+              'px-[18px] py-2 rounded-[9px] border-none text-[13px] font-bold',
+              'text-[var(--color-wise-surface)]',
+              !selectedCohort || loading
+                ? 'bg-[var(--color-wise-text-muted)] cursor-not-allowed'
+                : 'bg-[var(--color-wise-text)] cursor-pointer',
+              loading ? 'opacity-70' : 'opacity-100',
+            ].join(' ')}
           >
             {loading ? 'Transferring...' : 'Confirm Transfer'}
           </button>
@@ -590,30 +456,19 @@ function MiniStat({
   value: number
   accent: string
 }) {
+  // `accent` is per-card (success / warning / primary-text) — passed through
+  // via inline style. Everything else is class-driven.
   return (
-    <div
-      style={{
-        flex: 1,
-        background: 'var(--color-wise-surface)',
-        borderRadius: 14,
-        padding: '14px 18px',
-        border: '1px solid var(--color-wise-ring)',
-        boxShadow: '0 1px 3px var(--color-wise-ring), 0 4px 16px var(--color-wise-ring)',
-      }}
-    >
+    <div className="flex-1 bg-[var(--color-wise-surface)] rounded-[14px] px-[18px] py-[14px] border border-[var(--color-wise-ring)] shadow-[0_1px_3px_var(--color-wise-ring),0_4px_16px_var(--color-wise-ring)]">
       <div
-        style={{
-          fontSize: 24,
-          fontWeight: 900,
-          color: accent,
-          letterSpacing: '-0.5px',
-          lineHeight: 1,
-          marginBottom: 4,
-        }}
+        className="text-[24px] font-black tracking-[-0.5px] leading-none mb-1"
+        style={{ color: accent }}
       >
         {value}
       </div>
-      <div style={{ fontSize: 11, color: 'var(--color-wise-text-muted)', fontWeight: 600 }}>{label}</div>
+      <div className="text-[11px] text-[var(--color-wise-text-muted)] font-semibold">
+        {label}
+      </div>
     </div>
   )
 }
@@ -623,32 +478,26 @@ function MiniStat({
 // ---------------------------------------------------------------------------
 
 function Toast({ message, type }: { message: string; type: 'success' | 'error' }) {
+  const isSuccess = type === 'success'
   return (
     <div
       role="alert"
       aria-live="polite"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '10px 16px',
-        borderRadius: 10,
-        fontSize: 13,
-        fontWeight: 600,
-        background: type === 'success' ? 'rgba(5,150,105,0.1)' : 'rgba(239,68,68,0.1)',
-        color: type === 'success' ? 'var(--color-wise-success)' : 'var(--color-wise-danger)',
-        border: `1px solid ${type === 'success' ? 'rgba(5,150,105,0.2)' : 'rgba(239,68,68,0.2)'}`,
-        marginBottom: 4,
-      }}
+      className={[
+        'inline-flex items-center gap-2 px-4 py-[10px] rounded-[10px]',
+        'text-[13px] font-semibold mb-1 border',
+        isSuccess
+          ? 'bg-[rgba(5,150,105,0.1)] text-[var(--color-wise-success)] border-[rgba(5,150,105,0.2)]'
+          : 'bg-[rgba(239,68,68,0.1)] text-[var(--color-wise-danger)] border-[rgba(239,68,68,0.2)]',
+      ].join(' ')}
     >
       <span
-        style={{
-          width: 7,
-          height: 7,
-          borderRadius: '50%',
-          background: type === 'success' ? 'var(--color-wise-success)' : 'var(--color-wise-danger)',
-          flexShrink: 0,
-        }}
+        className={[
+          'w-[7px] h-[7px] rounded-full shrink-0',
+          isSuccess
+            ? 'bg-[var(--color-wise-success)]'
+            : 'bg-[var(--color-wise-danger)]',
+        ].join(' ')}
       />
       {message}
     </div>
@@ -873,6 +722,9 @@ export default function EnrollmentManagementPage() {
   // ---------------------------------------------------------------------------
   return (
     <AdminShell title="Enrollments">
+      {/* Keyframes + row hover rule still live in a <style> tag — the hover
+          effect applies to descendant <td>s which Tailwind cannot target
+          conveniently without a custom variant. */}
       <style>{`
         @keyframes em-spin {
           to { transform: rotate(360deg); }
@@ -880,22 +732,13 @@ export default function EnrollmentManagementPage() {
         .em-tr:hover td { background: var(--color-wise-canvas) !important; }
       `}</style>
 
-      <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
+      <div className="px-8 py-7 flex flex-col gap-5">
         {/* Page header */}
         <div>
-          <h1
-            style={{
-              fontSize: 22,
-              fontWeight: 900,
-              color: 'var(--color-wise-text)',
-              margin: 0,
-              letterSpacing: '-0.4px',
-            }}
-          >
+          <h1 className="text-[22px] font-black text-[var(--color-wise-text)] m-0 tracking-[-0.4px]">
             Enrollments
           </h1>
-          <p style={{ fontSize: 13, color: 'var(--color-wise-text-muted)', marginTop: 4, fontWeight: 500 }}>
+          <p className="text-[13px] text-[var(--color-wise-text-muted)] mt-1 font-medium">
             Manage all student course enrollments
           </p>
         </div>
@@ -904,35 +747,13 @@ export default function EnrollmentManagementPage() {
         {toast && <Toast message={toast.message} type={toast.type} />}
 
         {/* ── Filter bar ── */}
-        <div
-          style={{
-            background: 'var(--color-wise-surface)',
-            borderRadius: 14,
-            border: '1px solid var(--color-wise-ring)',
-            boxShadow: '0 1px 3px var(--color-wise-ring)',
-            padding: '14px 18px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            flexWrap: 'wrap',
-          }}
-        >
+        <div className="bg-[var(--color-wise-surface)] rounded-[14px] border border-[var(--color-wise-ring)] shadow-[0_1px_3px_var(--color-wise-ring)] px-[18px] py-[14px] flex items-center gap-3 flex-wrap">
           {/* Status select */}
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as EnrollmentStatus | 'ALL')}
             aria-label="Filter by status"
-            style={{
-              padding: '7px 12px',
-              borderRadius: 8,
-              border: '1px solid var(--color-wise-ring)',
-              fontSize: 12,
-              fontWeight: 600,
-              color: 'var(--color-wise-text)',
-              background: 'var(--color-wise-canvas)',
-              cursor: 'pointer',
-              outline: 'none',
-            }}
+            className="px-3 py-[7px] rounded-lg border border-[var(--color-wise-ring)] text-[12px] font-semibold text-[var(--color-wise-text)] bg-[var(--color-wise-canvas)] cursor-pointer outline-none"
           >
             <option value="ALL">All Statuses</option>
             <option value="ACTIVE">Active</option>
@@ -942,17 +763,10 @@ export default function EnrollmentManagementPage() {
           </select>
 
           {/* Search */}
-          <div style={{ position: 'relative', flex: 1, minWidth: 180 }}>
+          <div className="relative flex-1 min-w-[180px]">
             <Search
               size={13}
-              style={{
-                position: 'absolute',
-                left: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--color-wise-text-muted)',
-                pointerEvents: 'none',
-              }}
+              className="absolute left-[10px] top-1/2 -translate-y-1/2 text-[var(--color-wise-text-muted)] pointer-events-none"
             />
             <input
               type="text"
@@ -960,17 +774,7 @@ export default function EnrollmentManagementPage() {
               value={filterSearch}
               onChange={(e) => setFilterSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
-              style={{
-                width: '100%',
-                padding: '7px 10px 7px 30px',
-                borderRadius: 8,
-                border: '1px solid var(--color-wise-ring)',
-                fontSize: 12,
-                color: 'var(--color-wise-text)',
-                background: 'var(--color-wise-canvas)',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
+              className="w-full pl-[30px] pr-[10px] py-[7px] rounded-lg border border-[var(--color-wise-ring)] text-[12px] text-[var(--color-wise-text)] bg-[var(--color-wise-canvas)] outline-none box-border"
             />
           </div>
 
@@ -980,15 +784,7 @@ export default function EnrollmentManagementPage() {
             value={filterDateFrom}
             onChange={(e) => setFilterDateFrom(e.target.value)}
             aria-label="From date"
-            style={{
-              padding: '7px 10px',
-              borderRadius: 8,
-              border: '1px solid var(--color-wise-ring)',
-              fontSize: 12,
-              color: 'var(--color-wise-text)',
-              background: 'var(--color-wise-canvas)',
-              outline: 'none',
-            }}
+            className="px-[10px] py-[7px] rounded-lg border border-[var(--color-wise-ring)] text-[12px] text-[var(--color-wise-text)] bg-[var(--color-wise-canvas)] outline-none"
           />
 
           {/* Date to */}
@@ -997,32 +793,14 @@ export default function EnrollmentManagementPage() {
             value={filterDateTo}
             onChange={(e) => setFilterDateTo(e.target.value)}
             aria-label="To date"
-            style={{
-              padding: '7px 10px',
-              borderRadius: 8,
-              border: '1px solid var(--color-wise-ring)',
-              fontSize: 12,
-              color: 'var(--color-wise-text)',
-              background: 'var(--color-wise-canvas)',
-              outline: 'none',
-            }}
+            className="px-[10px] py-[7px] rounded-lg border border-[var(--color-wise-ring)] text-[12px] text-[var(--color-wise-text)] bg-[var(--color-wise-canvas)] outline-none"
           />
 
           {/* Apply */}
           <button
             type="button"
             onClick={applyFilters}
-            style={{
-              padding: '7px 18px',
-              borderRadius: 8,
-              border: 'none',
-              background: 'var(--color-wise-text)',
-              color: 'var(--color-wise-surface)',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
+            className="px-[18px] py-[7px] rounded-lg border-none bg-[var(--color-wise-text)] text-[var(--color-wise-surface)] text-[12px] font-bold cursor-pointer whitespace-nowrap"
           >
             Apply Filters
           </button>
@@ -1032,20 +810,7 @@ export default function EnrollmentManagementPage() {
             <button
               type="button"
               onClick={clearFilters}
-              style={{
-                padding: '7px 12px',
-                borderRadius: 8,
-                border: '1px solid var(--color-wise-ring)',
-                background: 'var(--color-wise-surface)',
-                color: 'var(--color-wise-text-muted)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                whiteSpace: 'nowrap',
-              }}
+              className="px-3 py-[7px] rounded-lg border border-[var(--color-wise-ring)] bg-[var(--color-wise-surface)] text-[var(--color-wise-text-muted)] text-[12px] font-semibold cursor-pointer flex items-center gap-1 whitespace-nowrap"
             >
               <X size={11} /> Clear
             </button>
@@ -1053,7 +818,7 @@ export default function EnrollmentManagementPage() {
         </div>
 
         {/* ── Stats row ── */}
-        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+        <div className="flex gap-[14px] flex-wrap">
           <MiniStat label="Total Enrollments" value={statsTotal}     accent="var(--color-wise-primary-text)" />
           <MiniStat label="Active"            value={statsActive}    accent="var(--color-wise-success)" />
           <MiniStat label="Pending"           value={statsPending}   accent="var(--color-wise-warning)" />
@@ -1061,66 +826,37 @@ export default function EnrollmentManagementPage() {
         </div>
 
         {/* ── Enrollments table ── */}
-        <div
-          style={{
-            background: 'var(--color-wise-surface)',
-            borderRadius: 18,
-            border: '1px solid var(--color-wise-ring)',
-            boxShadow: '0 1px 3px var(--color-wise-ring), 0 4px 16px var(--color-wise-ring)',
-            overflow: 'hidden',
-          }}
-        >
+        <div className="bg-[var(--color-wise-surface)] rounded-[18px] border border-[var(--color-wise-ring)] shadow-[0_1px_3px_var(--color-wise-ring),0_4px_16px_var(--color-wise-ring)] overflow-hidden">
           {/* Card header */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '16px 24px',
-              borderBottom: '1px solid var(--color-wise-ring)',
-            }}
-          >
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-wise-ring)]">
             <div>
-              <h2 style={{ fontSize: 14, fontWeight: 800, color: 'var(--color-wise-text)', margin: 0 }}>
+              <h2 className="text-[14px] font-extrabold text-[var(--color-wise-text)] m-0">
                 All Enrollments
               </h2>
-              <p style={{ fontSize: 11, color: 'var(--color-wise-text-muted)', marginTop: 2, marginBottom: 0 }}>
+              <p className="text-[11px] text-[var(--color-wise-text-muted)] mt-[2px] mb-0">
                 {hasActiveFilters ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''} found` : `${enrollments.length} total`}
               </p>
             </div>
             {loading && (
               <div
                 aria-label="Loading"
-                style={{
-                  width: 18,
-                  height: 18,
-                  borderRadius: '50%',
-                  border: '2px solid var(--color-wise-ring)',
-                  borderTopColor: 'var(--color-wise-primary-text)',
-                  animation: 'em-spin 0.7s linear infinite',
-                }}
+                className="w-[18px] h-[18px] rounded-full border-2 border-[var(--color-wise-ring)] border-t-[var(--color-wise-primary-text)]"
+                style={{ animation: 'em-spin 0.7s linear infinite' }}
               />
             )}
           </div>
 
           {/* Table */}
           {pageRows.length === 0 && !loading ? (
-            <div
-              style={{
-                padding: '48px 24px',
-                textAlign: 'center',
-                color: 'var(--color-wise-text-muted)',
-                fontSize: 13,
-              }}
-            >
+            <div className="px-6 py-12 text-center text-[var(--color-wise-text-muted)] text-[13px]">
               {hasActiveFilters
                 ? 'No enrollments match your filters.'
                 : 'No enrollments found.'}
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="overflow-x-auto">
               <table
-                style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}
+                className="w-full border-collapse min-w-[800px]"
                 aria-label="Enrollments table"
               >
                 <thead>
@@ -1141,60 +877,32 @@ export default function EnrollmentManagementPage() {
                     const gradient =
                       AVATAR_GRADIENTS[row.gi % AVATAR_GRADIENTS.length]
                     const isCancelling = cancellingId === row.id
+                    const isLast = i >= pageRows.length - 1
 
                     return (
                       <tr
                         key={row.id}
-                        className="em-tr"
-                        style={{
-                          borderBottom:
-                            i < pageRows.length - 1
-                              ? '1px solid var(--color-wise-ring)'
-                              : 'none',
-                          opacity: isCancelling ? 0.5 : 1,
-                          transition: 'opacity 0.2s',
-                        }}
+                        className={[
+                          'em-tr transition-opacity duration-200',
+                          isLast ? '' : 'border-b border-[var(--color-wise-ring)]',
+                          isCancelling ? 'opacity-50' : 'opacity-100',
+                        ].join(' ')}
                       >
                         {/* Student */}
-                        <td style={{ padding: '12px 16px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-[10px]">
                             <div
                               aria-hidden="true"
-                              style={{
-                                width: 34,
-                                height: 34,
-                                borderRadius: '50%',
-                                background: gradient,
-                                flexShrink: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'var(--color-wise-surface)',
-                                fontSize: 12,
-                                fontWeight: 800,
-                                boxShadow: '0 2px 6px var(--color-wise-ring-strong)',
-                              }}
+                              className="w-[34px] h-[34px] rounded-full shrink-0 flex items-center justify-center text-[var(--color-wise-surface)] text-[12px] font-extrabold shadow-[0_2px_6px_var(--color-wise-ring-strong)]"
+                              style={{ background: gradient }}
                             >
                               {row.studentName.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <div
-                                style={{
-                                  fontSize: 13,
-                                  fontWeight: 700,
-                                  color: 'var(--color-wise-text)',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
+                              <div className="text-[13px] font-bold text-[var(--color-wise-text)] whitespace-nowrap">
                                 {row.studentName}
                               </div>
-                              <div
-                                style={{
-                                  fontSize: 11,
-                                  color: 'var(--color-wise-text-muted)',
-                                  marginTop: 1,
-                                }}
-                              >
+                              <div className="text-[11px] text-[var(--color-wise-text-muted)] mt-[1px]">
                                 {row.studentEmail}
                               </div>
                             </div>
@@ -1202,30 +910,17 @@ export default function EnrollmentManagementPage() {
                         </td>
 
                         {/* Course */}
-                        <td style={{ padding: '12px 16px' }}>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              fontWeight: 700,
-                              color: 'var(--color-wise-text)',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
+                        <td className="px-4 py-3">
+                          <div className="text-[12px] font-bold text-[var(--color-wise-text)] whitespace-nowrap">
                             {row.course}
                           </div>
-                          <div
-                            style={{
-                              fontSize: 11,
-                              color: 'var(--color-wise-text-muted)',
-                              marginTop: 2,
-                            }}
-                          >
+                          <div className="text-[11px] text-[var(--color-wise-text-muted)] mt-[2px]">
                             {row.cohortTitle}
                           </div>
                         </td>
 
                         {/* Status */}
-                        <td style={{ padding: '12px 16px' }}>
+                        <td className="px-4 py-3">
                           <StatusPill
                             label={sc.label}
                             bg={sc.bg}
@@ -1235,34 +930,24 @@ export default function EnrollmentManagementPage() {
                         </td>
 
                         {/* Payment */}
-                        <td style={{ padding: '12px 16px' }}>
-                          <div
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 4,
-                            }}
-                          >
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
                             <StatusPill
                               label={row.paymentStatus}
                               bg={pc.bg}
                               color={pc.color}
                             />
                             <span
+                              className="text-[9px] font-extrabold px-[7px] py-[2px] rounded uppercase tracking-[0.4px] self-start"
                               style={{
-                                fontSize: 9,
-                                fontWeight: 800,
-                                padding: '2px 7px',
-                                borderRadius: 4,
                                 background:
                                   row.paymentMethod === 'STRIPE'
                                     ? 'rgba(99,91,255,0.1)'
                                     : 'rgba(245,158,11,0.1)',
                                 color:
-                                  row.paymentMethod === 'STRIPE' ? 'var(--color-wise-primary-text)' : 'var(--color-wise-text-warm)',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.4px',
-                                alignSelf: 'flex-start',
+                                  row.paymentMethod === 'STRIPE'
+                                    ? 'var(--color-wise-primary-text)'
+                                    : 'var(--color-wise-text-warm)',
                               }}
                             >
                               {row.paymentMethod}
@@ -1271,20 +956,13 @@ export default function EnrollmentManagementPage() {
                         </td>
 
                         {/* Progress */}
-                        <td style={{ padding: '12px 16px' }}>
+                        <td className="px-4 py-3">
                           <ProgressBar value={row.progress} />
                         </td>
 
                         {/* Date */}
-                        <td style={{ padding: '12px 16px' }}>
-                          <span
-                            style={{
-                              fontSize: 11,
-                              color: 'var(--color-wise-text-muted)',
-                              fontWeight: 500,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
+                        <td className="px-4 py-3">
+                          <span className="text-[11px] text-[var(--color-wise-text-muted)] font-medium whitespace-nowrap">
                             {new Date(row.enrolledAt).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric',
@@ -1294,7 +972,7 @@ export default function EnrollmentManagementPage() {
                         </td>
 
                         {/* Actions */}
-                        <td style={{ padding: '12px 16px' }}>
+                        <td className="px-4 py-3">
                           <ActionsMenu
                             enrollment={row}
                             onCancel={handleCancel}
@@ -1310,49 +988,33 @@ export default function EnrollmentManagementPage() {
           )}
 
           {/* ── Pagination footer ── */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '11px 24px',
-              borderTop: '1px solid var(--color-wise-ring)',
-              background: 'var(--color-wise-canvas)',
-              flexWrap: 'wrap',
-              gap: 8,
-            }}
-          >
-            <span style={{ fontSize: 11, color: 'var(--color-wise-text-muted)' }}>
+          <div className="flex items-center justify-between px-6 py-[11px] border-t border-[var(--color-wise-ring)] bg-[var(--color-wise-canvas)] flex-wrap gap-2">
+            <span className="text-[11px] text-[var(--color-wise-text-muted)]">
               Showing{' '}
-              <strong style={{ color: 'var(--color-wise-text)' }}>
+              <strong className="text-[var(--color-wise-text)]">
                 {filtered.length === 0
                   ? 0
                   : (safePage - 1) * PAGE_SIZE + 1}
                 –
                 {Math.min(safePage * PAGE_SIZE, filtered.length)}
               </strong>{' '}
-              of <strong style={{ color: 'var(--color-wise-text)' }}>{filtered.length}</strong>
+              of{' '}
+              <strong className="text-[var(--color-wise-text)]">{filtered.length}</strong>
             </span>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="flex items-center gap-[6px]">
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={safePage <= 1}
                 aria-label="Previous page"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 30,
-                  height: 30,
-                  borderRadius: 8,
-                  border: '1px solid var(--color-wise-ring)',
-                  background: safePage <= 1 ? 'var(--color-wise-canvas)' : 'var(--color-wise-surface)',
-                  color: safePage <= 1 ? 'var(--color-wise-ring-strong)' : 'var(--color-wise-text-muted)',
-                  cursor: safePage <= 1 ? 'not-allowed' : 'pointer',
-                  flexShrink: 0,
-                }}
+                className={[
+                  'flex items-center justify-center w-[30px] h-[30px] rounded-lg',
+                  'border border-[var(--color-wise-ring)] shrink-0',
+                  safePage <= 1
+                    ? 'bg-[var(--color-wise-canvas)] text-[var(--color-wise-ring-strong)] cursor-not-allowed'
+                    : 'bg-[var(--color-wise-surface)] text-[var(--color-wise-text-muted)] cursor-pointer',
+                ].join(' ')}
               >
                 <ChevronLeft size={14} />
               </button>
@@ -1360,28 +1022,21 @@ export default function EnrollmentManagementPage() {
               {/* Page numbers */}
               {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                 const p = i + 1
+                const active = p === safePage
                 return (
                   <button
                     key={p}
                     type="button"
                     onClick={() => setPage(p)}
                     aria-label={`Page ${p}`}
-                    aria-current={p === safePage ? 'page' : undefined}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 30,
-                      height: 30,
-                      borderRadius: 8,
-                      border: p === safePage ? 'none' : '1px solid var(--color-wise-ring)',
-                      background: p === safePage ? 'var(--color-wise-text)' : 'var(--color-wise-surface)',
-                      color: p === safePage ? 'var(--color-wise-surface)' : 'var(--color-wise-text-muted)',
-                      fontSize: 12,
-                      fontWeight: p === safePage ? 700 : 500,
-                      cursor: 'pointer',
-                      flexShrink: 0,
-                    }}
+                    aria-current={active ? 'page' : undefined}
+                    className={[
+                      'flex items-center justify-center w-[30px] h-[30px] rounded-lg',
+                      'text-[12px] cursor-pointer shrink-0',
+                      active
+                        ? 'border-none bg-[var(--color-wise-text)] text-[var(--color-wise-surface)] font-bold'
+                        : 'border border-[var(--color-wise-ring)] bg-[var(--color-wise-surface)] text-[var(--color-wise-text-muted)] font-medium',
+                    ].join(' ')}
                   >
                     {p}
                   </button>
@@ -1393,19 +1048,13 @@ export default function EnrollmentManagementPage() {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={safePage >= totalPages}
                 aria-label="Next page"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 30,
-                  height: 30,
-                  borderRadius: 8,
-                  border: '1px solid var(--color-wise-ring)',
-                  background: safePage >= totalPages ? 'var(--color-wise-canvas)' : 'var(--color-wise-surface)',
-                  color: safePage >= totalPages ? 'var(--color-wise-ring-strong)' : 'var(--color-wise-text-muted)',
-                  cursor: safePage >= totalPages ? 'not-allowed' : 'pointer',
-                  flexShrink: 0,
-                }}
+                className={[
+                  'flex items-center justify-center w-[30px] h-[30px] rounded-lg',
+                  'border border-[var(--color-wise-ring)] shrink-0',
+                  safePage >= totalPages
+                    ? 'bg-[var(--color-wise-canvas)] text-[var(--color-wise-ring-strong)] cursor-not-allowed'
+                    : 'bg-[var(--color-wise-surface)] text-[var(--color-wise-text-muted)] cursor-pointer',
+                ].join(' ')}
               >
                 <ChevronRight size={14} />
               </button>

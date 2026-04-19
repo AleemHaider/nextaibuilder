@@ -1,4 +1,10 @@
 // FIR-209 — Admin can view full student profile
+//
+// Sprint 4 Story 22: inline-style → Tailwind conversion.
+// Tokens from Sprint 3 Story 16 are preserved; we only rewrite the
+// `style={{...}}` wrappers as Tailwind classes. Dynamic values that cannot
+// be expressed as static classes (gradient avatar, progress width, status
+// pill tints keyed off per-record state) remain inline.
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
@@ -102,16 +108,15 @@ function SkeletonBlock({
   h?: number
   radius?: number
 }) {
+  // Width / height / radius are all caller-configured — stay inline.
   return (
     <div
+      className="shrink-0 bg-[linear-gradient(90deg,var(--color-wise-ring)_25%,var(--color-wise-canvas)_50%,var(--color-wise-ring)_75%)] bg-[size:200%_100%]"
       style={{
         width: w,
         height: h,
         borderRadius: radius,
-        background: 'linear-gradient(90deg,var(--color-wise-ring) 25%,var(--color-wise-canvas) 50%,var(--color-wise-ring) 75%)',
-        backgroundSize: '200% 100%',
         animation: 'shimmer 1.4s infinite',
-        flexShrink: 0,
       }}
     />
   )
@@ -134,28 +139,13 @@ function StatusPill({
 }) {
   return (
     <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        fontSize: 11,
-        fontWeight: 700,
-        padding: '4px 10px',
-        borderRadius: 20,
-        background: bg,
-        color,
-        whiteSpace: 'nowrap',
-      }}
+      className="inline-flex items-center gap-[5px] px-[10px] py-1 rounded-[20px] text-[11px] font-bold whitespace-nowrap"
+      style={{ background: bg, color }}
     >
       {dot && (
         <span
-          style={{
-            width: 5,
-            height: 5,
-            borderRadius: '50%',
-            background: dot,
-            flexShrink: 0,
-          }}
+          className="w-[5px] h-[5px] rounded-full shrink-0"
+          style={{ background: dot }}
         />
       )}
       {label}
@@ -168,6 +158,7 @@ function StatusPill({
 // ---------------------------------------------------------------------------
 
 function ProgressBar({ value }: { value: number }) {
+  // Width + fill background depend on the value — both stay inline.
   const color =
     value === 100
       ? 'linear-gradient(90deg,var(--color-wise-success),var(--color-wise-success))'
@@ -176,27 +167,14 @@ function ProgressBar({ value }: { value: number }) {
       : 'linear-gradient(90deg,var(--color-wise-primary-text),var(--color-wise-primary-text))'
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div
-        style={{
-          width: 80,
-          height: 5,
-          background: 'var(--color-wise-canvas)',
-          borderRadius: 99,
-          overflow: 'hidden',
-          flexShrink: 0,
-        }}
-      >
+    <div className="flex items-center gap-2">
+      <div className="w-20 h-[5px] bg-[var(--color-wise-canvas)] rounded-[99px] overflow-hidden shrink-0">
         <div
-          style={{
-            height: '100%',
-            borderRadius: 99,
-            width: `${value}%`,
-            background: color,
-          }}
+          className="h-full rounded-[99px]"
+          style={{ width: `${value}%`, background: color }}
         />
       </div>
-      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-wise-text-muted)', flexShrink: 0 }}>
+      <span className="text-[11px] font-bold text-[var(--color-wise-text-muted)] shrink-0">
         {value}%
       </span>
     </div>
@@ -216,37 +194,19 @@ function StatCard({
   value: string | number
   accent: string
 }) {
+  // The accent bar's color is a per-card prop, so it stays inline. Card
+  // shell + typography are fully class-driven.
   return (
-    <div
-      style={{
-        background: 'var(--color-wise-surface)',
-        borderRadius: 14,
-        padding: '18px 20px',
-        border: '1px solid var(--color-wise-ring)',
-        boxShadow: '0 1px 3px var(--color-wise-ring), 0 4px 16px var(--color-wise-ring)',
-        flex: 1,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 26,
-          fontWeight: 900,
-          color: 'var(--color-wise-text)',
-          letterSpacing: '-0.5px',
-          marginBottom: 4,
-        }}
-      >
+    <div className="flex-1 bg-[var(--color-wise-surface)] rounded-[14px] px-5 py-[18px] border border-[var(--color-wise-ring)] shadow-[0_1px_3px_var(--color-wise-ring),0_4px_16px_var(--color-wise-ring)]">
+      <div className="text-[26px] font-black text-[var(--color-wise-text)] tracking-[-0.5px] mb-1">
         {value}
       </div>
-      <div style={{ fontSize: 12, color: 'var(--color-wise-text-muted)', fontWeight: 500 }}>{label}</div>
+      <div className="text-[12px] text-[var(--color-wise-text-muted)] font-medium">
+        {label}
+      </div>
       <div
-        style={{
-          marginTop: 10,
-          height: 3,
-          width: 32,
-          background: accent,
-          borderRadius: 99,
-        }}
+        className="mt-[10px] h-[3px] w-8 rounded-[99px]"
+        style={{ background: accent }}
       />
     </div>
   )
@@ -263,31 +223,26 @@ function Toast({
   message: string
   type: 'success' | 'error'
 }) {
+  const isSuccess = type === 'success'
   return (
     <div
       role="alert"
       aria-live="polite"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '10px 16px',
-        borderRadius: 10,
-        fontSize: 13,
-        fontWeight: 600,
-        background: type === 'success' ? 'rgba(5,150,105,0.1)' : 'rgba(239,68,68,0.1)',
-        color: type === 'success' ? 'var(--color-wise-success)' : 'var(--color-wise-danger)',
-        border: `1px solid ${type === 'success' ? 'rgba(5,150,105,0.2)' : 'rgba(239,68,68,0.2)'}`,
-      }}
+      className={[
+        'inline-flex items-center gap-2 px-4 py-[10px] rounded-[10px]',
+        'text-[13px] font-semibold border',
+        isSuccess
+          ? 'bg-[rgba(5,150,105,0.1)] text-[var(--color-wise-success)] border-[rgba(5,150,105,0.2)]'
+          : 'bg-[rgba(239,68,68,0.1)] text-[var(--color-wise-danger)] border-[rgba(239,68,68,0.2)]',
+      ].join(' ')}
     >
       <span
-        style={{
-          width: 7,
-          height: 7,
-          borderRadius: '50%',
-          background: type === 'success' ? 'var(--color-wise-success)' : 'var(--color-wise-danger)',
-          flexShrink: 0,
-        }}
+        className={[
+          'w-[7px] h-[7px] rounded-full shrink-0',
+          isSuccess
+            ? 'bg-[var(--color-wise-success)]'
+            : 'bg-[var(--color-wise-danger)]',
+        ].join(' ')}
       />
       {message}
     </div>
@@ -300,21 +255,20 @@ function Toast({
 
 function Card({
   children,
-  style: extraStyle,
+  className: extraClassName,
 }: {
   children: React.ReactNode
-  style?: React.CSSProperties
+  className?: string
 }) {
+  // Extra className slot — callers compose (e.g. bottom-margin for the final
+  // card in the stack).
   return (
     <div
-      style={{
-        background: 'var(--color-wise-surface)',
-        borderRadius: 18,
-        border: '1px solid var(--color-wise-ring)',
-        boxShadow: '0 1px 3px var(--color-wise-ring), 0 4px 16px var(--color-wise-ring)',
-        overflow: 'hidden',
-        ...extraStyle,
-      }}
+      className={[
+        'bg-[var(--color-wise-surface)] rounded-[18px] border border-[var(--color-wise-ring)]',
+        'shadow-[0_1px_3px_var(--color-wise-ring),0_4px_16px_var(--color-wise-ring)] overflow-hidden',
+        extraClassName ?? '',
+      ].join(' ')}
     >
       {children}
     </div>
@@ -325,22 +279,11 @@ function Card({
 // Table head
 // ---------------------------------------------------------------------------
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({ children }: { children?: React.ReactNode }) {
   return (
     <th
       scope="col"
-      style={{
-        textAlign: 'left',
-        fontSize: 10,
-        fontWeight: 700,
-        color: 'var(--color-wise-text-muted)',
-        padding: '10px 20px',
-        textTransform: 'uppercase',
-        letterSpacing: '0.8px',
-        borderBottom: '1px solid var(--color-wise-ring)',
-        whiteSpace: 'nowrap',
-        background: 'var(--color-wise-canvas)',
-      }}
+      className="text-left text-[10px] font-bold text-[var(--color-wise-text-muted)] px-5 py-[10px] uppercase tracking-[0.8px] border-b border-[var(--color-wise-ring)] whitespace-nowrap bg-[var(--color-wise-canvas)]"
     >
       {children}
     </th>
@@ -429,50 +372,20 @@ export default function StudentDetailPage() {
   if (!loading && notFound) {
     return (
       <AdminShell title="Student Not Found">
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '60vh',
-            gap: 16,
-            padding: 32,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 64,
-              fontWeight: 900,
-              color: 'var(--color-wise-ring)',
-              letterSpacing: '-3px',
-              lineHeight: 1,
-            }}
-          >
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8">
+          <div className="text-[64px] font-black text-[var(--color-wise-ring)] tracking-[-3px] leading-none">
             404
           </div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-wise-text)' }}>
+          <div className="text-[16px] font-bold text-[var(--color-wise-text)]">
             Student not found
           </div>
-          <div style={{ fontSize: 13, color: 'var(--color-wise-text-muted)' }}>
+          <div className="text-[13px] text-[var(--color-wise-text-muted)]">
             The student you're looking for doesn't exist or was removed.
           </div>
           <button
             type="button"
             onClick={() => navigate('/admin/students')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '9px 18px',
-              borderRadius: 10,
-              background: 'var(--color-wise-text)',
-              color: 'var(--color-wise-surface)',
-              fontSize: 13,
-              fontWeight: 700,
-              border: 'none',
-              cursor: 'pointer',
-            }}
+            className="inline-flex items-center gap-[6px] px-[18px] py-[9px] rounded-[10px] bg-[var(--color-wise-text)] text-[var(--color-wise-surface)] text-[13px] font-bold border-none cursor-pointer"
           >
             <ArrowLeft size={14} /> Back to Students
           </button>
@@ -493,15 +406,15 @@ export default function StudentDetailPage() {
             100% { background-position: -200% 0; }
           }
         `}</style>
-        <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="px-8 py-7 flex flex-col gap-5">
           {/* Back button skeleton */}
           <SkeletonBlock w={120} h={32} radius={10} />
 
           {/* Header card skeleton */}
           <Card>
-            <div style={{ padding: '24px 28px', display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div className="px-7 py-6 flex items-center gap-5">
               <SkeletonBlock w={72} h={72} radius={36} />
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="flex-1 flex flex-col gap-[10px]">
                 <SkeletonBlock w={200} h={20} />
                 <SkeletonBlock w={160} h={14} />
                 <SkeletonBlock w={100} h={24} radius={20} />
@@ -511,20 +424,14 @@ export default function StudentDetailPage() {
           </Card>
 
           {/* Stats row skeleton */}
-          <div style={{ display: 'flex', gap: 16 }}>
+          <div className="flex gap-4">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                style={{
-                  flex: 1,
-                  background: 'var(--color-wise-surface)',
-                  borderRadius: 14,
-                  padding: '18px 20px',
-                  border: '1px solid var(--color-wise-ring)',
-                }}
+                className="flex-1 bg-[var(--color-wise-surface)] rounded-[14px] px-5 py-[18px] border border-[var(--color-wise-ring)]"
               >
                 <SkeletonBlock w={60} h={28} radius={6} />
-                <div style={{ marginTop: 8 }}>
+                <div className="mt-2">
                   <SkeletonBlock w={100} h={12} />
                 </div>
               </div>
@@ -533,10 +440,10 @@ export default function StudentDetailPage() {
 
           {/* Table skeleton */}
           <Card>
-            <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--color-wise-ring)' }}>
+            <div className="px-6 py-[18px] border-b border-[var(--color-wise-ring)]">
               <SkeletonBlock w={160} h={18} />
             </div>
-            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="p-6 flex flex-col gap-4">
               {[1, 2, 3].map((i) => (
                 <SkeletonBlock key={i} w="100%" h={40} radius={8} />
               ))}
@@ -564,26 +471,12 @@ export default function StudentDetailPage() {
         .sd-tr:hover td { background: var(--color-wise-canvas) !important; }
       `}</style>
 
-      <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
+      <div className="px-8 py-7 flex flex-col gap-5">
         {/* Back button */}
         <div>
           <Link
             to="/admin/students"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 13,
-              fontWeight: 600,
-              color: 'var(--color-wise-text-muted)',
-              textDecoration: 'none',
-              padding: '7px 12px',
-              borderRadius: 8,
-              background: 'var(--color-wise-surface)',
-              border: '1px solid var(--color-wise-ring)',
-              boxShadow: '0 1px 2px var(--color-wise-ring)',
-            }}
+            className="inline-flex items-center gap-[6px] text-[13px] font-semibold text-[var(--color-wise-text-muted)] no-underline px-3 py-[7px] rounded-lg bg-[var(--color-wise-surface)] border border-[var(--color-wise-ring)] shadow-[0_1px_2px_var(--color-wise-ring)]"
           >
             <ArrowLeft size={14} /> Back to Students
           </Link>
@@ -594,84 +487,27 @@ export default function StudentDetailPage() {
 
         {/* ── Header profile card ── */}
         <Card>
-          <div
-            style={{
-              padding: '24px 28px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 20,
-              flexWrap: 'wrap',
-            }}
-          >
+          <div className="px-7 py-6 flex items-center gap-5 flex-wrap">
             {/* Avatar */}
             <div
               aria-hidden="true"
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: '50%',
-                background: getAvatarGradient(student.name),
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 28,
-                fontWeight: 900,
-                color: 'var(--color-wise-surface)',
-                flexShrink: 0,
-                boxShadow: '0 4px 16px rgba(26,39,68,0.18)',
-              }}
+              className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-[28px] font-black text-[var(--color-wise-surface)] shrink-0 shadow-[0_4px_16px_rgba(26,39,68,0.18)]"
+              style={{ background: getAvatarGradient(student.name) }}
             >
               {student.name.charAt(0).toUpperCase()}
             </div>
 
             {/* Identity */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <h1
-                style={{
-                  fontSize: 22,
-                  fontWeight: 900,
-                  color: 'var(--color-wise-text)',
-                  margin: 0,
-                  letterSpacing: '-0.4px',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
+            <div className="flex-1 min-w-0">
+              <h1 className="text-[22px] font-black text-[var(--color-wise-text)] m-0 tracking-[-0.4px] whitespace-nowrap overflow-hidden text-ellipsis">
                 {student.name}
               </h1>
-              <div
-                style={{
-                  fontSize: 13,
-                  color: 'var(--color-wise-text-muted)',
-                  marginTop: 3,
-                  fontWeight: 500,
-                }}
-              >
+              <div className="text-[13px] text-[var(--color-wise-text-muted)] mt-[3px] font-medium">
                 {student.email}
               </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginTop: 10,
-                  flexWrap: 'wrap',
-                }}
-              >
+              <div className="flex items-center gap-2 mt-[10px] flex-wrap">
                 {/* Role badge */}
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    padding: '3px 9px',
-                    borderRadius: 6,
-                    background: 'rgba(74,154,212,0.1)',
-                    color: 'var(--color-wise-primary-text)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.6px',
-                  }}
-                >
+                <span className="text-[10px] font-bold px-[9px] py-[3px] rounded-md bg-[rgba(74,154,212,0.1)] text-[var(--color-wise-primary-text)] uppercase tracking-[0.6px]">
                   {student.role.replace('_', ' ')}
                 </span>
 
@@ -690,25 +526,14 @@ export default function StudentDetailPage() {
               type="button"
               onClick={handleStatusToggle}
               disabled={statusLoading}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '9px 20px',
-                borderRadius: 10,
-                fontSize: 13,
-                fontWeight: 700,
-                border: 'none',
-                cursor: statusLoading ? 'not-allowed' : 'pointer',
-                opacity: statusLoading ? 0.7 : 1,
-                background: isSuspended ? 'var(--color-wise-success)' : 'var(--color-wise-danger)',
-                color: 'var(--color-wise-surface)',
-                boxShadow: isSuspended
-                  ? '0 2px 8px rgba(5,150,105,0.3)'
-                  : '0 2px 8px rgba(239,68,68,0.3)',
-                transition: 'opacity 0.15s',
-                flexShrink: 0,
-              }}
+              className={[
+                'inline-flex items-center gap-[6px] px-5 py-[9px] rounded-[10px] text-[13px] font-bold',
+                'border-none text-[var(--color-wise-surface)] transition-opacity duration-150 shrink-0',
+                statusLoading ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100',
+                isSuspended
+                  ? 'bg-[var(--color-wise-success)] shadow-[0_2px_8px_rgba(5,150,105,0.3)]'
+                  : 'bg-[var(--color-wise-danger)] shadow-[0_2px_8px_rgba(239,68,68,0.3)]',
+              ].join(' ')}
             >
               {statusLoading
                 ? 'Updating...'
@@ -720,7 +545,7 @@ export default function StudentDetailPage() {
         </Card>
 
         {/* ── Stats row ── */}
-        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        <div className="flex gap-4 flex-wrap">
           <StatCard
             label="Total Enrollments"
             value={student.totalEnrollments}
@@ -740,60 +565,28 @@ export default function StudentDetailPage() {
 
         {/* ── Enrollments table ── */}
         <Card>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '18px 24px',
-              borderBottom: '1px solid var(--color-wise-ring)',
-            }}
-          >
+          <div className="flex items-center justify-between px-6 py-[18px] border-b border-[var(--color-wise-ring)]">
             <div>
-              <h2
-                style={{
-                  fontSize: 15,
-                  fontWeight: 800,
-                  color: 'var(--color-wise-text)',
-                  margin: 0,
-                }}
-              >
+              <h2 className="text-[15px] font-extrabold text-[var(--color-wise-text)] m-0">
                 Enrollments
               </h2>
-              <p style={{ fontSize: 12, color: 'var(--color-wise-text-muted)', marginTop: 2, marginBottom: 0 }}>
+              <p className="text-[12px] text-[var(--color-wise-text-muted)] mt-[2px] mb-0">
                 All course enrollments for this student
               </p>
             </div>
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: 'var(--color-wise-primary-text)',
-                background: 'rgba(74,154,212,0.08)',
-                padding: '4px 12px',
-                borderRadius: 20,
-                border: '1px solid rgba(74,154,212,0.15)',
-              }}
-            >
+            <span className="text-[12px] font-bold text-[var(--color-wise-primary-text)] bg-[rgba(74,154,212,0.08)] px-3 py-1 rounded-[20px] border border-[rgba(74,154,212,0.15)]">
               {student.enrollments.length} total
             </span>
           </div>
 
           {student.enrollments.length === 0 ? (
-            <div
-              style={{
-                padding: '40px 24px',
-                textAlign: 'center',
-                color: 'var(--color-wise-text-muted)',
-                fontSize: 13,
-              }}
-            >
+            <div className="px-6 py-10 text-center text-[var(--color-wise-text-muted)] text-[13px]">
               No enrollments found for this student.
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="overflow-x-auto">
               <table
-                style={{ width: '100%', borderCollapse: 'collapse' }}
+                className="w-full border-collapse"
                 aria-label="Student enrollments"
               >
                 <thead>
@@ -803,41 +596,33 @@ export default function StudentDetailPage() {
                     <Th>Payment</Th>
                     <Th>Progress</Th>
                     <Th>Enrolled</Th>
-                    <Th></Th>
+                    <Th />
                   </tr>
                 </thead>
                 <tbody>
                   {student.enrollments.map((enr, i) => {
                     const sc = ENROLLMENT_STATUS_CFG[enr.status]
                     const pc = ENROLLMENT_PAYMENT_CFG[enr.paymentStatus]
+                    const isLast = i >= student.enrollments.length - 1
                     return (
                       <tr
                         key={enr.id}
-                        className="sd-tr"
-                        style={{
-                          borderBottom:
-                            i < student.enrollments.length - 1
-                              ? '1px solid var(--color-wise-ring)'
-                              : 'none',
-                        }}
+                        className={[
+                          'sd-tr',
+                          isLast ? '' : 'border-b border-[var(--color-wise-ring)]',
+                        ].join(' ')}
                       >
-                        <td style={{ padding: '14px 20px' }}>
-                          <div
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: 'var(--color-wise-text)',
-                            }}
-                          >
+                        <td className="px-5 py-[14px]">
+                          <div className="text-[13px] font-bold text-[var(--color-wise-text)]">
                             {enr.courseTitle}
                           </div>
                           {enr.cohortTitle && (
-                            <div style={{ fontSize: 11, color: 'var(--color-wise-text-muted)', marginTop: 2 }}>
+                            <div className="text-[11px] text-[var(--color-wise-text-muted)] mt-[2px]">
                               {enr.cohortTitle}
                             </div>
                           )}
                         </td>
-                        <td style={{ padding: '14px 20px' }}>
+                        <td className="px-5 py-[14px]">
                           <StatusPill
                             label={sc.label}
                             bg={sc.bg}
@@ -845,18 +630,18 @@ export default function StudentDetailPage() {
                             dot={sc.dot}
                           />
                         </td>
-                        <td style={{ padding: '14px 20px' }}>
+                        <td className="px-5 py-[14px]">
                           <StatusPill
                             label={enr.paymentStatus}
                             bg={pc.bg}
                             color={pc.color}
                           />
                         </td>
-                        <td style={{ padding: '14px 20px' }}>
+                        <td className="px-5 py-[14px]">
                           <ProgressBar value={enr.progress} />
                         </td>
-                        <td style={{ padding: '14px 20px' }}>
-                          <span style={{ fontSize: 11, color: 'var(--color-wise-text-muted)', fontWeight: 500 }}>
+                        <td className="px-5 py-[14px]">
+                          <span className="text-[11px] text-[var(--color-wise-text-muted)] font-medium">
                             {new Date(enr.enrolledAt).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric',
@@ -864,23 +649,10 @@ export default function StudentDetailPage() {
                             })}
                           </span>
                         </td>
-                        <td style={{ padding: '14px 16px' }}>
+                        <td className="px-4 py-[14px]">
                           <Link
                             to={`/admin/courses`}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              fontSize: 11,
-                              fontWeight: 700,
-                              color: 'var(--color-wise-primary-text)',
-                              textDecoration: 'none',
-                              padding: '5px 10px',
-                              borderRadius: 7,
-                              background: 'rgba(74,154,212,0.08)',
-                              border: '1px solid rgba(74,154,212,0.15)',
-                              whiteSpace: 'nowrap',
-                            }}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--color-wise-primary-text)] no-underline px-[10px] py-[5px] rounded-[7px] bg-[rgba(74,154,212,0.08)] border border-[rgba(74,154,212,0.15)] whitespace-nowrap"
                           >
                             View <ExternalLink size={10} />
                           </Link>
@@ -895,48 +667,26 @@ export default function StudentDetailPage() {
         </Card>
 
         {/* ── Payment History ── */}
-        <Card style={{ marginBottom: 8 }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '18px 24px',
-              borderBottom: '1px solid var(--color-wise-ring)',
-            }}
-          >
+        <Card className="mb-2">
+          <div className="flex items-center justify-between px-6 py-[18px] border-b border-[var(--color-wise-ring)]">
             <div>
-              <h2
-                style={{
-                  fontSize: 15,
-                  fontWeight: 800,
-                  color: 'var(--color-wise-text)',
-                  margin: 0,
-                }}
-              >
+              <h2 className="text-[15px] font-extrabold text-[var(--color-wise-text)] m-0">
                 Payment History
               </h2>
-              <p style={{ fontSize: 12, color: 'var(--color-wise-text-muted)', marginTop: 2, marginBottom: 0 }}>
+              <p className="text-[12px] text-[var(--color-wise-text-muted)] mt-[2px] mb-0">
                 All payment transactions for this student
               </p>
             </div>
           </div>
 
           {student.payments.length === 0 ? (
-            <div
-              style={{
-                padding: '40px 24px',
-                textAlign: 'center',
-                color: 'var(--color-wise-text-muted)',
-                fontSize: 13,
-              }}
-            >
+            <div className="px-6 py-10 text-center text-[var(--color-wise-text-muted)] text-[13px]">
               No payment records found.
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="overflow-x-auto">
               <table
-                style={{ width: '100%', borderCollapse: 'collapse' }}
+                className="w-full border-collapse"
                 aria-label="Payment history"
               >
                 <thead>
@@ -952,19 +702,17 @@ export default function StudentDetailPage() {
                   {student.payments.map((pmt, i) => {
                     const sc = PAYMENT_STATUS_CFG[pmt.status]
                     const isStripe = pmt.type === 'STRIPE'
+                    const isLast = i >= student.payments.length - 1
                     return (
                       <tr
                         key={pmt.id}
-                        className="sd-tr"
-                        style={{
-                          borderBottom:
-                            i < student.payments.length - 1
-                              ? '1px solid var(--color-wise-ring)'
-                              : 'none',
-                        }}
+                        className={[
+                          'sd-tr',
+                          isLast ? '' : 'border-b border-[var(--color-wise-ring)]',
+                        ].join(' ')}
                       >
-                        <td style={{ padding: '14px 20px' }}>
-                          <span style={{ fontSize: 12, color: 'var(--color-wise-text-muted)', fontWeight: 500 }}>
+                        <td className="px-5 py-[14px]">
+                          <span className="text-[12px] text-[var(--color-wise-text-muted)] font-medium">
                             {new Date(pmt.date).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric',
@@ -972,50 +720,33 @@ export default function StudentDetailPage() {
                             })}
                           </span>
                         </td>
-                        <td style={{ padding: '14px 20px' }}>
+                        <td className="px-5 py-[14px]">
                           <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 800,
-                              padding: '3px 9px',
-                              borderRadius: 6,
-                              background: isStripe
-                                ? 'rgba(99,91,255,0.1)'
-                                : 'rgba(245,158,11,0.1)',
-                              color: isStripe ? 'var(--color-wise-primary-text)' : 'var(--color-wise-text-warm)',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.5px',
-                            }}
+                            className={[
+                              'text-[10px] font-extrabold px-[9px] py-[3px] rounded-md',
+                              'uppercase tracking-[0.5px]',
+                              isStripe
+                                ? 'bg-[rgba(99,91,255,0.1)] text-[var(--color-wise-primary-text)]'
+                                : 'bg-[rgba(245,158,11,0.1)] text-[var(--color-wise-text-warm)]',
+                            ].join(' ')}
                           >
                             {pmt.type}
                           </span>
                         </td>
-                        <td style={{ padding: '14px 20px' }}>
-                          <span
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 800,
-                              color: 'var(--color-wise-text)',
-                            }}
-                          >
+                        <td className="px-5 py-[14px]">
+                          <span className="text-[13px] font-extrabold text-[var(--color-wise-text)]">
                             ${pmt.amount.toLocaleString()}
                           </span>
                         </td>
-                        <td style={{ padding: '14px 20px' }}>
+                        <td className="px-5 py-[14px]">
                           <StatusPill
                             label={pmt.status}
                             bg={sc.bg}
                             color={sc.color}
                           />
                         </td>
-                        <td style={{ padding: '14px 20px' }}>
-                          <span
-                            style={{
-                              fontSize: 12,
-                              fontWeight: 600,
-                              color: 'var(--color-wise-text)',
-                            }}
-                          >
+                        <td className="px-5 py-[14px]">
+                          <span className="text-[12px] font-semibold text-[var(--color-wise-text)]">
                             {pmt.courseTitle}
                           </span>
                         </td>
