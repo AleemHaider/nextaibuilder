@@ -7,6 +7,10 @@
 //   GAP-031: "Check your email at X" CTA added, using the logged-in
 //            user's email via useAuth(), falling back to a generic
 //            message when unauthenticated.
+//
+// Sprint 3 Story 13: Wise theme sweep — legacy navy/green hex codes
+// replaced with `--color-wise-*` tokens so the card matches the rest of
+// the public surface.
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { Mail } from 'lucide-react'
@@ -72,7 +76,7 @@ export default function EnrollmentSuccessPage() {
 
   if (lookup.status === 'loading') {
     return (
-      <div className="min-h-screen bg-[#f8f9fb] flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--color-wise-canvas)] flex items-center justify-center">
         <LoadingSpinner size="lg" label="Loading enrollment" centered />
       </div>
     )
@@ -80,8 +84,13 @@ export default function EnrollmentSuccessPage() {
 
   if (lookup.status === 'error') {
     return (
-      <div className="min-h-screen bg-[#f8f9fb] flex items-center justify-center px-4">
-        <div className="bg-white rounded-[20px] w-full max-w-[520px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px]">
+      <div className="min-h-screen bg-[var(--color-wise-canvas)] flex items-center justify-center px-4">
+        <div
+          className={cn(
+            'rounded-[var(--radius-md)] bg-[var(--color-wise-surface)]',
+            'w-full max-w-[520px] shadow-[var(--shadow-card)]',
+          )}
+        >
           <EmptyState
             title="You\u2019re enrolled!"
             description={lookup.message}
@@ -97,14 +106,16 @@ export default function EnrollmentSuccessPage() {
   return (
     <div
       className={cn(
-        'min-h-screen bg-[#f8f9fb] flex flex-col items-center justify-center px-4',
+        'min-h-screen flex flex-col items-center justify-center px-4',
+        'bg-[var(--color-wise-canvas)]',
       )}
     >
       {/* Success card */}
       <div
         className={cn(
-          'bg-white rounded-[20px] p-12 text-center w-full max-w-[480px]',
-          'shadow-[rgba(26,39,68,0.12)_0_0_0_1px]',
+          'w-full max-w-[480px] p-12 text-center',
+          'rounded-[var(--radius-md)] bg-[var(--color-wise-surface)]',
+          'shadow-[var(--shadow-card)]',
         )}
         role="main"
         aria-labelledby="success-heading"
@@ -115,7 +126,7 @@ export default function EnrollmentSuccessPage() {
             {/* Background circle */}
             <div
               className={cn(
-                'absolute inset-0 rounded-full bg-[#e6f4ec]',
+                'absolute inset-0 rounded-full bg-[var(--color-wise-mint)]',
                 'animate-[ping_0.4s_ease-out_forwards]',
               )}
               style={{ animationIterationCount: 1 }}
@@ -130,8 +141,8 @@ export default function EnrollmentSuccessPage() {
                 cx="36"
                 cy="36"
                 r="32"
-                fill="#e6f4ec"
-                stroke="#054d28"
+                fill="var(--color-wise-mint)"
+                stroke="var(--color-wise-primary-text)"
                 strokeWidth="2.5"
                 strokeDasharray="201"
                 strokeDashoffset="201"
@@ -143,7 +154,7 @@ export default function EnrollmentSuccessPage() {
               <path
                 d="M22 36 L31 45 L50 26"
                 fill="none"
-                stroke="#054d28"
+                stroke="var(--color-wise-primary-text)"
                 strokeWidth="3.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -169,19 +180,22 @@ export default function EnrollmentSuccessPage() {
 
         <h1
           id="success-heading"
-          className="text-[28px] font-black text-[#1a2744] mb-2"
+          className="mb-2 text-[28px] font-black text-[var(--color-wise-text)]"
         >
           You're enrolled!
         </h1>
 
-        <p className="text-[16px] text-[#717182] leading-relaxed mb-6">
+        <p className="mb-6 text-base leading-relaxed text-[var(--color-wise-text-muted)]">
           Your payment was successful. Welcome to{' '}
           {/*
             GAP-030 — cohort name is the server-returned `title` from
             /storefront/cohorts/by-id/:id. Rendered as a plain text node so
             React's default escaping handles any residual characters.
           */}
-          <span data-testid="cohort-title" className="font-semibold text-[#1a2744]">
+          <span
+            data-testid="cohort-title"
+            className="font-semibold text-[var(--color-wise-text)]"
+          >
             {cohortTitle}
           </span>
           .
@@ -194,18 +208,18 @@ export default function EnrollmentSuccessPage() {
           <div
             data-testid="email-cta"
             className={cn(
-              'flex items-center justify-center gap-2 mb-8 py-3 px-4 rounded-xl',
-              'bg-[#eef6fd] text-[#0d1a3a]',
+              'flex items-center justify-center gap-2 mb-8 py-3 px-4',
+              'rounded-xl bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
             )}
           >
             <Mail className="h-4 w-4" aria-hidden="true" />
-            <span className="text-[14px]">
+            <span className="text-sm">
               Check your email at{' '}
               <span className="font-semibold break-all">{userEmail}</span>
             </span>
           </div>
         ) : (
-          <p className="text-[14px] text-[#717182] mb-8">
+          <p className="mb-8 text-sm text-[var(--color-wise-text-muted)]">
             Check your email for access details.
           </p>
         )}
@@ -221,7 +235,7 @@ export default function EnrollmentSuccessPage() {
         </Button>
 
         {/* Secondary — receipt hint */}
-        <p className="text-[13px] text-[#717182]">
+        <p className="text-[13px] text-[var(--color-wise-text-muted)]">
           A receipt has been sent to your email address.
         </p>
       </div>

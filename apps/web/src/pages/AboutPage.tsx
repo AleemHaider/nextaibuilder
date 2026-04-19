@@ -1,6 +1,20 @@
 // About page — nextaibuilder platform
+//
+// Sprint 3 Story 13 — migrated from navy/blue palette to the Wise theme.
+// Emojis swapped for lucide icons, inline styles consolidated into Tailwind
+// classes that consume the `--color-wise-*` tokens. The existing TopNav is
+// left untouched (separate story).
 import { Link } from 'react-router'
+import {
+  ArrowRight,
+  Target,
+  Users,
+  Rocket,
+  Unlock,
+  type LucideIcon,
+} from 'lucide-react'
 import { TopNav } from '../components/TopNav'
+import { cn } from '../lib/utils'
 
 const TEAM = [
   {
@@ -8,86 +22,80 @@ const TEAM = [
     role: 'Founder & Lead Instructor',
     bio: 'Builder, educator, and AI product enthusiast. Helping founders ship real AI products.',
     initials: 'AH',
-    accent: '#4a9ad4',
   },
 ]
 
-const VALUES = [
+interface Value {
+  Icon: LucideIcon
+  title: string
+  desc: string
+}
+
+const VALUES: Value[] = [
   {
-    icon: '🎯',
-    title: 'Build, don\'t just learn',
+    Icon: Target,
+    title: "Build, don't just learn",
     desc: 'Every cohort ends with a deployed, production-grade project — not a certificate you forget about.',
-    bg: 'linear-gradient(135deg,#eef6fd,#c8e4f7)',
   },
   {
-    icon: '👥',
+    Icon: Users,
     title: 'Community first',
     desc: 'You learn faster alongside people who share your goals. Our cohorts keep groups intentionally small.',
-    bg: 'linear-gradient(135deg,#f3f0ff,#d6c9fc)',
   },
   {
-    icon: '🚀',
+    Icon: Rocket,
     title: 'AI-native curriculum',
     desc: 'We update every cohort as the tools evolve. No stale content — just what\'s relevant right now.',
-    bg: 'linear-gradient(135deg,#fff7ed,#fed7aa)',
   },
   {
-    icon: '🔓',
+    Icon: Unlock,
     title: 'Transparent pricing',
     desc: 'Instalment plans, manual payment options, and no hidden fees. Education should be accessible.',
-    bg: 'linear-gradient(135deg,#ecfdf5,#a7f3d0)',
   },
 ]
 
 export default function AboutPage() {
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fb' }}>
+    <div className="min-h-screen bg-[var(--color-wise-canvas)]">
       <TopNav />
 
-      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '48px 24px 80px' }}>
+      <main className="max-w-[1100px] mx-auto px-6 py-12 lg:py-16">
 
         {/* ── Hero ──────────────────────────────────────────────────────── */}
-        <div style={{
-          borderRadius: 24,
-          background: 'linear-gradient(135deg, #080f24 0%, #102040 45%, #1a3060 100%)',
-          padding: 'clamp(36px,6vw,64px) clamp(28px,6vw,64px)',
-          marginBottom: 56,
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
-          {/* blobs */}
-          <div style={{
-            position: 'absolute', top: -80, right: -60, width: 320, height: 320,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle,rgba(74,154,212,0.18) 0%,transparent 70%)',
-            pointerEvents: 'none',
-          }} />
-          <div style={{
-            position: 'absolute', bottom: -60, left: '35%', width: 200, height: 200,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle,rgba(74,154,212,0.10) 0%,transparent 70%)',
-            pointerEvents: 'none',
-          }} />
+        <section
+          className={cn(
+            'relative overflow-hidden mb-14',
+            'rounded-[var(--radius-xl)]',
+            'bg-[var(--color-wise-dark)] text-white',
+            'px-7 py-10 sm:px-12 sm:py-14 lg:px-16 lg:py-16',
+          )}
+        >
+          {/* Decorative blobs */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-20 -right-16 w-[320px] h-[320px] rounded-full"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(159,232,112,0.22) 0%, transparent 70%)',
+            }}
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -bottom-16 left-[35%] w-[200px] h-[200px] rounded-full"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(226,246,213,0.16) 0%, transparent 70%)',
+            }}
+          />
 
-          <p style={{
-            fontSize: 11, fontWeight: 700, letterSpacing: '1.4px',
-            color: 'rgba(74,154,212,0.85)', textTransform: 'uppercase',
-            marginBottom: 14, position: 'relative',
-          }}>
+          <p className="relative mb-4 text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--color-wise-primary)]">
             About nextaibuilder
           </p>
-          <h1 style={{
-            fontSize: 'clamp(26px,4vw,44px)', fontWeight: 800, color: '#fff',
-            lineHeight: 1.2, marginBottom: 18, position: 'relative',
-            maxWidth: 640,
-          }}>
+          <h1 className="relative mb-5 max-w-[640px] text-4xl sm:text-5xl md:text-[56px] font-black leading-[0.95] tracking-[-1px]">
             We help builders ship<br />
-            <span style={{ color: '#7bb8e0' }}>real AI products.</span>
+            <span className="text-[var(--color-wise-primary)]">real AI products.</span>
           </h1>
-          <p style={{
-            fontSize: 17, color: 'rgba(255,255,255,0.62)', lineHeight: 1.65,
-            maxWidth: 560, marginBottom: 32, position: 'relative',
-          }}>
+          <p className="relative mb-8 max-w-[560px] text-base sm:text-[17px] leading-relaxed text-white/70">
             nextaibuilder is a cohort-based learning platform where founders,
             developers, and product thinkers learn to build and ship AI products
             — with live sessions, real projects, and a community that actually
@@ -95,131 +103,137 @@ export default function AboutPage() {
           </p>
           <Link
             to="/courses"
-            style={{
-              display: 'inline-block',
-              background: 'linear-gradient(135deg,#4a9ad4,#2d7ab8)',
-              color: '#fff', fontWeight: 700, fontSize: 15,
-              padding: '12px 28px', borderRadius: 100,
-              textDecoration: 'none',
-              boxShadow: '0 4px 20px rgba(74,154,212,0.40)',
-              position: 'relative',
-            }}
+            className={cn(
+              'relative inline-flex items-center gap-2',
+              'rounded-[var(--radius-pill)] px-7 py-3',
+              'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+              'text-[15px] font-bold',
+              'transition-transform duration-150 ease-out hover:scale-[1.02] active:scale-[0.98]',
+              'hover:bg-[var(--color-wise-primary-hover)]',
+              'focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2',
+            )}
           >
-            Browse cohorts →
+            Browse cohorts
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
-        </div>
+        </section>
 
         {/* ── Values ────────────────────────────────────────────────────── */}
-        <p style={{
-          fontSize: 11, fontWeight: 800, color: '#717182',
-          textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: 20,
-        }}>
+        <p className="mb-5 text-[11px] font-extrabold uppercase tracking-[1.2px] text-[var(--color-wise-text-muted)]">
           What we stand for
         </p>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-          gap: 18,
-          marginBottom: 60,
-        }}>
-          {VALUES.map((v) => (
-            <div key={v.title} style={{
-              background: '#fff',
-              borderRadius: 20,
-              padding: '26px 22px',
-              boxShadow: 'rgba(26,39,68,0.07) 0 0 0 1px, rgba(26,39,68,0.04) 0 4px 16px',
-              display: 'flex', flexDirection: 'column', gap: 14,
-            }}>
-              <div style={{
-                width: 52, height: 52, borderRadius: 14,
-                background: v.bg,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 26, flexShrink: 0,
-              }}>
-                {v.icon}
+        <div className="mb-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {VALUES.map(({ Icon, title, desc }) => (
+            <div
+              key={title}
+              className={cn(
+                'flex flex-col gap-3.5',
+                'rounded-[var(--radius-md)] bg-[var(--color-wise-surface)]',
+                'px-5 py-6 shadow-[var(--shadow-ring)]',
+              )}
+            >
+              <div
+                className={cn(
+                  'flex h-13 w-13 items-center justify-center',
+                  'h-[52px] w-[52px] rounded-2xl',
+                  'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+                )}
+              >
+                <Icon className="h-6 w-6" strokeWidth={2.25} aria-hidden="true" />
               </div>
               <div>
-                <p style={{ fontSize: 15, fontWeight: 700, color: '#1a2744', marginBottom: 6, lineHeight: 1.3 }}>{v.title}</p>
-                <p style={{ fontSize: 13, color: '#717182', lineHeight: 1.55, margin: 0 }}>{v.desc}</p>
+                <p className="mb-1.5 text-[15px] font-bold leading-tight text-[var(--color-wise-text)]">
+                  {title}
+                </p>
+                <p className="m-0 text-[13px] leading-[1.55] text-[var(--color-wise-text-muted)]">
+                  {desc}
+                </p>
               </div>
             </div>
           ))}
         </div>
 
         {/* ── Team ──────────────────────────────────────────────────────── */}
-        <p style={{
-          fontSize: 11, fontWeight: 800, color: '#717182',
-          textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: 20,
-        }}>
+        <p className="mb-5 text-[11px] font-extrabold uppercase tracking-[1.2px] text-[var(--color-wise-text-muted)]">
           The team
         </p>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-          gap: 18,
-          marginBottom: 60,
-        }}>
+        <div className="mb-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {TEAM.map((member) => (
-            <div key={member.name} style={{
-              background: '#fff',
-              borderRadius: 20,
-              padding: '28px 24px',
-              boxShadow: 'rgba(26,39,68,0.07) 0 0 0 1px, rgba(26,39,68,0.04) 0 4px 16px',
-              display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14,
-            }}>
-              {/* Avatar */}
-              <div style={{
-                width: 60, height: 60, borderRadius: '50%',
-                background: `linear-gradient(135deg,${member.accent}30,${member.accent}60)`,
-                border: `2px solid ${member.accent}40`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 20, fontWeight: 800, color: member.accent,
-              }}>
+            <div
+              key={member.name}
+              className={cn(
+                'flex flex-col items-start gap-3.5',
+                'rounded-[var(--radius-md)] bg-[var(--color-wise-surface)]',
+                'px-6 py-7 shadow-[var(--shadow-ring)]',
+              )}
+            >
+              <div
+                className={cn(
+                  'h-[60px] w-[60px] rounded-full',
+                  'flex items-center justify-center',
+                  'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+                  'text-xl font-extrabold',
+                )}
+                aria-hidden="true"
+              >
                 {member.initials}
               </div>
               <div>
-                <p style={{ fontSize: 16, fontWeight: 700, color: '#1a2744', marginBottom: 3 }}>{member.name}</p>
-                <p style={{ fontSize: 12, fontWeight: 700, color: member.accent, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 10 }}>{member.role}</p>
-                <p style={{ fontSize: 13, color: '#717182', lineHeight: 1.55, margin: 0 }}>{member.bio}</p>
+                <p className="mb-0.5 text-base font-bold text-[var(--color-wise-text)]">
+                  {member.name}
+                </p>
+                <p className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.6px] text-[var(--color-wise-primary-text)]">
+                  {member.role}
+                </p>
+                <p className="m-0 text-[13px] leading-[1.55] text-[var(--color-wise-text-muted)]">
+                  {member.bio}
+                </p>
               </div>
             </div>
           ))}
         </div>
 
         {/* ── CTA ───────────────────────────────────────────────────────── */}
-        <div style={{
-          background: '#fff',
-          borderRadius: 24,
-          padding: '40px 36px',
-          boxShadow: 'rgba(26,39,68,0.07) 0 0 0 1px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 24, flexWrap: 'wrap',
-        }}>
+        <div
+          className={cn(
+            'flex flex-wrap items-center justify-between gap-6',
+            'rounded-[var(--radius-lg)] bg-[var(--color-wise-surface)]',
+            'px-8 py-10 shadow-[var(--shadow-ring)]',
+          )}
+        >
           <div>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1a2744', marginBottom: 6 }}>Ready to build?</h2>
-            <p style={{ fontSize: 15, color: '#717182', margin: 0 }}>Pick a cohort and start shipping in days, not months.</p>
+            <h2 className="mb-1.5 text-[22px] font-extrabold text-[var(--color-wise-text)]">
+              Ready to build?
+            </h2>
+            <p className="m-0 text-[15px] text-[var(--color-wise-text-muted)]">
+              Pick a cohort and start shipping in days, not months.
+            </p>
           </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div className="flex flex-wrap gap-3">
             <Link
               to="/courses"
-              style={{
-                display: 'inline-block',
-                background: '#1a2744', color: '#fff',
-                fontWeight: 700, fontSize: 14, padding: '11px 24px',
-                borderRadius: 100, textDecoration: 'none',
-              }}
+              className={cn(
+                'inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-6 py-2.5',
+                'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+                'text-sm font-bold',
+                'transition-transform duration-150 ease-out hover:scale-[1.02] active:scale-[0.98]',
+                'hover:bg-[var(--color-wise-primary-hover)]',
+                'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2',
+              )}
             >
               See all cohorts
             </Link>
             <Link
               to="/signup"
-              style={{
-                display: 'inline-block',
-                background: 'transparent',
-                border: '1.5px solid rgba(26,39,68,0.2)',
-                color: '#1a2744', fontWeight: 600, fontSize: 14,
-                padding: '11px 24px', borderRadius: 100, textDecoration: 'none',
-              }}
+              className={cn(
+                'inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-6 py-2.5',
+                'bg-transparent text-[var(--color-wise-text)]',
+                'ring-1 ring-[var(--color-wise-ring-strong)]',
+                'text-sm font-semibold',
+                'transition-transform duration-150 ease-out hover:scale-[1.02] active:scale-[0.98]',
+                'hover:bg-[var(--color-wise-mint)]',
+                'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2',
+              )}
             >
               Create free account
             </Link>

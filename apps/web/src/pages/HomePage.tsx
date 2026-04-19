@@ -1,22 +1,54 @@
-// FIR-28 — Public homepage (original design)
+// FIR-28 — Public homepage
+// Sprint 3 Story 13 — Wise theme migration.
+//
+// Navy/blue palette replaced with `--color-wise-*` tokens. All emoji glyphs
+// swapped for lucide icons. Inline styles collapsed into Tailwind class
+// strings so the cascade is predictable and responsive breakpoints work
+// through the normal `sm:` / `md:` / `lg:` modifiers.
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronRight,
+  Target,
+  Bot,
+  MessageSquare,
+  Video,
+  Radio,
+  Zap,
+  Calendar,
+  type LucideIcon,
+} from 'lucide-react'
 import { TopNav } from '../components/TopNav'
 import { Footer } from '../components/Footer'
 import { usePageMeta } from '../hooks/usePageMeta'
+import { cn } from '../lib/utils'
 
 // ---------------------------------------------------------------------------
 // Static data
 // ---------------------------------------------------------------------------
 
-const FEATURED_COURSES = [
+type BadgeTone = 'primary' | 'mint' | 'neutral'
+
+interface FeaturedCourse {
+  title: string
+  tagline: string
+  coverTone: 'primary' | 'dark' | 'mint'
+  badgeLabel: string
+  badgeTone: BadgeTone
+  price: string
+  installment: string
+  meta: string
+  slug: string
+}
+
+const FEATURED_COURSES: FeaturedCourse[] = [
   {
     title: 'Claude API Mastery',
     tagline: "Build production AI apps with Anthropic's API",
-    coverClass: 'blue',
+    coverTone: 'primary',
     badgeLabel: 'Recorded',
-    badgeType: 'blue',
+    badgeTone: 'primary',
     price: '$499',
     installment: '3×$166/mo',
     meta: 'Self-paced · 24 lessons',
@@ -25,9 +57,9 @@ const FEATURED_COURSES = [
   {
     title: 'AI Product Bootcamp',
     tagline: 'Ship your first AI product in 8 weeks',
-    coverClass: 'orange',
+    coverTone: 'mint',
     badgeLabel: 'Live Cohort',
-    badgeType: 'orange',
+    badgeTone: 'mint',
     price: '$999',
     installment: '3×$333/mo',
     meta: 'Starts Jan 20 · 12 seats',
@@ -36,9 +68,9 @@ const FEATURED_COURSES = [
   {
     title: 'Full-Stack AI Dev',
     tagline: 'End-to-end AI engineering from prompt to prod',
-    coverClass: 'deep',
+    coverTone: 'dark',
     badgeLabel: 'Combined',
-    badgeType: 'navy',
+    badgeTone: 'neutral',
     price: '$1,499',
     installment: '3×$499/mo',
     meta: 'Starts Feb 3 · 8 seats left',
@@ -74,50 +106,129 @@ const FAQ_ITEMS = [
 ]
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const badgeToneClasses: Record<BadgeTone, string> = {
+  primary:
+    'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+  mint:
+    'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+  neutral:
+    'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text)]',
+}
+
+const coverClasses: Record<FeaturedCourse['coverTone'], string> = {
+  primary:
+    'bg-gradient-to-br from-[var(--color-wise-primary)] to-[var(--color-wise-mint)]',
+  dark:
+    'bg-gradient-to-br from-[var(--color-wise-dark)] to-[var(--color-wise-text-warm)]',
+  mint:
+    'bg-gradient-to-br from-[var(--color-wise-mint)] to-[var(--color-wise-primary)]',
+}
+
+// ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
+
+function SectionEyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-3 text-[13px] font-semibold uppercase tracking-[1.5px] text-[var(--color-wise-primary-text)]">
+      {children}
+    </p>
+  )
+}
 
 function FaqItem({ q, a }: { q: string; a: string | null }) {
   const [open, setOpen] = useState(false)
 
   return (
-    <div style={{ borderBottom: '1px solid rgba(26,39,68,0.1)', padding: '24px 0' }}>
+    <div className="border-b border-[var(--color-wise-ring)] py-6">
       <button
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          width: '100%',
-          textAlign: 'left',
-          cursor: 'pointer',
-          background: 'transparent',
-          border: 'none',
-          padding: 0,
-          gap: 16,
-        }}
+        type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
+        className={cn(
+          'flex w-full items-center justify-between gap-4 text-left',
+          'cursor-pointer bg-transparent border-0 p-0',
+          'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2 rounded-md',
+        )}
       >
-        <span style={{ fontSize: 18, fontWeight: 600, color: '#1a2744', lineHeight: 1.4 }}>{q}</span>
-        <div style={{
-          width: 24,
-          height: 24,
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#717182',
-          fontSize: 18,
-        }}>
-          {open ? <ChevronDown size={20} aria-hidden="true" /> : <ChevronRight size={20} aria-hidden="true" />}
-        </div>
+        <span className="text-[18px] font-semibold leading-snug text-[var(--color-wise-text)]">
+          {q}
+        </span>
+        <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center text-[var(--color-wise-text-muted)]">
+          {open ? (
+            <ChevronDown size={20} aria-hidden="true" />
+          ) : (
+            <ChevronRight size={20} aria-hidden="true" />
+          )}
+        </span>
       </button>
       {open && a && (
-        <p style={{ fontSize: 16, color: '#717182', lineHeight: 1.7, marginTop: 16, marginBottom: 0 }}>{a}</p>
+        <p className="mt-4 mb-0 text-base leading-[1.7] text-[var(--color-wise-text-muted)]">
+          {a}
+        </p>
       )}
     </div>
   )
 }
+
+interface ValueProp {
+  Icon: LucideIcon
+  title: string
+  desc: string
+}
+
+const VALUE_PROPS: ValueProp[] = [
+  {
+    Icon: Target,
+    title: 'Project-First Learning',
+    desc: 'Every lesson is tied to a real deliverable. You leave each cohort with shipped code, not just notes.',
+  },
+  {
+    Icon: Bot,
+    title: 'AI-Validated Tools',
+    desc: 'Our AI verifies your tool setup at each step, so you never get stuck on configuration issues.',
+  },
+  {
+    Icon: MessageSquare,
+    title: 'Live Expert Sessions',
+    desc: 'Join live cohorts with direct instructor access, Q&A sessions, and real-time code reviews.',
+  },
+]
+
+interface CourseType {
+  Icon: LucideIcon
+  badge: string
+  badgeTone: BadgeTone
+  name: string
+  desc: string
+}
+
+const COURSE_TYPES: CourseType[] = [
+  {
+    Icon: Video,
+    badge: 'Recorded',
+    badgeTone: 'primary',
+    name: 'Self-Paced Courses',
+    desc: 'Watch at your own pace. Rewind, rewatch, and revisit any lesson whenever you need it.',
+  },
+  {
+    Icon: Radio,
+    badge: 'Live Cohort',
+    badgeTone: 'mint',
+    name: 'Live Cohorts',
+    desc: 'Scheduled sessions with live instruction, peer collaboration, and real-time feedback.',
+  },
+  {
+    Icon: Zap,
+    badge: 'Combined',
+    badgeTone: 'neutral',
+    name: 'Combined Cohorts',
+    desc: 'Best of both — recorded content with live sessions layered in at key milestones.',
+  },
+]
 
 // ---------------------------------------------------------------------------
 // Page
@@ -126,236 +237,188 @@ function FaqItem({ q, a }: { q: string; a: string | null }) {
 export default function HomePage() {
   usePageMeta({
     title: 'Build AI Products. Ship Real Projects.',
-    description: 'Learn to build, deploy, and scale AI-powered products through hands-on cohorts and recorded courses.',
+    description:
+      'Learn to build, deploy, and scale AI-powered products through hands-on cohorts and recorded courses.',
   })
 
-  return (
-    <div style={{ minHeight: '100vh', fontFamily: "'Inter', sans-serif", background: '#f8f9fb', color: '#1a2744' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .hero-section { flex-direction: column !important; padding: 40px 20px !important; min-height: unset !important; }
-          .hero-right { display: none !important; }
-          .hero-title { font-size: clamp(40px, 10vw, 88px) !important; letter-spacing: -1px !important; }
-          .hero-buttons { flex-direction: column !important; }
-          .section-pad { padding: 64px 20px !important; }
-          .props-grid { grid-template-columns: 1fr !important; }
-          .course-types-grid { grid-template-columns: 1fr !important; }
-          .featured-grid { grid-template-columns: 1fr !important; }
-          .how-it-works-row { flex-direction: column !important; align-items: center !important; gap: 32px !important; }
-          .hiw-connector { display: none !important; }
-          .stats-row { flex-direction: column !important; gap: 32px !important; align-items: center !important; }
-          .stats-number { font-size: 56px !important; }
-          .pricing-callout { flex-direction: column !important; padding: 32px 20px !important; gap: 28px !important; }
-          .pricing-boxes { grid-template-columns: 1fr !important; }
-          .section-h2 { font-size: clamp(32px, 8vw, 48px) !important; }
-          .footer-cta-h2 { font-size: clamp(32px, 8vw, 64px) !important; }
-          .footer-cta-section { padding: 64px 20px !important; }
-        }
-      `}</style>
+  const ctaPrimary =
+    'inline-flex items-center justify-center rounded-[var(--radius-pill)] ' +
+    'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)] ' +
+    'font-bold transition-transform duration-150 ease-out ' +
+    'hover:bg-[var(--color-wise-primary-hover)] hover:scale-[1.02] active:scale-[0.98] ' +
+    'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2'
 
+  const ctaOutline =
+    'inline-flex items-center justify-center rounded-[var(--radius-pill)] ' +
+    'bg-transparent text-[var(--color-wise-text)] ring-1 ring-[var(--color-wise-ring-strong)] ' +
+    'font-bold transition-transform duration-150 ease-out ' +
+    'hover:bg-[var(--color-wise-mint)] hover:scale-[1.02] active:scale-[0.98] ' +
+    'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2'
+
+  return (
+    <div className="min-h-screen bg-[var(--color-wise-canvas)] text-[var(--color-wise-text)] font-sans">
       <TopNav />
 
       {/* ------------------------------------------------------------------ */}
       {/* HERO                                                                */}
       {/* ------------------------------------------------------------------ */}
-      <section className="hero-section" style={{
-        background: '#fff',
-        padding: '96px 80px',
-        display: 'flex',
-        alignItems: 'center',
-        minHeight: 600,
-        gap: 60,
-      }}>
+      <section
+        className={cn(
+          'bg-[var(--color-wise-surface)]',
+          'px-6 sm:px-12 lg:px-20 py-16 sm:py-20 lg:py-24',
+          'flex flex-col lg:flex-row items-center gap-12 lg:gap-16',
+          'min-h-[560px]',
+        )}
+      >
         {/* Left — copy */}
-        <div style={{ flex: '0 0 55%' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            background: '#e8f4fd',
-            color: '#1a2744',
-            padding: '6px 14px',
-            borderRadius: 9999,
-            fontSize: 13,
-            fontWeight: 600,
-            marginBottom: 28,
-          }}>
-            <span style={{ width: 8, height: 8, background: '#4a9ad4', borderRadius: '50%', display: 'inline-block' }} />
+        <div className="lg:flex-[0_0_55%] w-full">
+          <div
+            className={cn(
+              'mb-7 inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-4 py-1.5',
+              'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+              'text-[13px] font-semibold',
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className="inline-block h-2 w-2 rounded-full bg-[var(--color-wise-primary-text)]"
+            />
             AI Education Platform
           </div>
 
-          <h1 className="hero-title" style={{
-            fontSize: 88,
-            fontWeight: 900,
-            lineHeight: 0.88,
-            color: '#1a2744',
-            letterSpacing: -3,
-            marginBottom: 28,
-            margin: '0 0 28px 0',
-          }}>
+          <h1
+            className={cn(
+              'mb-7 font-black tracking-[-1px] leading-[0.9]',
+              'text-5xl sm:text-6xl md:text-7xl lg:text-[88px]',
+              'text-[var(--color-wise-text)]',
+            )}
+          >
             Build AI<br />
             Products.<br />
-            <span style={{ color: '#4a9ad4' }}>Ship Real</span><br />
+            <span className="text-[var(--color-wise-primary-text)]">Ship Real</span>
+            <br />
             Projects.
           </h1>
 
-          <p style={{
-            fontSize: 20,
-            fontWeight: 400,
-            color: '#717182',
-            lineHeight: 1.55,
-            marginBottom: 40,
-            maxWidth: 480,
-          }}>
-            Learn to build, deploy, and scale AI-powered products through hands-on cohorts and recorded courses.
+          <p className="mb-10 max-w-[480px] text-[20px] leading-[1.55] text-[var(--color-wise-text-warm)]">
+            Learn to build, deploy, and scale AI-powered products through
+            hands-on cohorts and recorded courses.
           </p>
 
-          <div className="hero-buttons" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-            <Link
-              to="/courses"
-              style={{
-                padding: '16px 32px',
-                borderRadius: 9999,
-                fontSize: 17,
-                fontWeight: 700,
-                background: '#4a9ad4',
-                color: '#0d1a3a',
-                textDecoration: 'none',
-                display: 'inline-block',
-              }}
-            >
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5">
+            <Link to="/courses" className={cn(ctaPrimary, 'px-8 py-4 text-[17px]')}>
               Browse Courses
             </Link>
-            <Link
-              to="#how-it-works"
-              style={{
-                padding: '16px 32px',
-                borderRadius: 9999,
-                fontSize: 17,
-                fontWeight: 700,
-                background: 'transparent',
-                border: '2px solid #4a9ad4',
-                color: '#4a9ad4',
-                textDecoration: 'none',
-                display: 'inline-block',
-              }}
-            >
+            <Link to="#how-it-works" className={cn(ctaOutline, 'px-8 py-4 text-[17px]')}>
               See How It Works
             </Link>
           </div>
         </div>
 
-        {/* Right — illustration */}
-        <div className="hero-right" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{
-            width: '100%',
-            height: 460,
-            background: 'linear-gradient(135deg, #1a2744 0%, #2d4a8a 40%, #4a9ad4 100%)',
-            borderRadius: 40,
-            position: 'relative',
-            overflow: 'hidden',
-            boxShadow: 'rgba(26,39,68,0.12) 0 0 0 1px',
-          }}>
+        {/* Right — illustration (hidden on small viewports) */}
+        <div className="hidden lg:flex flex-1 items-center justify-center">
+          <div
+            className={cn(
+              'relative overflow-hidden w-full h-[460px]',
+              'rounded-[var(--radius-xl)]',
+              'bg-gradient-to-br from-[var(--color-wise-primary)] via-[var(--color-wise-mint)] to-[var(--color-wise-primary-hover)]',
+              'shadow-[var(--shadow-ring)]',
+            )}
+            aria-hidden="true"
+          >
             {/* Card 1 — top left */}
-            <div style={{
-              position: 'absolute',
-              top: 40,
-              left: 30,
-              width: 200,
-              background: '#fff',
-              borderRadius: 16,
-              padding: '16px 20px',
-              boxShadow: 'rgba(26,39,68,0.12) 0 0 0 1px',
-            }}>
-              <div style={{
-                fontSize: 11,
-                fontWeight: 600,
-                padding: '3px 10px',
-                borderRadius: 9999,
-                display: 'inline-block',
-                marginBottom: 8,
-                background: '#e8f4fd',
-                color: '#1a2744',
-              }}>
+            <div
+              className={cn(
+                'absolute top-10 left-[30px] w-[200px]',
+                'rounded-[var(--radius-sm)] bg-white px-5 py-4',
+                'shadow-[var(--shadow-ring)]',
+              )}
+            >
+              <div
+                className={cn(
+                  'mb-2 inline-block rounded-[var(--radius-pill)] px-2.5 py-0.5',
+                  'text-[11px] font-semibold',
+                  'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+                )}
+              >
                 Recorded
               </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1a2744', marginBottom: 4 }}>Claude API Mastery</div>
-              <div style={{ fontSize: 11, color: '#717182' }}>24 lessons · Self-paced</div>
-              <div style={{ height: 4, background: '#e8ecf4', borderRadius: 2, marginTop: 8 }}>
-                <div style={{ height: '100%', width: '68%', borderRadius: 2, background: '#4a9ad4' }} />
+              <div className="mb-1 text-[13px] font-bold text-[var(--color-wise-text)]">
+                Claude API Mastery
+              </div>
+              <div className="text-[11px] text-[var(--color-wise-text-muted)]">
+                24 lessons · Self-paced
+              </div>
+              <div className="mt-2 h-1 rounded-sm bg-[var(--color-wise-surface-soft)]">
+                <div className="h-full w-[68%] rounded-sm bg-[var(--color-wise-primary-text)]" />
               </div>
             </div>
 
             {/* Card 2 — top right */}
-            <div style={{
-              position: 'absolute',
-              top: 120,
-              right: 20,
-              width: 180,
-              background: '#fff',
-              borderRadius: 16,
-              padding: '16px 20px',
-              boxShadow: 'rgba(26,39,68,0.12) 0 0 0 1px',
-            }}>
-              <div style={{
-                fontSize: 11,
-                fontWeight: 600,
-                padding: '3px 10px',
-                borderRadius: 9999,
-                display: 'inline-block',
-                marginBottom: 8,
-                background: '#fff0e8',
-                color: '#cc4a00',
-              }}>
+            <div
+              className={cn(
+                'absolute top-[120px] right-5 w-[180px]',
+                'rounded-[var(--radius-sm)] bg-white px-5 py-4',
+                'shadow-[var(--shadow-ring)]',
+              )}
+            >
+              <div
+                className={cn(
+                  'mb-2 inline-block rounded-[var(--radius-pill)] px-2.5 py-0.5',
+                  'text-[11px] font-semibold',
+                  'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+                )}
+              >
                 Live Cohort
               </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1a2744', marginBottom: 4 }}>AI Product Bootcamp</div>
-              <div style={{ fontSize: 11, color: '#717182' }}>Starts Jan 20 · 12 seats</div>
+              <div className="mb-1 text-[13px] font-bold text-[var(--color-wise-text)]">
+                AI Product Bootcamp
+              </div>
+              <div className="text-[11px] text-[var(--color-wise-text-muted)]">
+                Starts Jan 20 · 12 seats
+              </div>
             </div>
 
             {/* Card 3 — bottom left */}
-            <div style={{
-              position: 'absolute',
-              bottom: 60,
-              left: 50,
-              width: 220,
-              background: '#fff',
-              borderRadius: 16,
-              padding: '16px 20px',
-              boxShadow: 'rgba(26,39,68,0.12) 0 0 0 1px',
-            }}>
-              <div style={{
-                fontSize: 11,
-                fontWeight: 600,
-                padding: '3px 10px',
-                borderRadius: 9999,
-                display: 'inline-block',
-                marginBottom: 8,
-                background: '#e8ecf4',
-                color: '#1a2744',
-              }}>
+            <div
+              className={cn(
+                'absolute bottom-[60px] left-[50px] w-[220px]',
+                'rounded-[var(--radius-sm)] bg-white px-5 py-4',
+                'shadow-[var(--shadow-ring)]',
+              )}
+            >
+              <div
+                className={cn(
+                  'mb-2 inline-block rounded-[var(--radius-pill)] px-2.5 py-0.5',
+                  'text-[11px] font-semibold',
+                  'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text)]',
+                )}
+              >
                 Combined
               </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1a2744', marginBottom: 4 }}>Full-Stack AI Dev</div>
-              <div style={{ fontSize: 11, color: '#717182' }}>48 lessons + 8 live sessions</div>
-              <div style={{ height: 4, background: '#e8ecf4', borderRadius: 2, marginTop: 8 }}>
-                <div style={{ height: '100%', width: '35%', borderRadius: 2, background: '#4a9ad4' }} />
+              <div className="mb-1 text-[13px] font-bold text-[var(--color-wise-text)]">
+                Full-Stack AI Dev
+              </div>
+              <div className="text-[11px] text-[var(--color-wise-text-muted)]">
+                48 lessons + 8 live sessions
+              </div>
+              <div className="mt-2 h-1 rounded-sm bg-[var(--color-wise-surface-soft)]">
+                <div className="h-full w-[35%] rounded-sm bg-[var(--color-wise-primary-text)]" />
               </div>
             </div>
 
             {/* Floating stat */}
-            <div style={{
-              position: 'absolute',
-              bottom: 30,
-              right: 20,
-              background: '#1a2744',
-              color: '#fff',
-              borderRadius: 12,
-              padding: '10px 16px',
-              fontSize: 12,
-              fontWeight: 700,
-            }}>
-              <span style={{ color: '#4a9ad4', fontSize: 20, fontWeight: 900, display: 'block' }}>500+</span>
+            <div
+              className={cn(
+                'absolute bottom-[30px] right-5',
+                'rounded-xl px-4 py-2.5',
+                'bg-[var(--color-wise-dark)] text-white',
+                'text-xs font-bold',
+              )}
+            >
+              <span className="block text-xl font-black text-[var(--color-wise-primary)]">
+                500+
+              </span>
               Students Enrolled
             </div>
           </div>
@@ -365,40 +428,40 @@ export default function HomePage() {
       {/* ------------------------------------------------------------------ */}
       {/* VALUE PROPS                                                         */}
       {/* ------------------------------------------------------------------ */}
-      <section className="section-pad" style={{ background: '#f8f9fb', padding: '96px 80px' }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: '#4a9ad4', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 12, margin: '0 0 12px' }}>
-          Why nextaibuilder
-        </p>
-        <h2 className="section-h2" style={{ fontSize: 48, fontWeight: 900, color: '#1a2744', lineHeight: 0.9, letterSpacing: -1.5, marginBottom: 60, margin: '0 0 60px' }}>
+      <section className="bg-[var(--color-wise-canvas)] px-6 sm:px-12 lg:px-20 py-16 lg:py-24">
+        <SectionEyebrow>Why nextaibuilder</SectionEyebrow>
+        <h2
+          className={cn(
+            'mb-14 font-black leading-[0.9] tracking-[-1.5px]',
+            'text-3xl sm:text-4xl md:text-5xl text-[var(--color-wise-text)]',
+          )}
+        >
           Everything you need<br />to ship AI products
         </h2>
-        <div className="props-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
-          {[
-            { icon: '🎯', title: 'Project-First Learning', desc: 'Every lesson is tied to a real deliverable. You leave each cohort with shipped code, not just notes.' },
-            { icon: '🤖', title: 'AI-Validated Tools', desc: 'Our AI verifies your tool setup at each step, so you never get stuck on configuration issues.' },
-            { icon: '💬', title: 'Live Expert Sessions', desc: 'Join live cohorts with direct instructor access, Q&A sessions, and real-time code reviews.' },
-          ].map((p) => (
-            <div key={p.title} style={{
-              background: '#fff',
-              borderRadius: 24,
-              padding: 36,
-              boxShadow: 'rgba(26,39,68,0.12) 0 0 0 1px',
-            }}>
-              <div style={{
-                width: 56,
-                height: 56,
-                background: '#e8f4fd',
-                borderRadius: 14,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 20,
-                fontSize: 24,
-              }}>
-                {p.icon}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {VALUE_PROPS.map(({ Icon, title, desc }) => (
+            <div
+              key={title}
+              className={cn(
+                'rounded-[var(--radius-lg)] bg-[var(--color-wise-surface)] p-9',
+                'shadow-[var(--shadow-ring)]',
+              )}
+            >
+              <div
+                className={cn(
+                  'mb-5 h-14 w-14 rounded-2xl',
+                  'flex items-center justify-center',
+                  'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+                )}
+              >
+                <Icon className="h-7 w-7" strokeWidth={2.25} aria-hidden="true" />
               </div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: '#1a2744', marginBottom: 10 }}>{p.title}</div>
-              <div style={{ fontSize: 16, fontWeight: 400, color: '#717182', lineHeight: 1.6 }}>{p.desc}</div>
+              <div className="mb-2.5 text-[22px] font-bold text-[var(--color-wise-text)]">
+                {title}
+              </div>
+              <div className="text-base leading-[1.6] text-[var(--color-wise-text-muted)]">
+                {desc}
+              </div>
             </div>
           ))}
         </div>
@@ -407,54 +470,59 @@ export default function HomePage() {
       {/* ------------------------------------------------------------------ */}
       {/* COURSE TYPES                                                        */}
       {/* ------------------------------------------------------------------ */}
-      <section className="section-pad" style={{ background: '#fff', padding: '96px 80px' }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: '#4a9ad4', letterSpacing: '1.5px', textTransform: 'uppercase', margin: '0 0 12px' }}>
-          Learning Formats
-        </p>
-        <h2 className="section-h2" style={{ fontSize: 48, fontWeight: 900, color: '#1a2744', lineHeight: 0.9, letterSpacing: -1.5, margin: '0 0 60px' }}>
+      <section className="bg-[var(--color-wise-surface)] px-6 sm:px-12 lg:px-20 py-16 lg:py-24">
+        <SectionEyebrow>Learning Formats</SectionEyebrow>
+        <h2
+          className={cn(
+            'mb-14 font-black leading-[0.9] tracking-[-1.5px]',
+            'text-3xl sm:text-4xl md:text-5xl text-[var(--color-wise-text)]',
+          )}
+        >
           Three ways to learn,<br />one destination
         </h2>
-        <div className="course-types-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-          {[
-            { icon: '📹', iconBg: '#e8f4fd', badge: 'Recorded', badgeBg: '#e8f4fd', badgeColor: '#1a2744', name: 'Self-Paced Courses', desc: 'Watch at your own pace. Rewind, rewatch, and revisit any lesson whenever you need it.' },
-            { icon: '🔴', iconBg: '#fff0e8', badge: 'Live Cohort', badgeBg: '#fff0e8', badgeColor: '#cc4a00', name: 'Live Cohorts', desc: 'Scheduled sessions with live instruction, peer collaboration, and real-time feedback.' },
-            { icon: '⚡', iconBg: '#e8ecf4', badge: 'Combined', badgeBg: '#e8ecf4', badgeColor: '#1a2744', name: 'Combined Cohorts', desc: 'Best of both — recorded content with live sessions layered in at key milestones.' },
-          ].map((t) => (
-            <div key={t.name} style={{
-              background: '#f8f9fb',
-              borderRadius: 30,
-              padding: 40,
-              boxShadow: 'rgba(26,39,68,0.12) 0 0 0 1px',
-            }}>
-              <div style={{
-                width: 64,
-                height: 64,
-                background: t.iconBg,
-                borderRadius: 18,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 20,
-                fontSize: 28,
-              }}>
-                {t.icon}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {COURSE_TYPES.map(({ Icon, badge, badgeTone, name, desc }) => (
+            <div
+              key={name}
+              className={cn(
+                'rounded-[var(--radius-lg)] bg-[var(--color-wise-canvas)] p-10',
+                'shadow-[var(--shadow-ring)]',
+              )}
+            >
+              <div
+                className={cn(
+                  'mb-5 h-16 w-16 rounded-2xl',
+                  'flex items-center justify-center',
+                  'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+                )}
+              >
+                <Icon className="h-8 w-8" strokeWidth={2.25} aria-hidden="true" />
               </div>
-              <div style={{
-                fontSize: 12,
-                fontWeight: 600,
-                padding: '3px 10px',
-                borderRadius: 9999,
-                display: 'inline-block',
-                marginBottom: 12,
-                background: t.badgeBg,
-                color: t.badgeColor,
-              }}>
-                {t.badge}
+              <div
+                className={cn(
+                  'mb-3 inline-block rounded-[var(--radius-pill)] px-2.5 py-0.5',
+                  'text-xs font-semibold',
+                  badgeToneClasses[badgeTone],
+                )}
+              >
+                {badge}
               </div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#1a2744', marginBottom: 12 }}>{t.name}</div>
-              <div style={{ fontSize: 16, color: '#717182', lineHeight: 1.6, marginBottom: 20 }}>{t.desc}</div>
-              <Link to="/courses" style={{ fontSize: 15, fontWeight: 600, color: '#4a9ad4', textDecoration: 'none' }}>
-                Learn more →
+              <div className="mb-3 text-2xl font-extrabold text-[var(--color-wise-text)]">
+                {name}
+              </div>
+              <div className="mb-5 text-base leading-[1.6] text-[var(--color-wise-text-muted)]">
+                {desc}
+              </div>
+              <Link
+                to="/courses"
+                className={cn(
+                  'inline-flex items-center gap-1 text-[15px] font-semibold',
+                  'text-[var(--color-wise-primary-text)] hover:underline',
+                  'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2 rounded',
+                )}
+              >
+                Learn more
+                <ChevronRight size={16} aria-hidden="true" />
               </Link>
             </div>
           ))}
@@ -464,127 +532,136 @@ export default function HomePage() {
       {/* ------------------------------------------------------------------ */}
       {/* FEATURED COURSES                                                    */}
       {/* ------------------------------------------------------------------ */}
-      <section className="section-pad" style={{ background: '#f8f9fb', padding: '96px 80px' }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: '#4a9ad4', letterSpacing: '1.5px', textTransform: 'uppercase', margin: '0 0 12px' }}>
-          Featured Cohorts
-        </p>
-        <h2 className="section-h2" style={{ fontSize: 48, fontWeight: 900, color: '#1a2744', lineHeight: 0.9, letterSpacing: -1.5, margin: '0 0 60px' }}>
+      <section className="bg-[var(--color-wise-canvas)] px-6 sm:px-12 lg:px-20 py-16 lg:py-24">
+        <SectionEyebrow>Featured Cohorts</SectionEyebrow>
+        <h2
+          className={cn(
+            'mb-14 font-black leading-[0.9] tracking-[-1.5px]',
+            'text-3xl sm:text-4xl md:text-5xl text-[var(--color-wise-text)]',
+          )}
+        >
           Start learning today
         </h2>
-        <div className="featured-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-          {FEATURED_COURSES.map((c) => {
-            const coverGradient = c.coverClass === 'orange'
-              ? 'linear-gradient(135deg, #cc4a00, #ff8c5a)'
-              : c.coverClass === 'deep'
-              ? 'linear-gradient(135deg, #0d1a3a, #2d4a8a)'
-              : 'linear-gradient(135deg, #1a2744, #4a9ad4)'
-            const badgeBg = c.badgeType === 'orange' ? '#fff0e8' : c.badgeType === 'navy' ? '#e8ecf4' : '#e8f4fd'
-            const badgeColor = c.badgeType === 'orange' ? '#cc4a00' : '#1a2744'
-            return (
-              <div key={c.title} style={{
-                background: '#fff',
-                borderRadius: 30,
-                overflow: 'hidden',
-                boxShadow: 'rgba(26,39,68,0.12) 0 0 0 1px',
-              }}>
-                <div style={{
-                  height: 200,
-                  background: coverGradient,
-                  position: 'relative',
-                }}>
-                  <div style={{ position: 'absolute', top: 16, left: 16 }}>
-                    <span style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      padding: '4px 12px',
-                      borderRadius: 9999,
-                      background: badgeBg,
-                      color: badgeColor,
-                    }}>
-                      {c.badgeLabel}
-                    </span>
-                  </div>
-                </div>
-                <div style={{ padding: 24 }}>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#1a2744', marginBottom: 8, lineHeight: 1.3 }}>{c.title}</div>
-                  <div style={{ fontSize: 14, color: '#717182', marginBottom: 16 }}>{c.tagline}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <span style={{ fontSize: 22, fontWeight: 800, color: '#1a2744' }}>{c.price}</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#ff8c5a' }}>{c.installment}</span>
-                  </div>
-                  <div style={{ fontSize: 13, color: '#717182', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    📅 {c.meta}
-                  </div>
-                  <Link to={`/courses/${c.slug}`} style={{
-                    display: 'block',
-                    width: '100%',
-                    padding: 12,
-                    borderRadius: 9999,
-                    background: '#4a9ad4',
-                    color: '#0d1a3a',
-                    fontSize: 15,
-                    fontWeight: 700,
-                    textAlign: 'center',
-                    textDecoration: 'none',
-                    boxSizing: 'border-box',
-                  }}>
-                    Enroll Now
-                  </Link>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {FEATURED_COURSES.map((c) => (
+            <div
+              key={c.title}
+              className={cn(
+                'overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-wise-surface)]',
+                'shadow-[var(--shadow-ring)]',
+              )}
+            >
+              <div className={cn('relative h-[200px]', coverClasses[c.coverTone])}>
+                <div className="absolute top-4 left-4">
+                  <span
+                    className={cn(
+                      'rounded-[var(--radius-pill)] px-3 py-1 text-[11px] font-semibold',
+                      badgeToneClasses[c.badgeTone],
+                    )}
+                  >
+                    {c.badgeLabel}
+                  </span>
                 </div>
               </div>
-            )
-          })}
+              <div className="p-6">
+                <div className="mb-2 text-xl font-bold leading-snug text-[var(--color-wise-text)]">
+                  {c.title}
+                </div>
+                <div className="mb-4 text-sm text-[var(--color-wise-text-muted)]">
+                  {c.tagline}
+                </div>
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="text-[22px] font-extrabold text-[var(--color-wise-text)]">
+                    {c.price}
+                  </span>
+                  <span className="text-[13px] font-semibold text-[var(--color-wise-primary-text)]">
+                    {c.installment}
+                  </span>
+                </div>
+                <div className="mb-5 flex items-center gap-1.5 text-[13px] text-[var(--color-wise-text-muted)]">
+                  <Calendar size={14} aria-hidden="true" />
+                  {c.meta}
+                </div>
+                <Link
+                  to={`/courses/${c.slug}`}
+                  className={cn(
+                    ctaPrimary,
+                    'block w-full py-3 text-center text-[15px] box-border',
+                  )}
+                >
+                  Enroll Now
+                </Link>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* ------------------------------------------------------------------ */}
       {/* HOW IT WORKS                                                        */}
       {/* ------------------------------------------------------------------ */}
-      <section id="how-it-works" className="section-pad" style={{ background: '#fff', padding: '96px 80px' }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: '#4a9ad4', letterSpacing: '1.5px', textTransform: 'uppercase', margin: '0 0 12px' }}>
-          Process
-        </p>
-        <h2 className="section-h2" style={{ fontSize: 48, fontWeight: 900, color: '#1a2744', lineHeight: 0.9, letterSpacing: -1.5, margin: '0 0 60px' }}>
+      <section
+        id="how-it-works"
+        className="bg-[var(--color-wise-surface)] px-6 sm:px-12 lg:px-20 py-16 lg:py-24"
+      >
+        <SectionEyebrow>Process</SectionEyebrow>
+        <h2
+          className={cn(
+            'mb-14 font-black leading-[0.9] tracking-[-1.5px]',
+            'text-3xl sm:text-4xl md:text-5xl text-[var(--color-wise-text)]',
+          )}
+        >
           Three steps to<br />your first AI product
         </h2>
-        <div className="how-it-works-row" style={{ display: 'flex', alignItems: 'flex-start', gap: 0, position: 'relative' }}>
+        <div className="relative flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-0">
           {[
-            { num: 1, title: 'Browse Courses', desc: 'Explore our catalog of recorded courses and live cohorts. Filter by format, topic, or level.' },
-            { num: 2, title: 'Enroll & Pay', desc: 'Secure checkout with Stripe or pay in 3 installments. Manual payment options also available.' },
-            { num: 3, title: 'Learn & Ship', desc: 'Follow the curriculum, set up your AI tools, and ship real projects with instructor support.' },
+            {
+              num: 1,
+              title: 'Browse Courses',
+              desc: 'Explore our catalog of recorded courses and live cohorts. Filter by format, topic, or level.',
+            },
+            {
+              num: 2,
+              title: 'Enroll & Pay',
+              desc: 'Secure checkout with Stripe or pay in 3 installments. Manual payment options also available.',
+            },
+            {
+              num: 3,
+              title: 'Learn & Ship',
+              desc: 'Follow the curriculum, set up your AI tools, and ship real projects with instructor support.',
+            },
           ].map((step, i) => (
-            <div key={step.num} style={{ flex: 1, textAlign: 'center', position: 'relative', padding: '0 20px' }}>
-              {/* Dashed connector */}
+            <div
+              key={step.num}
+              className="relative flex-1 px-5 text-center"
+            >
+              {/* Dashed connector — hidden on mobile / last step */}
               {i < 2 && (
-                <div className="hiw-connector" style={{
-                  position: 'absolute',
-                  top: 32,
-                  left: '50%',
-                  right: '-50%',
-                  height: 2,
-                  background: 'repeating-linear-gradient(90deg, #4a9ad4 0, #4a9ad4 8px, transparent 8px, transparent 16px)',
-                  zIndex: 0,
-                }} />
+                <div
+                  aria-hidden="true"
+                  className="hidden md:block absolute top-8 left-1/2 -right-1/2 h-[2px] z-0"
+                  style={{
+                    background:
+                      'repeating-linear-gradient(90deg, var(--color-wise-primary-text) 0, var(--color-wise-primary-text) 8px, transparent 8px, transparent 16px)',
+                  }}
+                />
               )}
-              <div style={{
-                width: 64,
-                height: 64,
-                borderRadius: 9999,
-                background: '#4a9ad4',
-                color: '#fff',
-                fontSize: 24,
-                fontWeight: 900,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 20px',
-                position: 'relative',
-                zIndex: 1,
-              }}>
+              <div
+                className={cn(
+                  'relative z-10 mx-auto mb-5 h-16 w-16 rounded-[var(--radius-pill)]',
+                  'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+                  'flex items-center justify-center',
+                  'text-2xl font-black',
+                )}
+              >
                 {step.num}
               </div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: '#1a2744', marginBottom: 10 }}>{step.title}</div>
-              <div style={{ fontSize: 16, color: '#717182', lineHeight: 1.6 }}>{step.desc}</div>
+              <div className="mb-2.5 text-[22px] font-bold text-[var(--color-wise-text)]">
+                {step.title}
+              </div>
+              <div className="text-base leading-[1.6] text-[var(--color-wise-text-muted)]">
+                {step.desc}
+              </div>
             </div>
           ))}
         </div>
@@ -593,22 +670,42 @@ export default function HomePage() {
       {/* ------------------------------------------------------------------ */}
       {/* STATS                                                               */}
       {/* ------------------------------------------------------------------ */}
-      <section className="section-pad" style={{ background: '#1a2744', padding: '96px 80px', textAlign: 'center' }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '1.5px', textTransform: 'uppercase', margin: '0 0 12px' }}>
+      <section
+        className={cn(
+          'bg-[var(--color-wise-dark)] text-white text-center',
+          'px-6 sm:px-12 lg:px-20 py-16 lg:py-24',
+        )}
+      >
+        <p className="mb-3 text-[13px] font-semibold uppercase tracking-[1.5px] text-white/50">
           By the numbers
         </p>
-        <h2 className="section-h2" style={{ fontSize: 48, fontWeight: 900, color: '#fff', lineHeight: 0.9, letterSpacing: -1.5, margin: '0 0 40px' }}>
+        <h2
+          className={cn(
+            'mb-10 font-black leading-[0.9] tracking-[-1.5px]',
+            'text-3xl sm:text-4xl md:text-5xl',
+          )}
+        >
           Trusted by builders<br />around the world
         </h2>
-        <div className="stats-row" style={{ display: 'flex', justifyContent: 'center', gap: 80, marginTop: 40 }}>
+        <div className="mt-10 flex flex-col md:flex-row items-center justify-center gap-10 md:gap-20">
           {[
             { number: '500+', label: 'Students Enrolled' },
-            { number: '12',   label: 'Active Cohorts' },
-            { number: '95%',  label: 'Completion Rate' },
+            { number: '12', label: 'Active Cohorts' },
+            { number: '95%', label: 'Completion Rate' },
           ].map((s) => (
             <div key={s.label}>
-              <div className="stats-number" style={{ fontSize: 80, fontWeight: 900, color: '#4a9ad4', lineHeight: 1, letterSpacing: -2 }}>{s.number}</div>
-              <div style={{ fontSize: 18, fontWeight: 500, color: 'rgba(255,255,255,0.7)', marginTop: 8 }}>{s.label}</div>
+              <div
+                className={cn(
+                  'font-black leading-none tracking-[-2px]',
+                  'text-5xl sm:text-6xl md:text-7xl lg:text-[80px]',
+                  'text-[var(--color-wise-primary)]',
+                )}
+              >
+                {s.number}
+              </div>
+              <div className="mt-2 text-lg font-medium text-white/70">
+                {s.label}
+              </div>
             </div>
           ))}
         </div>
@@ -617,49 +714,61 @@ export default function HomePage() {
       {/* ------------------------------------------------------------------ */}
       {/* PRICING CALLOUT                                                     */}
       {/* ------------------------------------------------------------------ */}
-      <section className="section-pad" style={{ background: '#f8f9fb', padding: '96px 80px' }}>
-        <div className="pricing-callout" style={{
-          background: 'linear-gradient(135deg, #1a2744 0%, #2d4a8a 100%)',
-          borderRadius: 40,
-          padding: 64,
-          display: 'flex',
-          gap: 60,
-          alignItems: 'center',
-        }}>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '1.5px', textTransform: 'uppercase', margin: '0 0 12px' }}>
+      <section className="bg-[var(--color-wise-canvas)] px-6 sm:px-12 lg:px-20 py-16 lg:py-24">
+        <div
+          className={cn(
+            'rounded-[var(--radius-xl)]',
+            'bg-[var(--color-wise-dark)] text-white',
+            'flex flex-col md:flex-row items-center gap-10 md:gap-16',
+            'p-8 md:p-16',
+          )}
+        >
+          <div className="flex-1">
+            <p className="mb-3 text-[13px] font-semibold uppercase tracking-[1.5px] text-white/50">
               Flexible Pricing
             </p>
-            <h2 style={{ fontSize: 48, fontWeight: 900, color: '#fff', lineHeight: 0.9, letterSpacing: -1.5, margin: '0 0 16px' }}>
+            <h2
+              className={cn(
+                'mb-4 font-black leading-[0.9] tracking-[-1.5px]',
+                'text-3xl sm:text-4xl md:text-5xl',
+              )}
+            >
               Pay your<br />way
             </h2>
-            <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, margin: 0 }}>
-              Choose full payment or spread the cost across 3 installments. Manual payment option also available.
+            <p className="m-0 text-lg leading-[1.5] text-white/70">
+              Choose full payment or spread the cost across 3 installments.
+              Manual payment option also available.
             </p>
           </div>
-          <div className="pricing-boxes" style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <div style={{
-              background: 'rgba(255,255,255,0.08)',
-              borderRadius: 20,
-              padding: 28,
-              border: '1px solid rgba(255,255,255,0.12)',
-            }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>Pay in Full</div>
-              <div style={{ fontSize: 36, fontWeight: 900, color: '#fff', letterSpacing: -1 }}>$999</div>
-              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', marginTop: 6 }}>One-time payment</div>
-            </div>
-            <div style={{
-              background: 'rgba(74,154,212,0.2)',
-              borderRadius: 20,
-              padding: 28,
-              border: '1px solid #4a9ad4',
-            }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>Installment Plan</div>
-              <div style={{ fontSize: 36, fontWeight: 900, color: '#fff', letterSpacing: -1 }}>
-                $333<span style={{ fontSize: 16, fontWeight: 500 }}>/mo</span>
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+            <div
+              className={cn(
+                'rounded-[var(--radius-md)] p-7',
+                'bg-white/5 ring-1 ring-white/10',
+              )}
+            >
+              <div className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-white/50">
+                Pay in Full
               </div>
-              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', marginTop: 6 }}>×3 monthly payments</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#ff8c5a', marginTop: 8 }}>Most popular option</div>
+              <div className="text-4xl font-black tracking-[-1px]">$999</div>
+              <div className="mt-1.5 text-sm text-white/60">One-time payment</div>
+            </div>
+            <div
+              className={cn(
+                'rounded-[var(--radius-md)] p-7',
+                'bg-[var(--color-wise-primary)]/20 ring-1 ring-[var(--color-wise-primary)]',
+              )}
+            >
+              <div className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-white/50">
+                Installment Plan
+              </div>
+              <div className="text-4xl font-black tracking-[-1px]">
+                $333<span className="text-base font-medium">/mo</span>
+              </div>
+              <div className="mt-1.5 text-sm text-white/60">×3 monthly payments</div>
+              <div className="mt-2 text-sm font-semibold text-[var(--color-wise-primary)]">
+                Most popular option
+              </div>
             </div>
           </div>
         </div>
@@ -668,14 +777,19 @@ export default function HomePage() {
       {/* ------------------------------------------------------------------ */}
       {/* FAQ                                                                 */}
       {/* ------------------------------------------------------------------ */}
-      <section className="section-pad" style={{ background: '#fff', padding: '96px 80px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: '#4a9ad4', letterSpacing: '1.5px', textTransform: 'uppercase', margin: '0 0 12px' }}>FAQ</p>
-          <h2 className="section-h2" style={{ fontSize: 48, fontWeight: 900, color: '#1a2744', lineHeight: 0.9, letterSpacing: -1.5, margin: '0 0 60px' }}>
+      <section className="bg-[var(--color-wise-surface)] px-6 sm:px-12 lg:px-20 py-16 lg:py-24">
+        <div className="text-center">
+          <SectionEyebrow>FAQ</SectionEyebrow>
+          <h2
+            className={cn(
+              'mb-14 font-black leading-[0.9] tracking-[-1.5px]',
+              'text-3xl sm:text-4xl md:text-5xl text-[var(--color-wise-text)]',
+            )}
+          >
             Frequently asked<br />questions
           </h2>
         </div>
-        <div style={{ maxWidth: 800, marginLeft: 'auto', marginRight: 'auto' }}>
+        <div className="mx-auto max-w-[800px]">
           {FAQ_ITEMS.map((item) => (
             <FaqItem key={item.q} q={item.q} a={item.a} />
           ))}
@@ -685,25 +799,36 @@ export default function HomePage() {
       {/* ------------------------------------------------------------------ */}
       {/* FOOTER CTA                                                          */}
       {/* ------------------------------------------------------------------ */}
-      <section className="footer-cta-section" style={{ background: '#1a2744', padding: '96px 80px', textAlign: 'center' }}>
-        <h2 className="footer-cta-h2" style={{ fontSize: 64, fontWeight: 900, color: '#fff', lineHeight: 0.9, letterSpacing: -2, marginBottom: 32, margin: '0 0 32px' }}>
+      <section
+        className={cn(
+          'bg-[var(--color-wise-dark)] text-white text-center',
+          'px-6 sm:px-12 lg:px-20 py-16 lg:py-24',
+        )}
+      >
+        <h2
+          className={cn(
+            'mb-8 font-black leading-[0.9] tracking-[-2px]',
+            'text-4xl sm:text-5xl md:text-6xl lg:text-[64px]',
+          )}
+        >
           Ready to build<br />your first AI product?
         </h2>
-        <Link to="/courses" style={{
-          display: 'inline-block',
-          padding: '18px 40px',
-          borderRadius: 9999,
-          fontSize: 18,
-          fontWeight: 700,
-          background: '#4a9ad4',
-          color: '#0d1a3a',
-          textDecoration: 'none',
-        }}>
+        <Link to="/courses" className={cn(ctaPrimary, 'px-10 py-[18px] text-lg')}>
           Get Started Today
         </Link>
-        <div style={{ marginTop: 24, display: 'flex', gap: 24, justifyContent: 'center' }}>
-          <Link to="/privacy" style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>Privacy Policy</Link>
-          <Link to="/terms" style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>Terms of Service</Link>
+        <div className="mt-6 flex justify-center gap-6">
+          <Link
+            to="/privacy"
+            className="text-sm text-white/50 hover:text-white/80 focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded"
+          >
+            Privacy Policy
+          </Link>
+          <Link
+            to="/terms"
+            className="text-sm text-white/50 hover:text-white/80 focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded"
+          >
+            Terms of Service
+          </Link>
         </div>
       </section>
 
@@ -711,5 +836,7 @@ export default function HomePage() {
     </div>
   )
 }
-const __BUILD_MARKER__ = "newdesign-v2";
+
+const __BUILD_MARKER__ = 'newdesign-v2'
+export { __BUILD_MARKER__ }
 // build-1776111635

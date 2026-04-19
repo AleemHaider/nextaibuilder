@@ -1,4 +1,11 @@
 // FIR-157 — Stripe Elements checkout page
+// Sprint 3 Story 13 — Wise theme migration.
+//
+// The Sprint 2 error classifier from Story 10 (GAP-025) is preserved
+// exactly. `data-testid` hooks and the data-error-kind attribute on the
+// banner remain untouched so the existing vitest suite keeps passing.
+// Everything purely visual (navy gradients, inline <style> blocks, emoji
+// trust icons) is replaced with Wise tokens + lucide-react icons.
 import {
   useCallback,
   useEffect,
@@ -9,6 +16,23 @@ import {
 } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import {
+  AlertTriangle,
+  ArrowLeft,
+  Check,
+  CreditCard,
+  FileText,
+  Hourglass,
+  Lock,
+  Radio,
+  Upload,
+  Video,
+  X,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react'
+import { Button } from '../components/ui/Button'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
+import {
   createInstallmentCheckout,
   createOneTimeCheckout,
   fetchCohortBySlug,
@@ -17,6 +41,7 @@ import {
   type InstallmentCheckoutResponse,
   type OneTimeCheckoutResponse,
 } from '../lib/api'
+import { cn } from '../lib/utils'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -125,65 +150,46 @@ interface UploadedFile {
 }
 
 // ---------------------------------------------------------------------------
-// Spinner
-// ---------------------------------------------------------------------------
-
-function Spinner({ size = 20 }: { size?: number }) {
-  return (
-    <div
-      style={{
-        width: size, height: size, borderRadius: '50%',
-        border: `3px solid rgba(255,255,255,0.3)`,
-        borderTopColor: '#fff',
-        animation: 'spin 0.7s linear infinite',
-        flexShrink: 0,
-      }}
-      aria-hidden="true"
-    />
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Navbar
 // ---------------------------------------------------------------------------
 
 function CheckoutNav({ backSlug }: { backSlug: string }) {
   return (
-    <nav style={{
-      height: 68,
-      background: '#fff',
-      display: 'flex',
-      alignItems: 'center',
-      padding: '0 32px',
-      borderBottom: '1px solid rgba(26,39,68,0.10)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-    }}>
-      <span style={{ fontSize: 20, fontWeight: 900, color: '#1a2744', letterSpacing: '-0.4px' }}>
+    <nav
+      className={cn(
+        'sticky top-0 z-[100] h-[68px]',
+        'flex items-center px-6 sm:px-8',
+        'bg-[var(--color-wise-surface)] border-b border-[var(--color-wise-ring)]',
+      )}
+    >
+      <span className="text-xl font-black tracking-[-0.4px] text-[var(--color-wise-text)]">
         nextaibuilder
       </span>
 
-      <div style={{ marginLeft: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{
-          background: '#e6f4ec', color: '#054d28',
-          fontSize: 11, fontWeight: 700, padding: '3px 10px',
-          borderRadius: 100, letterSpacing: '0.3px',
-        }}>
-          🔒 Secure checkout
+      <div className="ml-4 flex items-center gap-1.5">
+        <span
+          className={cn(
+            'inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-1',
+            'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+            'text-[11px] font-bold tracking-[0.3px]',
+          )}
+        >
+          <Lock size={12} aria-hidden="true" />
+          Secure checkout
         </span>
       </div>
 
       <Link
         to={`/courses/${backSlug}`}
-        style={{
-          marginLeft: 'auto',
-          fontSize: 14, color: '#717182',
-          textDecoration: 'none', fontWeight: 500,
-          display: 'flex', alignItems: 'center', gap: 4,
-        }}
+        className={cn(
+          'ml-auto flex items-center gap-1',
+          'text-sm font-medium text-[var(--color-wise-text-muted)]',
+          'hover:text-[var(--color-wise-text)]',
+          'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2 rounded',
+        )}
       >
-        ← Back to course
+        <ArrowLeft size={14} aria-hidden="true" />
+        Back to course
       </Link>
     </nav>
   )
@@ -199,115 +205,142 @@ interface OrderSummaryCardProps {
   installmentAmount?: number
 }
 
-const TYPE_COVER: Record<string, string> = {
-  live:     'linear-gradient(145deg,#0d1b42,#1e4080,#4a9ad4)',
-  combined: 'linear-gradient(145deg,#100d30,#2a1f6e,#6b5ce7)',
-  recorded: 'linear-gradient(145deg,#0a2a1a,#0f5132,#16a34a)',
+const TYPE_COVER_FALLBACK: Record<string, string> = {
+  live:     'linear-gradient(145deg, var(--color-wise-primary), var(--color-wise-primary-hover), var(--color-wise-mint))',
+  combined: 'linear-gradient(145deg, var(--color-wise-dark), var(--color-wise-text-warm), var(--color-wise-text-muted))',
+  recorded: 'linear-gradient(145deg, var(--color-wise-mint), var(--color-wise-primary), var(--color-wise-primary-hover))',
 }
 
-const TYPE_BADGE: Record<string, string> = {
-  live:     '🔴 Live Cohort',
-  combined: '⚡ Combined',
-  recorded: '📹 Recorded',
+const TYPE_META: Record<string, { label: string; Icon: LucideIcon }> = {
+  live:     { label: 'Live Cohort', Icon: Radio },
+  combined: { label: 'Combined',    Icon: Zap },
+  recorded: { label: 'Recorded',    Icon: Video },
 }
 
 function OrderSummaryCard({ cohort, tab, installmentAmount }: OrderSummaryCardProps) {
   const schedule = getInstallmentSchedule()
-  const cover = TYPE_COVER[cohort.type] ?? TYPE_COVER.recorded
+  const coverBg = cohort.coverGradient ?? TYPE_COVER_FALLBACK[cohort.type] ?? TYPE_COVER_FALLBACK.recorded
   const instAmt = installmentAmount ?? Math.ceil(cohort.price / 3)
+  const meta = TYPE_META[cohort.type] ?? { label: cohort.type, Icon: Video }
 
   return (
-    <div style={{
-      background: '#fff',
-      borderRadius: 24,
-      overflow: 'hidden',
-      boxShadow: 'rgba(26,39,68,0.10) 0 4px 24px, rgba(26,39,68,0.08) 0 0 0 1px',
-    }}>
+    <div
+      className={cn(
+        'overflow-hidden rounded-[var(--radius-lg)]',
+        'bg-[var(--color-wise-surface)] shadow-[var(--shadow-card)]',
+      )}
+    >
       {/* Cover */}
-      <div style={{
-        height: 160, background: cohort.coverGradient ?? cover,
-        position: 'relative', display: 'flex', flexDirection: 'column',
-        justifyContent: 'space-between', padding: '20px 24px',
-      }}>
-        <div style={{
-          position: 'absolute', top: -40, right: -40, width: 160, height: 160,
-          borderRadius: '50%', background: 'radial-gradient(circle,rgba(255,255,255,0.12) 0%,transparent 70%)',
-          pointerEvents: 'none',
-        }} />
-        <span style={{
-          display: 'inline-block', background: 'rgba(255,255,255,0.18)',
-          backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.28)',
-          borderRadius: 100, padding: '4px 12px',
-          fontSize: 11, fontWeight: 700, color: '#fff', alignSelf: 'flex-start',
-        }}>
-          {TYPE_BADGE[cohort.type] ?? cohort.type}
+      <div
+        className="relative flex h-40 flex-col justify-between px-6 py-5"
+        style={{ background: coverBg }}
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%)',
+          }}
+        />
+        <span
+          className={cn(
+            'self-start inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1',
+            'text-[11px] font-bold text-white',
+            'bg-white/20 backdrop-blur ring-1 ring-white/30',
+          )}
+        >
+          <meta.Icon size={12} aria-hidden="true" />
+          {meta.label}
         </span>
-        <p style={{ fontSize: 18, fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.3, textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
+        <p
+          className="m-0 text-lg font-extrabold leading-snug text-white"
+          style={{ textShadow: '0 1px 4px rgba(0,0,0,0.35)' }}
+        >
           {cohort.title}
         </p>
       </div>
 
       {/* Pricing breakdown */}
-      <div style={{ padding: '24px 24px 20px' }}>
+      <div className="px-6 pt-6 pb-5">
         {tab === 'full' ? (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: 14, color: '#717182' }}>
-              <span>Subtotal</span><span>{formatMoney(cohort.price)}</span>
+            <div className="mb-2.5 flex justify-between text-sm text-[var(--color-wise-text-muted)]">
+              <span>Subtotal</span>
+              <span>{formatMoney(cohort.price)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, fontSize: 14, color: '#717182' }}>
-              <span>Processing fee</span><span>$0</span>
+            <div className="mb-4 flex justify-between text-sm text-[var(--color-wise-text-muted)]">
+              <span>Processing fee</span>
+              <span>$0</span>
             </div>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              borderTop: '1px solid rgba(26,39,68,0.08)', paddingTop: 16, marginBottom: 16,
-              fontSize: 18, fontWeight: 800, color: '#1a2744',
-            }}>
-              <span>Total due today</span><span>{formatMoney(cohort.price)}</span>
+            <div
+              className={cn(
+                'mb-4 flex justify-between border-t border-[var(--color-wise-ring)] pt-4',
+                'text-lg font-extrabold text-[var(--color-wise-text)]',
+              )}
+            >
+              <span>Total due today</span>
+              <span>{formatMoney(cohort.price)}</span>
             </div>
-            <div style={{
-              display: 'flex', alignItems: 'flex-start', gap: 8,
-              background: '#e6f4ec', borderRadius: 12, padding: '10px 14px',
-              fontSize: 13, color: '#054d28', fontWeight: 600,
-            }}>
-              <span>✓</span>
+            <div
+              className={cn(
+                'flex items-start gap-2 rounded-xl px-3.5 py-2.5',
+                'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+                'text-[13px] font-semibold',
+              )}
+            >
+              <Check size={14} strokeWidth={3} aria-hidden="true" className="mt-0.5" />
               <span>Lifetime course access included with enrollment.</span>
             </div>
           </>
         ) : (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: 14, color: '#717182' }}>
-              <span>Course total</span><span>{formatMoney(cohort.price)}</span>
+            <div className="mb-2.5 flex justify-between text-sm text-[var(--color-wise-text-muted)]">
+              <span>Course total</span>
+              <span>{formatMoney(cohort.price)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, fontSize: 14, color: '#717182' }}>
-              <span>3 × monthly installments</span><span>{formatMoney(instAmt)}/mo</span>
+            <div className="mb-4 flex justify-between text-sm text-[var(--color-wise-text-muted)]">
+              <span>3 × monthly installments</span>
+              <span>{formatMoney(instAmt)}/mo</span>
             </div>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              borderTop: '1px solid rgba(26,39,68,0.08)', paddingTop: 16, marginBottom: 16,
-              fontSize: 18, fontWeight: 800, color: '#1a2744',
-            }}>
-              <span>Due today</span><span>{formatMoney(instAmt)}</span>
+            <div
+              className={cn(
+                'mb-4 flex justify-between border-t border-[var(--color-wise-ring)] pt-4',
+                'text-lg font-extrabold text-[var(--color-wise-text)]',
+              )}
+            >
+              <span>Due today</span>
+              <span>{formatMoney(instAmt)}</span>
             </div>
-            <div style={{
-              display: 'flex', alignItems: 'flex-start', gap: 8,
-              background: '#fff7ed', borderRadius: 12, padding: '10px 14px',
-              fontSize: 13, color: '#9a3412', fontWeight: 600,
-            }}>
-              <span>💳</span>
-              <span>2nd payment {schedule[1]} · 3rd on {schedule[2]}</span>
+            <div
+              className={cn(
+                'flex items-start gap-2 rounded-xl px-3.5 py-2.5',
+                'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text)]',
+                'text-[13px] font-semibold',
+              )}
+            >
+              <CreditCard size={14} aria-hidden="true" className="mt-0.5" />
+              <span>
+                2nd payment {schedule[1]} · 3rd on {schedule[2]}
+              </span>
             </div>
           </>
         )}
       </div>
 
       {/* Trust row */}
-      <div style={{
-        padding: '12px 24px 20px',
-        display: 'flex', gap: 12, justifyContent: 'center',
-      }}>
-        {['🔒 SSL encrypted', '✓ Secure checkout', '💳 Stripe protected'].map((t) => (
-          <span key={t} style={{ fontSize: 11, color: '#a3a3a3', fontWeight: 600 }}>{t}</span>
-        ))}
+      <div className="flex justify-center gap-3 px-6 pt-3 pb-5">
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-wise-text-muted)]">
+          <Lock size={12} aria-hidden="true" />
+          SSL encrypted
+        </span>
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-wise-text-muted)]">
+          <Check size={12} strokeWidth={3} aria-hidden="true" />
+          Secure checkout
+        </span>
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-wise-text-muted)]">
+          <CreditCard size={12} aria-hidden="true" />
+          Stripe protected
+        </span>
       </div>
     </div>
   )
@@ -325,78 +358,57 @@ interface StripeFieldsStubProps {
 }
 
 function StripeFieldsStub({ onPay, isProcessing, buttonLabel, declined }: StripeFieldsStubProps) {
-  const fieldStyle: React.CSSProperties = {
-    height: 48, borderRadius: 12,
-    border: declined ? '1.5px solid #d03238' : '1.5px solid rgba(26,39,68,0.15)',
-    background: declined ? '#fef2f2' : '#f8f9fb',
-    display: 'flex', alignItems: 'center', padding: '0 16px',
-    fontSize: 15, color: '#a3a3a3', marginBottom: 14,
-  }
+  const fieldClass = cn(
+    'flex items-center px-4 h-12 rounded-[var(--radius-sm)] border text-[15px] mb-3.5',
+    declined
+      ? 'border-[var(--color-wise-danger)] bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-text-muted)]'
+      : 'border-[var(--color-wise-ring)] bg-[var(--color-wise-canvas)] text-[var(--color-wise-text-muted)]',
+  )
+
+  const labelClass =
+    'mb-1.5 block text-xs font-bold uppercase tracking-[0.3px] text-[var(--color-wise-text)]'
 
   return (
     <>
-      <label style={{ fontSize: 12, fontWeight: 700, color: '#1a2744', display: 'block', marginBottom: 6, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-        Card number
-      </label>
-      <div style={fieldStyle}>
-        <span style={{ flex: 1 }}>•••• •••• •••• ••••</span>
-        <span style={{ fontSize: 20 }}>💳</span>
+      <label className={labelClass}>Card number</label>
+      <div className={fieldClass}>
+        <span className="flex-1">•••• •••• •••• ••••</span>
+        <CreditCard size={20} aria-hidden="true" className="text-[var(--color-wise-text-muted)]" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 4 }}>
+      <div className="mb-1 grid grid-cols-2 gap-3">
         <div>
-          <label style={{ fontSize: 12, fontWeight: 700, color: '#1a2744', display: 'block', marginBottom: 6, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-            Expiry
-          </label>
-          <div style={{ ...fieldStyle, marginBottom: 0 }}>
-            <span style={{ fontSize: 14, color: '#a3a3a3' }}>MM / YY</span>
+          <label className={labelClass}>Expiry</label>
+          <div className={cn(fieldClass, 'mb-0')}>
+            <span className="text-sm text-[var(--color-wise-text-muted)]">MM / YY</span>
           </div>
         </div>
         <div>
-          <label style={{ fontSize: 12, fontWeight: 700, color: '#1a2744', display: 'block', marginBottom: 6, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-            CVC
-          </label>
-          <div style={{ ...fieldStyle, marginBottom: 0 }}>
-            <span style={{ fontSize: 14, color: '#a3a3a3' }}>•••</span>
+          <label className={labelClass}>CVC</label>
+          <div className={cn(fieldClass, 'mb-0')}>
+            <span className="text-sm text-[var(--color-wise-text-muted)]">•••</span>
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 16, marginBottom: 20 }}>
-        <span style={{ fontSize: 13, color: '#717182' }}>Powered by</span>
-        <span style={{ fontSize: 13, fontWeight: 900, color: '#635bff' }}>stripe</span>
-        <span style={{ marginLeft: 'auto', fontSize: 12, color: '#a3a3a3', fontWeight: 500 }}>Visa · Mastercard · Amex</span>
+      <div className="mt-4 mb-5 flex items-center gap-1.5">
+        <span className="text-[13px] text-[var(--color-wise-text-muted)]">Powered by</span>
+        <span className="text-[13px] font-black text-[#635bff]">stripe</span>
+        <span className="ml-auto text-xs font-medium text-[var(--color-wise-text-muted)]">
+          Visa · Mastercard · Amex
+        </span>
       </div>
 
-      <button
+      <Button
         type="button"
         onClick={onPay}
-        disabled={isProcessing}
-        style={{
-          width: '100%', height: 56, borderRadius: 100,
-          background: declined
-            ? 'linear-gradient(135deg,#d03238,#b02428)'
-            : 'linear-gradient(135deg,#1a2744,#2d4a8a)',
-          color: '#fff', border: 'none',
-          fontSize: 16, fontWeight: 800, cursor: isProcessing ? 'not-allowed' : 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          opacity: isProcessing ? 0.85 : 1,
-          boxShadow: declined
-            ? '0 4px 20px rgba(208,50,56,0.35)'
-            : '0 4px 20px rgba(26,39,68,0.30)',
-          transition: 'opacity 0.15s',
-          letterSpacing: '0.2px',
-        }}
+        isLoading={isProcessing}
+        variant={declined ? 'danger' : 'primary'}
+        size="lg"
+        className="w-full"
       >
-        {isProcessing ? (
-          <>
-            <Spinner />
-            Processing payment...
-          </>
-        ) : (
-          buttonLabel
-        )}
-      </button>
+        {isProcessing ? 'Processing payment...' : buttonLabel}
+      </Button>
     </>
   )
 }
@@ -414,32 +426,44 @@ function InstallmentSchedule({ installmentAmount, currency }: { installmentAmoun
   ]
 
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+    <table className="w-full border-collapse">
       <thead>
         <tr>
           {(['Payment', 'Date', 'Amount'] as const).map((h) => (
-            <th key={h} style={{
-              textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#717182',
-              padding: '0 0 10px', borderBottom: '1px solid rgba(26,39,68,0.08)',
-              textTransform: 'uppercase', letterSpacing: '0.5px',
-            }}>{h}</th>
+            <th
+              key={h}
+              className={cn(
+                'text-left pb-2.5 border-b border-[var(--color-wise-ring)]',
+                'text-xs font-bold uppercase tracking-[0.5px]',
+                'text-[var(--color-wise-text-muted)]',
+              )}
+            >
+              {h}
+            </th>
           ))}
         </tr>
       </thead>
       <tbody>
         {rows.map((row, i) => (
           <tr key={i}>
-            <td style={{ fontSize: 14, color: '#1a2744', padding: '13px 0', borderBottom: '1px solid rgba(26,39,68,0.05)' }}>
+            <td className="border-b border-[var(--color-wise-ring)]/60 py-3 text-sm text-[var(--color-wise-text)]">
               {row.label}
               {row.badge && (
-                <span style={{
-                  marginLeft: 8, fontSize: 10, fontWeight: 700, padding: '2px 8px',
-                  borderRadius: 100, background: '#e6f4ec', color: '#054d28',
-                }}>Today</span>
+                <span
+                  className={cn(
+                    'ml-2 inline-block rounded-[var(--radius-pill)] px-2 py-0.5',
+                    'text-[10px] font-bold',
+                    'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+                  )}
+                >
+                  Today
+                </span>
               )}
             </td>
-            <td style={{ fontSize: 13, color: '#717182', padding: '13px 0', borderBottom: '1px solid rgba(26,39,68,0.05)' }}>{row.date}</td>
-            <td style={{ fontSize: 15, fontWeight: 700, color: '#1a2744', padding: '13px 0', borderBottom: '1px solid rgba(26,39,68,0.05)' }}>
+            <td className="border-b border-[var(--color-wise-ring)]/60 py-3 text-[13px] text-[var(--color-wise-text-muted)]">
+              {row.date}
+            </td>
+            <td className="border-b border-[var(--color-wise-ring)]/60 py-3 text-[15px] font-bold text-[var(--color-wise-text)]">
               {formatMoney(installmentAmount, currency)}
             </td>
           </tr>
@@ -489,42 +513,41 @@ function CheckoutForm({
     ? `Pay ${formatMoney(cohort.price, currency)} Now`
     : `Start Plan — Pay ${formatMoney(installmentAmount, currency)} Today`
 
-  const cardStyle: React.CSSProperties = {
-    background: '#fff',
-    borderRadius: 20,
-    padding: '28px 28px',
-    boxShadow: 'rgba(26,39,68,0.08) 0 0 0 1px, rgba(26,39,68,0.04) 0 4px 16px',
-    marginBottom: 16,
-  }
+  const cardClass = cn(
+    'mb-4 rounded-[var(--radius-md)] bg-[var(--color-wise-surface)]',
+    'px-7 py-7 shadow-[var(--shadow-ring)]',
+  )
 
   return (
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <h1 style={{ fontSize: 30, fontWeight: 900, color: '#1a2744', letterSpacing: '-0.6px', margin: '0 0 6px' }}>
+    <div className="flex-1 min-w-0">
+      <h1 className="mb-1.5 text-3xl font-black tracking-[-0.6px] text-[var(--color-wise-text)]">
         Complete your enrollment
       </h1>
-      <p style={{ fontSize: 15, color: '#717182', margin: '0 0 28px' }}>
+      <p className="mb-7 text-[15px] text-[var(--color-wise-text-muted)]">
         Secure checkout powered by Stripe
       </p>
 
       {/* Tab toggle */}
-      <div style={{
-        display: 'inline-flex',
-        background: '#f0f0f4', borderRadius: 100,
-        padding: 4, marginBottom: 24, gap: 4,
-      }}>
+      <div
+        className={cn(
+          'mb-6 inline-flex gap-1 rounded-[var(--radius-pill)] p-1',
+          'bg-[var(--color-wise-surface-soft)]',
+        )}
+      >
         {(['full', 'installments'] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => onTabChange(t)}
-            style={{
-              padding: '9px 20px', borderRadius: 100, border: 'none',
-              fontSize: 14, fontWeight: 700, cursor: 'pointer',
-              transition: 'all 0.18s',
-              background: tab === t ? '#1a2744' : 'transparent',
-              color: tab === t ? '#fff' : '#717182',
-              boxShadow: tab === t ? '0 2px 8px rgba(26,39,68,0.20)' : 'none',
-            }}
+            aria-pressed={tab === t}
+            className={cn(
+              'rounded-[var(--radius-pill)] px-5 py-2 text-sm font-bold',
+              'transition-colors duration-150',
+              'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2',
+              tab === t
+                ? 'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)] shadow-sm'
+                : 'bg-transparent text-[var(--color-wise-text-muted)] hover:text-[var(--color-wise-text)]',
+            )}
           >
             {t === 'full' ? 'Pay in Full' : 'Pay in 3 Installments'}
           </button>
@@ -539,22 +562,25 @@ function CheckoutForm({
         <div
           data-testid="stripe-error-banner"
           data-error-kind={stripeError.kind}
-          style={{
-            display: 'flex', alignItems: 'flex-start', gap: 10,
-            background: '#fdeaeb', border: '1px solid rgba(208,50,56,0.2)',
-            borderRadius: 14, padding: '14px 16px', marginBottom: 16,
-          }}
           role="alert"
+          className={cn(
+            'mb-4 flex items-start gap-2.5 rounded-[var(--radius-sm)] px-4 py-3.5',
+            'bg-[var(--color-wise-danger-soft)] ring-1 ring-[var(--color-wise-danger)]/30',
+          )}
         >
-          <span aria-hidden="true">⚠️</span>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: '#d03238', margin: '0 0 2px' }}>
+          <AlertTriangle
+            size={18}
+            aria-hidden="true"
+            className="mt-0.5 flex-shrink-0 text-[var(--color-wise-danger)]"
+          />
+          <div className="flex-1">
+            <p className="m-0 mb-0.5 text-sm font-bold text-[var(--color-wise-danger)]">
               {stripeError.kind === 'CARD_DECLINED'    ? 'Card declined'
                 : stripeError.kind === 'NETWORK_TIMEOUT' ? 'Network error'
                 : stripeError.kind === 'INVALID_PLAN'    ? 'Payment plan unavailable'
                 : 'Payment failed'}
             </p>
-            <p style={{ fontSize: 13, color: '#9a3412', margin: 0 }}>
+            <p className="m-0 text-[13px] text-[var(--color-wise-text-warm)]">
               {stripeError.message}
             </p>
           </div>
@@ -562,26 +588,32 @@ function CheckoutForm({
             type="button"
             onClick={onDismissError}
             aria-label="Dismiss error"
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 18, color: '#d03238', lineHeight: 1, padding: 0,
-            }}
+            className={cn(
+              'flex-shrink-0 rounded p-0.5',
+              'bg-transparent border-0 cursor-pointer',
+              'text-[var(--color-wise-danger)] hover:bg-[var(--color-wise-danger)]/10',
+              'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-danger)] focus-visible:outline-offset-2',
+            )}
           >
-            ×
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
       )}
 
       {/* Installment schedule */}
       {tab === 'installments' && (
-        <div style={cardStyle}>
-          <h2 style={{ fontSize: 15, fontWeight: 800, color: '#1a2744', margin: '0 0 20px' }}>Payment schedule</h2>
+        <div className={cardClass}>
+          <h2 className="mb-5 text-[15px] font-extrabold text-[var(--color-wise-text)]">
+            Payment schedule
+          </h2>
           <InstallmentSchedule installmentAmount={installmentAmount} currency={currency} />
-          <p style={{
-            fontSize: 13, color: '#717182', lineHeight: 1.6,
-            background: '#f8f9fb', borderRadius: 10, padding: '12px 14px',
-            margin: '16px 0 0',
-          }}>
+          <p
+            className={cn(
+              'mt-4 rounded-xl px-3.5 py-3',
+              'bg-[var(--color-wise-canvas)] text-[var(--color-wise-text-muted)]',
+              'text-[13px] leading-[1.6]',
+            )}
+          >
             By starting this plan, you authorize nextaibuilder to charge{' '}
             {formatMoney(installmentAmount, currency)} today and the same amount on the following two dates.
           </p>
@@ -589,8 +621,8 @@ function CheckoutForm({
       )}
 
       {/* Card details */}
-      <div style={cardStyle}>
-        <h2 style={{ fontSize: 15, fontWeight: 800, color: '#1a2744', margin: '0 0 22px' }}>
+      <div className={cardClass}>
+        <h2 className="mb-5 text-[15px] font-extrabold text-[var(--color-wise-text)]">
           Card details
         </h2>
         {showStripeStub && (
@@ -604,14 +636,16 @@ function CheckoutForm({
       </div>
 
       {/* Bank transfer link */}
-      <div style={{ textAlign: 'center', marginTop: 8 }}>
+      <div className="mt-2 text-center">
         <button
           type="button"
           onClick={onSwitchToManual}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 14, color: '#4a9ad4', fontWeight: 600,
-          }}
+          className={cn(
+            'text-sm font-semibold text-[var(--color-wise-primary-text)]',
+            'bg-transparent border-0 cursor-pointer',
+            'hover:underline',
+            'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2 rounded',
+          )}
         >
           Pay by bank transfer instead →
         </button>
@@ -704,30 +738,40 @@ function ManualReceiptView({ cohort, cohortId, paymentPlanId, onBack }: ManualRe
 
   if (uploadState === 'pending') {
     return (
-      <div style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center', padding: '60px 24px' }}>
-        <div style={{
-          background: '#fff', borderRadius: 24,
-          padding: '56px 40px',
-          boxShadow: 'rgba(26,39,68,0.08) 0 0 0 1px, rgba(26,39,68,0.06) 0 8px 32px',
-        }}>
-          <div style={{ fontSize: 56, marginBottom: 20 }}>⏳</div>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: '#fff8e6', color: '#8a5a00',
-            fontSize: 13, fontWeight: 700, padding: '6px 16px',
-            borderRadius: 100, marginBottom: 20,
-          }}>🕐 Under Review</span>
-          <h2 style={{ fontSize: 26, fontWeight: 900, color: '#1a2744', marginBottom: 10 }}>Receipt submitted!</h2>
-          <p style={{ fontSize: 15, color: '#717182', lineHeight: 1.6, marginBottom: 32, maxWidth: 360, margin: '0 auto 32px' }}>
+      <div className="mx-auto max-w-[520px] px-6 py-14 text-center">
+        <div
+          className={cn(
+            'rounded-[var(--radius-lg)] bg-[var(--color-wise-surface)]',
+            'px-10 py-14 shadow-[var(--shadow-card)]',
+          )}
+        >
+          <div
+            className={cn(
+              'mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full',
+              'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-warning)]',
+            )}
+          >
+            <Hourglass size={32} aria-hidden="true" />
+          </div>
+          <span
+            className={cn(
+              'mb-5 inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] px-4 py-1.5',
+              'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text)]',
+              'text-[13px] font-bold',
+            )}
+          >
+            <Hourglass size={12} aria-hidden="true" />
+            Under Review
+          </span>
+          <h2 className="mb-2.5 text-[26px] font-black text-[var(--color-wise-text)]">
+            Receipt submitted!
+          </h2>
+          <p className="mx-auto mb-8 max-w-[360px] text-[15px] leading-[1.6] text-[var(--color-wise-text-muted)]">
             Your payment receipt is being reviewed. You'll receive an email within 24–48 hours once approved.
           </p>
-          <button type="button" onClick={onBack} style={{
-            padding: '12px 32px', borderRadius: 100, background: '#f8f9fb',
-            color: '#1a2744', fontWeight: 700, fontSize: 15,
-            border: '1px solid rgba(26,39,68,0.15)', cursor: 'pointer',
-          }}>
+          <Button variant="outline" size="md" onClick={onBack}>
             View Dashboard
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -736,165 +780,268 @@ function ManualReceiptView({ cohort, cohortId, paymentPlanId, onBack }: ManualRe
   const isSubmitting = uploadState === 'submitting'
   const isUploading = uploadState === 'uploading'
 
-  const cardStyle: React.CSSProperties = {
-    background: '#fff', borderRadius: 20,
-    boxShadow: 'rgba(26,39,68,0.08) 0 0 0 1px, rgba(26,39,68,0.04) 0 4px 16px',
-    marginBottom: 14,
-  }
+  const cardClass = cn(
+    'mb-3.5 rounded-[var(--radius-md)] bg-[var(--color-wise-surface)]',
+    'shadow-[var(--shadow-ring)]',
+  )
 
   return (
-    <div style={{ maxWidth: 620, margin: '0 auto' }}>
+    <div className="mx-auto max-w-[620px]">
       {/* Course header */}
-      <div style={{ ...cardStyle, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 18 }}>
-        <div style={{
-          width: 72, height: 56, borderRadius: 12, flexShrink: 0,
-          background: cohort.coverGradient ?? TYPE_COVER[cohort.type] ?? TYPE_COVER.recorded,
-        }} />
+      <div className={cn(cardClass, 'flex items-center gap-4 px-6 py-5')}>
+        <div
+          className="h-14 w-[72px] flex-shrink-0 rounded-xl"
+          style={{
+            background:
+              cohort.coverGradient ??
+              TYPE_COVER_FALLBACK[cohort.type] ??
+              TYPE_COVER_FALLBACK.recorded,
+          }}
+          aria-hidden="true"
+        />
         <div>
-          <p style={{ fontSize: 12, color: '#717182', margin: '0 0 4px' }}>Enrolling in</p>
-          <p style={{ fontSize: 17, fontWeight: 800, color: '#1a2744', margin: '0 0 4px' }}>{cohort.title}</p>
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#4a9ad4', margin: 0 }}>
+          <p className="mb-1 text-xs text-[var(--color-wise-text-muted)]">Enrolling in</p>
+          <p className="mb-1 text-[17px] font-extrabold text-[var(--color-wise-text)]">
+            {cohort.title}
+          </p>
+          <p className="m-0 text-[13px] font-bold text-[var(--color-wise-primary-text)]">
             Pay in full · {formatMoney(cohort.price)}
           </p>
         </div>
       </div>
 
       {/* Bank transfer instructions */}
-      <div style={{
-        ...cardStyle,
-        background: '#eef6fd', borderLeft: '4px solid #4a9ad4',
-        borderRadius: '0 16px 16px 0', padding: '20px 22px',
-      }}>
-        <h2 style={{ fontSize: 14, fontWeight: 800, color: '#1a2744', margin: '0 0 14px' }}>Bank Transfer Instructions</h2>
+      <div
+        className={cn(
+          'mb-3.5 rounded-r-[var(--radius-md)] px-5 py-5',
+          'bg-[var(--color-wise-mint)] border-l-4 border-[var(--color-wise-primary-text)]',
+        )}
+      >
+        <h2 className="mb-3.5 text-sm font-extrabold text-[var(--color-wise-primary-text)]">
+          Bank Transfer Instructions
+        </h2>
         {[
           { label: 'Bank name', value: 'HSBC Pakistan' },
           { label: 'Account name', value: 'NextAI Builder Ltd' },
           { label: 'Account number', value: 'PK36 SCBL 0000 0011 2345 6700' },
           { label: 'Amount', value: `${formatMoney(cohort.price)} USD equivalent` },
         ].map(({ label, value }) => (
-          <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: '#717182' }}>{label}</span>
-            <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 700, color: '#1a2744', background: 'rgba(26,39,68,0.06)', padding: '3px 8px', borderRadius: 6 }}>{value}</span>
+          <div
+            key={label}
+            className="mb-2 flex items-center justify-between"
+          >
+            <span className="text-[13px] text-[var(--color-wise-text-muted)]">{label}</span>
+            <span
+              className={cn(
+                'rounded px-2 py-0.5 font-mono text-[13px] font-bold',
+                'bg-white/60 text-[var(--color-wise-primary-text)]',
+              )}
+            >
+              {value}
+            </span>
           </div>
         ))}
-        <p style={{ fontSize: 13, color: '#717182', margin: '12px 0 0', lineHeight: 1.55 }}>
+        <p className="mt-3 text-[13px] leading-[1.55] text-[var(--color-wise-text-warm)]">
           Transfer the amount shown and upload your receipt below. Access activates within 24 hours of approval.
         </p>
       </div>
 
       {/* Error */}
       {errorMessage && (
-        <div style={{
-          background: '#fdeaeb', border: '1px solid rgba(208,50,56,0.2)',
-          borderRadius: 12, padding: '12px 16px', marginBottom: 14,
-          display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 14, color: '#d03238',
-        }}>
-          <span>⚠️</span><p style={{ margin: 0 }}>{errorMessage}</p>
+        <div
+          className={cn(
+            'mb-3.5 flex items-start gap-2 rounded-xl px-4 py-3',
+            'bg-[var(--color-wise-danger-soft)] ring-1 ring-[var(--color-wise-danger)]/30',
+            'text-sm text-[var(--color-wise-danger)]',
+          )}
+          role="alert"
+        >
+          <AlertTriangle size={16} aria-hidden="true" className="mt-0.5 flex-shrink-0" />
+          <p className="m-0">{errorMessage}</p>
         </div>
       )}
 
       {/* Upload zone */}
       {uploadState === 'idle' && (
         <>
-          <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp"
-            style={{ display: 'none' }} onChange={handleInputChange} />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            className="hidden"
+            onChange={handleInputChange}
+            aria-label="Upload payment receipt"
+          />
           <div
-            role="button" tabIndex={0}
+            role="button"
+            tabIndex={0}
             onDrop={handleDrop}
             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
             onDragLeave={() => setIsDragOver(false)}
             onClick={() => fileInputRef.current?.click()}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click() }}
-            style={{
-              border: `2px dashed ${isDragOver ? '#1a2744' : '#4a9ad4'}`,
-              borderRadius: 20, padding: '48px 32px',
-              textAlign: 'center', cursor: 'pointer', marginBottom: 14,
-              background: isDragOver ? '#eef6fd' : '#f8fbff',
-              transition: 'all 0.18s',
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click()
             }}
+            className={cn(
+              'mb-3.5 rounded-[var(--radius-md)] border-2 border-dashed px-8 py-12',
+              'text-center cursor-pointer transition-colors',
+              'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2',
+              isDragOver
+                ? 'border-[var(--color-wise-primary-text)] bg-[var(--color-wise-mint)]'
+                : 'border-[var(--color-wise-primary-text)] bg-[var(--color-wise-canvas)]',
+            )}
           >
-            <div style={{ fontSize: 44, marginBottom: 14 }}>📤</div>
-            <p style={{ fontSize: 17, fontWeight: 800, color: '#1a2744', margin: '0 0 6px' }}>Upload your payment receipt</p>
-            <p style={{ fontSize: 14, color: '#717182', margin: '0 0 6px' }}>Drag & drop, or <span style={{ color: '#4a9ad4', fontWeight: 700 }}>browse files</span></p>
-            <p style={{ fontSize: 12, color: '#a3a3a3', margin: 0 }}>PDF, JPG, PNG · Max 10 MB</p>
+            <Upload
+              size={40}
+              aria-hidden="true"
+              className="mx-auto mb-3.5 text-[var(--color-wise-primary-text)]"
+            />
+            <p className="mb-1.5 text-[17px] font-extrabold text-[var(--color-wise-text)]">
+              Upload your payment receipt
+            </p>
+            <p className="mb-1.5 text-sm text-[var(--color-wise-text-muted)]">
+              Drag &amp; drop, or{' '}
+              <span className="font-bold text-[var(--color-wise-primary-text)]">
+                browse files
+              </span>
+            </p>
+            <p className="m-0 text-xs text-[var(--color-wise-text-muted)]">
+              PDF, JPG, PNG · Max 10 MB
+            </p>
           </div>
         </>
       )}
 
       {isUploading && (
-        <div style={{
-          border: '2px dashed #4a9ad4', borderRadius: 20,
-          padding: '40px 32px', textAlign: 'center', marginBottom: 14,
-          background: 'linear-gradient(135deg,#eef6fd,#f0f8ff)',
-        }}>
-          <div style={{ fontSize: 44, marginBottom: 12 }}>⏳</div>
-          <p style={{ fontSize: 16, fontWeight: 700, color: '#1a2744', margin: '0 0 14px' }}>Uploading receipt...</p>
-          <div style={{ height: 6, background: '#c8dff4', borderRadius: 100, maxWidth: 240, margin: '0 auto 8px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', background: '#4a9ad4', borderRadius: 100, width: `${Math.min(uploadProgress, 100)}%`, transition: 'width 0.2s' }} />
+        <div
+          className={cn(
+            'mb-3.5 rounded-[var(--radius-md)] border-2 border-dashed px-8 py-10',
+            'text-center',
+            'border-[var(--color-wise-primary-text)] bg-[var(--color-wise-mint)]',
+          )}
+        >
+          <Hourglass
+            size={40}
+            aria-hidden="true"
+            className="mx-auto mb-3 text-[var(--color-wise-primary-text)]"
+          />
+          <p className="mb-3.5 text-base font-bold text-[var(--color-wise-text)]">
+            Uploading receipt...
+          </p>
+          <div className="mx-auto mb-2 h-1.5 max-w-[240px] overflow-hidden rounded-[var(--radius-pill)] bg-white/60">
+            <div
+              className="h-full rounded-[var(--radius-pill)] bg-[var(--color-wise-primary-text)] transition-[width] duration-200"
+              style={{ width: `${Math.min(uploadProgress, 100)}%` }}
+            />
           </div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#4a9ad4' }}>{Math.min(uploadProgress, 100)}%</span>
+          <span className="text-[13px] font-bold text-[var(--color-wise-primary-text)]">
+            {Math.min(uploadProgress, 100)}%
+          </span>
         </div>
       )}
 
       {uploadState === 'uploaded' && uploadedFile && (
-        <div style={{
-          border: '2px solid rgba(5,77,40,0.25)', borderRadius: 20,
-          background: '#e6f4ec', padding: '18px 20px',
-          display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14,
-        }}>
-          <div style={{
-            width: 52, height: 52, background: '#fff', borderRadius: 12,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 24, flexShrink: 0,
-            boxShadow: 'rgba(26,39,68,0.10) 0 0 0 1px',
-          }}>📄</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 15, fontWeight: 700, color: '#1a2744', margin: '0 0 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{uploadedFile.name}</p>
-            <p style={{ fontSize: 13, color: '#717182', margin: 0 }}>{uploadedFile.sizeLabel}</p>
+        <div
+          className={cn(
+            'mb-3.5 flex items-center gap-3.5 rounded-[var(--radius-md)] px-5 py-4',
+            'bg-[var(--color-wise-mint)] ring-2 ring-[var(--color-wise-primary-text)]/25',
+          )}
+        >
+          <div
+            className={cn(
+              'flex h-13 w-13 flex-shrink-0 items-center justify-center rounded-xl',
+              'h-[52px] w-[52px]',
+              'bg-white shadow-[var(--shadow-ring)]',
+            )}
+          >
+            <FileText
+              size={24}
+              aria-hidden="true"
+              className="text-[var(--color-wise-primary-text)]"
+            />
           </div>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#054d28', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, flexShrink: 0 }}>✓</div>
-          <button type="button" onClick={() => { setUploadedFile(null); setUploadState('idle'); setUploadProgress(0) }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#d03238', fontWeight: 600, flexShrink: 0 }}>
+          <div className="min-w-0 flex-1">
+            <p className="mb-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-bold text-[var(--color-wise-text)]">
+              {uploadedFile.name}
+            </p>
+            <p className="m-0 text-[13px] text-[var(--color-wise-text-muted)]">
+              {uploadedFile.sizeLabel}
+            </p>
+          </div>
+          <div
+            className={cn(
+              'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full',
+              'bg-[var(--color-wise-primary-text)] text-white',
+            )}
+            aria-hidden="true"
+          >
+            <Check size={16} strokeWidth={3} />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setUploadedFile(null)
+              setUploadState('idle')
+              setUploadProgress(0)
+            }}
+            className={cn(
+              'flex-shrink-0 bg-transparent border-0 cursor-pointer',
+              'text-[13px] font-semibold text-[var(--color-wise-danger)]',
+              'hover:underline',
+              'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-danger)] focus-visible:outline-offset-2 rounded',
+            )}
+          >
             Remove
           </button>
         </div>
       )}
 
       {/* Note */}
+      <label htmlFor="manual-payment-note" className="sr-only">
+        Optional note
+      </label>
       <textarea
+        id="manual-payment-note"
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="Optional: Add a note (e.g. transaction reference number)"
-        rows={3} maxLength={500}
-        style={{
-          width: '100%', boxSizing: 'border-box',
-          borderRadius: 14, border: '1.5px solid rgba(26,39,68,0.15)',
-          background: '#fff', padding: '14px 16px',
-          fontSize: 14, color: '#1a2744', resize: 'none', outline: 'none',
-          fontFamily: 'inherit', marginBottom: 14,
-        }}
+        rows={3}
+        maxLength={500}
+        className={cn(
+          'mb-3.5 w-full box-border resize-none outline-none',
+          'rounded-[var(--radius-sm)] border border-[var(--color-wise-ring)]',
+          'bg-white px-4 py-3.5 text-sm text-[var(--color-wise-text)]',
+          'font-sans',
+          'focus-visible:border-[var(--color-wise-text)] focus-visible:ring-4 focus-visible:ring-[var(--color-wise-primary)]/30',
+        )}
       />
 
       {/* Submit */}
-      <button
-        type="button" onClick={handleSubmit}
+      <Button
+        type="button"
+        onClick={handleSubmit}
+        isLoading={isSubmitting}
         disabled={!uploadedFile || isUploading || isSubmitting}
-        style={{
-          width: '100%', height: 56, borderRadius: 100,
-          background: 'linear-gradient(135deg,#1a2744,#2d4a8a)',
-          color: '#fff', border: 'none', fontSize: 16, fontWeight: 800,
-          cursor: !uploadedFile || isUploading || isSubmitting ? 'not-allowed' : 'pointer',
-          opacity: !uploadedFile || isUploading || isSubmitting ? 0.5 : 1,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          boxShadow: '0 4px 20px rgba(26,39,68,0.25)',
-        }}
+        variant="primary"
+        size="lg"
+        className="w-full"
       >
-        {isSubmitting ? <><Spinner />Submitting...</> : 'Submit Receipt'}
-      </button>
+        {isSubmitting ? 'Submitting...' : 'Submit Receipt'}
+      </Button>
 
-      <div style={{ textAlign: 'center', marginTop: 16 }}>
-        <button type="button" onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#717182', fontWeight: 500 }}>
-          ← Pay by card instead
+      <div className="mt-4 text-center">
+        <button
+          type="button"
+          onClick={onBack}
+          className={cn(
+            'inline-flex items-center gap-1 bg-transparent border-0 cursor-pointer',
+            'text-sm font-medium text-[var(--color-wise-text-muted)]',
+            'hover:text-[var(--color-wise-text)]',
+            'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2 rounded',
+          )}
+        >
+          <ArrowLeft size={14} aria-hidden="true" />
+          Pay by card instead
         </button>
       </div>
     </div>
@@ -908,28 +1055,34 @@ function ManualReceiptView({ cohort, cohortId, paymentPlanId, onBack }: ManualRe
 function SuccessView({ cohortTitle }: { cohortTitle: string }) {
   const navigate = useNavigate()
   return (
-    <div style={{ maxWidth: 480, margin: '60px auto 0', textAlign: 'center' }}>
-      <div style={{
-        background: '#fff', borderRadius: 24, padding: '56px 40px',
-        boxShadow: 'rgba(26,39,68,0.08) 0 0 0 1px, rgba(26,39,68,0.06) 0 8px 32px',
-      }}>
-        <div style={{
-          width: 80, height: 80, borderRadius: '50%', background: '#e6f4ec',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 36, margin: '0 auto 24px',
-        }}>✓</div>
-        <h2 style={{ fontSize: 28, fontWeight: 900, color: '#1a2744', marginBottom: 10 }}>You're enrolled!</h2>
-        <p style={{ fontSize: 15, color: '#717182', lineHeight: 1.65, marginBottom: 32 }}>
+    <div className="mx-auto mt-14 max-w-[480px] text-center">
+      <div
+        className={cn(
+          'rounded-[var(--radius-lg)] bg-[var(--color-wise-surface)]',
+          'px-10 py-14 shadow-[var(--shadow-card)]',
+        )}
+      >
+        <div
+          className={cn(
+            'mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full',
+            'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+          )}
+        >
+          <Check size={36} strokeWidth={3} aria-hidden="true" />
+        </div>
+        <h2 className="mb-2.5 text-[28px] font-black text-[var(--color-wise-text)]">
+          You're enrolled!
+        </h2>
+        <p className="mb-8 text-[15px] leading-[1.65] text-[var(--color-wise-text-muted)]">
           Your payment was successful. Welcome to {cohortTitle}. Check your email for access details.
         </p>
-        <button type="button" onClick={() => navigate('/student/dashboard')} style={{
-          padding: '13px 32px', borderRadius: 100,
-          background: 'linear-gradient(135deg,#4a9ad4,#2d7ab8)',
-          color: '#fff', fontSize: 15, fontWeight: 800, border: 'none',
-          cursor: 'pointer', boxShadow: '0 4px 16px rgba(74,154,212,0.35)',
-        }}>
-          Go to My Courses →
-        </button>
+        <Button
+          variant="primary"
+          size="lg"
+          onClick={() => navigate('/student/dashboard')}
+        >
+          Go to My Courses
+        </Button>
       </div>
     </div>
   )
@@ -941,25 +1094,19 @@ function SuccessView({ cohortTitle }: { cohortTitle: string }) {
 
 function LoadingState() {
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{
-        width: 40, height: 40, borderRadius: '50%',
-        border: '3px solid rgba(26,39,68,0.10)', borderTopColor: '#4a9ad4',
-        animation: 'spin 0.7s linear infinite',
-      }} />
+    <div className="min-h-screen flex items-center justify-center bg-[var(--color-wise-canvas)]">
+      <LoadingSpinner size="lg" label="Loading checkout" centered />
     </div>
   )
 }
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fb', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-      <p style={{ fontSize: 18, fontWeight: 700, color: '#1a2744' }}>{message}</p>
-      <button type="button" onClick={onRetry} style={{
-        padding: '10px 24px', borderRadius: 100,
-        background: '#4a9ad4', color: '#0d1a3a',
-        fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer',
-      }}>Try again</button>
+    <div className="min-h-screen bg-[var(--color-wise-canvas)] flex flex-col items-center justify-center gap-4 px-6">
+      <p className="text-lg font-bold text-[var(--color-wise-text)]">{message}</p>
+      <Button variant="primary" size="md" onClick={onRetry}>
+        Try again
+      </Button>
     </div>
   )
 }
@@ -1043,7 +1190,7 @@ export default function CheckoutPage() {
 
   if (status === 'success') {
     return (
-      <div style={{ minHeight: '100vh', background: '#f8f9fb' }}>
+      <div className="min-h-screen bg-[var(--color-wise-canvas)]">
         <CheckoutNav backSlug={slug} />
         <SuccessView cohortTitle={cohort.title} />
       </div>
@@ -1051,21 +1198,10 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fb' }}>
+    <div className="min-h-screen bg-[var(--color-wise-canvas)]">
       <CheckoutNav backSlug={slug} />
 
-      {/* Add keyframe for spinner */}
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 768px) {
-          .checkout-layout { flex-direction: column !important; }
-          .checkout-summary { width: 100% !important; position: static !important; }
-          .checkout-nav-inner { padding: 0 16px !important; }
-          .checkout-page-pad { padding: 20px 16px 48px !important; }
-        }
-      `}</style>
-
-      <div className="checkout-page-pad" style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px 80px' }}>
+      <div className="max-w-[1100px] mx-auto px-4 sm:px-6 pt-10 pb-20">
         {view === 'manual' ? (
           <ManualReceiptView
             cohort={cohort}
@@ -1074,14 +1210,9 @@ export default function CheckoutPage() {
             onBack={() => setView('checkout')}
           />
         ) : (
-          /* Two-column layout */
-          <div className="checkout-layout" style={{
-            display: 'flex',
-            gap: 32,
-            alignItems: 'flex-start',
-          }}>
+          <div className="flex flex-col lg:flex-row gap-8 lg:items-start">
             {/* Left — form */}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="flex-1 min-w-0">
               <CheckoutForm
                 cohort={cohort}
                 tab={tab}
@@ -1098,7 +1229,7 @@ export default function CheckoutPage() {
             </div>
 
             {/* Right — order summary */}
-            <div className="checkout-summary" style={{ width: 360, flexShrink: 0, position: 'sticky', top: 88 }}>
+            <div className="w-full lg:w-[360px] flex-shrink-0 lg:sticky lg:top-[88px]">
               <OrderSummaryCard
                 cohort={cohort}
                 tab={tab}

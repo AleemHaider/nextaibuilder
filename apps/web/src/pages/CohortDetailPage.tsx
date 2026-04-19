@@ -1,67 +1,165 @@
 // FIR-30 — Cohort detail / course landing page
+// Sprint 3 Story 13 — Wise theme migration.
+//
+// The hero gradient, type badges, pricing card, modal, and curriculum rows
+// are now driven by `--color-wise-*` tokens and Tailwind utilities. Emojis
+// were swapped for lucide icons (Radio, Zap, Video, Calendar, Users, Clock,
+// Armchair, Flame, Lock, Check, Play, FileText, Wrench). sanitizeHtml() on
+// the cohort description is kept — do not unwrap.
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
+import {
+  Radio,
+  Zap,
+  Video,
+  Calendar,
+  Clock,
+  Users,
+  Armchair,
+  Flame,
+  Lock,
+  Check,
+  Play,
+  FileText,
+  Wrench,
+  ChevronRight,
+  X,
+  type LucideIcon,
+} from 'lucide-react'
 import { TopNav } from '../components/TopNav'
 import { Footer } from '../components/Footer'
+import { Button } from '../components/ui/Button'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { fetchCohortBySlug, fetchPreviewLessons } from '../lib/api'
 import type { CohortDetail, CohortLesson, PreviewLesson } from '../lib/api'
 import { sanitizeHtml } from '../lib/sanitize'
+import { cn } from '../lib/utils'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-const TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
-  live:     { label: '🔴 Live Cohort', color: '#cc4a00', bg: '#fff0e8' },
-  combined: { label: '⚡ Combined',    color: '#1a2744', bg: '#e8ecf4' },
-  recorded: { label: '📹 Recorded',   color: '#054d28', bg: '#e6f4ec' },
+interface TypeMeta {
+  label: string
+  Icon: LucideIcon
+  chipClass: string
+}
+
+const TYPE_META: Record<string, TypeMeta> = {
+  live: {
+    label: 'Live Cohort',
+    Icon: Radio,
+    chipClass: 'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+  },
+  combined: {
+    label: 'Combined',
+    Icon: Zap,
+    chipClass: 'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text)]',
+  },
+  recorded: {
+    label: 'Recorded',
+    Icon: Video,
+    chipClass: 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+  },
 }
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(n)
 }
 
 // ─── Preview player modal ──────────────────────────────────────────────────────
 
-function PreviewPlayer({ lesson, onClose }: { lesson: PreviewLesson; onClose: () => void }) {
+function PreviewPlayer({
+  lesson,
+  onClose,
+}: {
+  lesson: PreviewLesson
+  onClose: () => void
+}) {
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(8,15,36,0.9)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Lesson preview"
       onClick={onClose}
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm"
     >
       <div
-        style={{ width: '100%', maxWidth: 880, background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 40px 100px rgba(0,0,0,0.5)' }}
         onClick={(e) => e.stopPropagation()}
+        className={cn(
+          'w-full max-w-[880px] overflow-hidden bg-[var(--color-wise-surface)]',
+          'rounded-[var(--radius-md)] shadow-[0_40px_100px_rgba(0,0,0,0.5)]',
+        )}
       >
         {/* header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #f0f2f5' }}>
+        <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-[var(--color-wise-ring)]">
           <div>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#4a9ad4', background: '#deeefb', padding: '3px 9px', borderRadius: 6, letterSpacing: 0.8, textTransform: 'uppercase' }}>
+            <span
+              className={cn(
+                'inline-block rounded-md px-2.5 py-0.5',
+                'text-[10px] font-bold uppercase tracking-wider',
+                'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+              )}
+            >
               Free Preview
             </span>
-            <p style={{ fontSize: 16, fontWeight: 700, color: '#1a2744', marginTop: 5 }}>{lesson.title}</p>
-            {lesson.moduleTitle && <p style={{ fontSize: 12, color: '#9499a8', marginTop: 2 }}>{lesson.moduleTitle}</p>}
+            <p className="mt-1.5 text-base font-bold text-[var(--color-wise-text)]">
+              {lesson.title}
+            </p>
+            {lesson.moduleTitle && (
+              <p className="mt-0.5 text-xs text-[var(--color-wise-text-muted)]">
+                {lesson.moduleTitle}
+              </p>
+            )}
           </div>
-          <button onClick={onClose} aria-label="Close" style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: '#f3f4f6', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', flexShrink: 0 }}>✕</button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className={cn(
+              'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full',
+              'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)]',
+              'hover:bg-[var(--color-wise-mint)] hover:text-[var(--color-wise-primary-text)]',
+              'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2',
+            )}
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
         </div>
 
         {/* content */}
         {lesson.type === 'VIDEO' && lesson.loomUrl ? (
-          <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-            <iframe src={lesson.loomUrl.replace('share/', 'embed/')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen title={lesson.title} />
+          <div className="relative h-0 pb-[56.25%]">
+            <iframe
+              src={lesson.loomUrl.replace('share/', 'embed/')}
+              title={lesson.title}
+              allowFullScreen
+              className="absolute inset-0 h-full w-full border-0"
+            />
           </div>
         ) : lesson.type === 'TEXT' && lesson.content ? (
-          <div style={{ padding: '24px 28px', maxHeight: 480, overflowY: 'auto', fontSize: 15, color: '#374151', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{lesson.content}</div>
+          <div
+            className="max-h-[480px] overflow-y-auto whitespace-pre-wrap px-7 py-6 text-[15px] leading-[1.8] text-[var(--color-wise-text-warm)]"
+          >
+            {lesson.content}
+          </div>
         ) : (
-          <div style={{ padding: 48, textAlign: 'center', color: '#9499a8', fontSize: 14 }}>No preview available.</div>
+          <div className="p-12 text-center text-sm text-[var(--color-wise-text-muted)]">
+            No preview available.
+          </div>
         )}
 
         {/* footer cta */}
-        <div style={{ padding: '14px 20px', borderTop: '1px solid #f0f2f5', background: '#f8f9fb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <p style={{ fontSize: 13, color: '#717182' }}>Enjoying this? Enroll to unlock all lessons.</p>
-          <button onClick={onClose} style={{ padding: '9px 22px', borderRadius: 9999, background: '#1a2744', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
-            Enroll now →
-          </button>
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--color-wise-ring)] bg-[var(--color-wise-canvas)] px-5 py-3.5">
+          <p className="text-[13px] text-[var(--color-wise-text-muted)]">
+            Enjoying this? Enroll to unlock all lessons.
+          </p>
+          <Button variant="primary" size="sm" onClick={onClose}>
+            Enroll now
+          </Button>
         </div>
       </div>
     </div>
@@ -71,9 +169,9 @@ function PreviewPlayer({ lesson, onClose }: { lesson: PreviewLesson; onClose: ()
 // ─── Curriculum module accordion ──────────────────────────────────────────────
 
 function LessonTypeIcon({ type }: { type: CohortLesson['type'] }) {
-  if (type === 'VIDEO')      return <span style={{ fontSize: 13 }}>▶</span>
-  if (type === 'TEXT')       return <span style={{ fontSize: 13 }}>📄</span>
-  return                            <span style={{ fontSize: 13 }}>🔧</span>
+  if (type === 'VIDEO') return <Play size={14} aria-hidden="true" />
+  if (type === 'TEXT') return <FileText size={14} aria-hidden="true" />
+  return <Wrench size={14} aria-hidden="true" />
 }
 
 interface ModuleRowProps {
@@ -86,70 +184,152 @@ interface ModuleRowProps {
   defaultOpen?: boolean
 }
 
-function ModuleRow({ title, lessonCount, freePreviewCount, lessons, previewLessonMap, onPreviewClick, defaultOpen = false }: ModuleRowProps) {
+function ModuleRow({
+  title,
+  lessonCount,
+  freePreviewCount,
+  lessons,
+  previewLessonMap,
+  onPreviewClick,
+  defaultOpen = false,
+}: ModuleRowProps) {
   const [open, setOpen] = useState(defaultOpen)
 
   return (
-    <div style={{ border: '1px solid rgba(26,39,68,0.09)', borderRadius: 14, marginBottom: 10, overflow: 'hidden' }}>
+    <div
+      className={cn(
+        'mb-2.5 overflow-hidden rounded-[var(--radius-sm)]',
+        'ring-1 ring-[var(--color-wise-ring)]',
+      )}
+    >
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '15px 18px', background: open ? '#f0f6fc' : '#f8f9fb', cursor: 'pointer', border: 'none', textAlign: 'left' }}
+        className={cn(
+          'flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left',
+          'cursor-pointer border-0',
+          'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2',
+          open
+            ? 'bg-[var(--color-wise-mint)]'
+            : 'bg-[var(--color-wise-canvas)] hover:bg-[var(--color-wise-surface-soft)]',
+        )}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 14, color: open ? '#4a9ad4' : '#a3a3a3', transition: 'transform 0.2s', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#1a2744' }}>{title}</span>
+        <div className="flex items-center gap-2.5">
+          <ChevronRight
+            size={16}
+            aria-hidden="true"
+            className={cn(
+              'inline-block transition-transform duration-200',
+              open
+                ? 'rotate-90 text-[var(--color-wise-primary-text)]'
+                : 'text-[var(--color-wise-text-muted)]',
+            )}
+          />
+          <span className="text-[15px] font-bold text-[var(--color-wise-text)]">
+            {title}
+          </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <div className="flex flex-shrink-0 items-center gap-2">
           {freePreviewCount > 0 && (
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#4a9ad4', background: '#deeefb', padding: '2px 9px', borderRadius: 9999, letterSpacing: 0.4 }}>
+            <span
+              className={cn(
+                'rounded-[var(--radius-pill)] px-2.5 py-0.5',
+                'text-[10px] font-bold tracking-wide',
+                'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+              )}
+            >
               {freePreviewCount} free
             </span>
           )}
-          <span style={{ fontSize: 11, fontWeight: 600, color: '#717182', background: '#e8ecf4', padding: '2px 9px', borderRadius: 9999 }}>
+          <span
+            className={cn(
+              'rounded-[var(--radius-pill)] px-2.5 py-0.5',
+              'text-[11px] font-semibold',
+              'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)]',
+            )}
+          >
             {lessonCount} lessons
           </span>
         </div>
       </button>
 
       {open && (
-        <div style={{ background: '#fff' }}>
-          {lessons.length > 0 ? lessons.map((lesson, i) => {
-            const preview = previewLessonMap.get(lesson.id)
-            return (
-              <div
-                key={lesson.id}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 18px', borderTop: i === 0 ? '1px solid rgba(26,39,68,0.06)' : '1px solid rgba(26,39,68,0.04)', gap: 12 }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                  <span style={{ color: '#a3a3a3', flexShrink: 0 }}><LessonTypeIcon type={lesson.type} /></span>
-                  <span style={{ fontSize: 13, color: lesson.freePreview ? '#1a2744' : '#717182', fontWeight: lesson.freePreview ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {lesson.title}
-                  </span>
-                  {lesson.freePreview && (
-                    <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 800, color: '#4a9ad4', background: '#deeefb', padding: '2px 6px', borderRadius: 4, letterSpacing: 0.6 }}>FREE</span>
+        <div className="bg-[var(--color-wise-surface)]">
+          {lessons.length > 0 ? (
+            lessons.map((lesson, i) => {
+              const preview = previewLessonMap.get(lesson.id)
+              return (
+                <div
+                  key={lesson.id}
+                  className={cn(
+                    'flex items-center justify-between gap-3 px-4 py-2.5',
+                    i === 0
+                      ? 'border-t border-[var(--color-wise-ring)]'
+                      : 'border-t border-[var(--color-wise-ring)]/60',
                   )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                  {lesson.estimatedMinutes > 0 && (
-                    <span style={{ fontSize: 11, color: '#b0b5c3' }}>{lesson.estimatedMinutes}m</span>
-                  )}
-                  {lesson.freePreview && preview ? (
-                    <button
-                      onClick={() => onPreviewClick(preview)}
-                      style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: '#4a9ad4', border: 'none', borderRadius: 7, padding: '5px 12px', cursor: 'pointer' }}
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="flex-shrink-0 text-[var(--color-wise-text-muted)]">
+                      <LessonTypeIcon type={lesson.type} />
+                    </span>
+                    <span
+                      className={cn(
+                        'overflow-hidden text-ellipsis whitespace-nowrap text-[13px]',
+                        lesson.freePreview
+                          ? 'font-semibold text-[var(--color-wise-text)]'
+                          : 'text-[var(--color-wise-text-muted)]',
+                      )}
                     >
-                      Watch free →
-                    </button>
-                  ) : (
-                    <span style={{ fontSize: 11, color: '#c8ccd6' }}>🔒</span>
-                  )}
+                      {lesson.title}
+                    </span>
+                    {lesson.freePreview && (
+                      <span
+                        className={cn(
+                          'flex-shrink-0 rounded px-1.5 py-0.5',
+                          'text-[9px] font-extrabold tracking-wider',
+                          'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+                        )}
+                      >
+                        FREE
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-shrink-0 items-center gap-2.5">
+                    {lesson.estimatedMinutes > 0 && (
+                      <span className="text-[11px] text-[var(--color-wise-text-muted)]">
+                        {lesson.estimatedMinutes}m
+                      </span>
+                    )}
+                    {lesson.freePreview && preview ? (
+                      <button
+                        type="button"
+                        onClick={() => onPreviewClick(preview)}
+                        className={cn(
+                          'rounded-md px-3 py-1 text-[11px] font-bold',
+                          'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+                          'hover:bg-[var(--color-wise-primary-hover)]',
+                          'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2',
+                        )}
+                      >
+                        Watch free
+                      </button>
+                    ) : (
+                      <Lock
+                        size={14}
+                        aria-hidden="true"
+                        className="text-[var(--color-wise-text-muted)]"
+                      />
+                    )}
+                  </div>
                 </div>
-              </div>
-            )
-          }) : (
-            <div style={{ padding: '12px 18px', borderTop: '1px solid rgba(26,39,68,0.06)' }}>
-              <p style={{ fontSize: 13, color: '#a3a3a3' }}>{lessonCount} lesson{lessonCount !== 1 ? 's' : ''} — enroll to access</p>
+              )
+            })
+          ) : (
+            <div className="border-t border-[var(--color-wise-ring)] px-4 py-3">
+              <p className="text-[13px] text-[var(--color-wise-text-muted)]">
+                {lessonCount} lesson{lessonCount !== 1 ? 's' : ''} — enroll to access
+              </p>
             </div>
           )}
         </div>
@@ -160,11 +340,17 @@ function ModuleRow({ title, lessonCount, freePreviewCount, lessons, previewLesso
 
 // ─── Stat pill ─────────────────────────────────────────────────────────────────
 
-function StatPill({ icon, label }: { icon: string; label: string }) {
+function StatPill({ Icon, label }: { Icon: LucideIcon; label: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 14px', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.12)' }}>
-      <span style={{ fontSize: 16 }}>{icon}</span>
-      <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>{label}</span>
+    <div
+      className={cn(
+        'inline-flex items-center gap-2 rounded-xl px-3.5 py-2',
+        'bg-white/10 text-white/90 backdrop-blur',
+        'ring-1 ring-white/15',
+      )}
+    >
+      <Icon size={16} aria-hidden="true" />
+      <span className="text-[13px] font-semibold">{label}</span>
     </div>
   )
 }
@@ -175,15 +361,19 @@ function PricingCard({ cohort }: { cohort: CohortDetail }) {
   const navigate = useNavigate()
 
   return (
-    <div style={{ background: '#fff', borderRadius: 20, padding: 28, boxShadow: '0 4px 32px rgba(26,39,68,0.14), rgba(26,39,68,0.08) 0 0 0 1px', position: 'sticky', top: 88 }}>
-
+    <div
+      className={cn(
+        'sticky top-[88px] rounded-[var(--radius-md)] bg-[var(--color-wise-surface)]',
+        'p-7 shadow-[var(--shadow-card)]',
+      )}
+    >
       {/* Price */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 42, fontWeight: 900, color: '#1a2744', letterSpacing: -1.5, lineHeight: 1 }}>
+      <div className="mb-5">
+        <div className="text-[42px] font-black leading-none tracking-[-1.5px] text-[var(--color-wise-text)]">
           {cohort.price === 0 ? 'Free' : fmt(cohort.price)}
         </div>
         {cohort.installmentPrice != null && (
-          <p style={{ fontSize: 14, color: '#ff8c5a', fontWeight: 700, marginTop: 6 }}>
+          <p className="mt-1.5 text-sm font-bold text-[var(--color-wise-primary-text)]">
             or {cohort.installmentCount ?? 3}× {fmt(cohort.installmentPrice)}/mo
           </p>
         )}
@@ -191,59 +381,99 @@ function PricingCard({ cohort }: { cohort: CohortDetail }) {
 
       {/* Seats urgency */}
       {cohort.seatsRemaining != null && cohort.seatsRemaining <= 10 && (
-        <div style={{ background: '#fff8e6', borderRadius: 10, padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 16 }}>🔥</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#8a5a00' }}>Only {cohort.seatsRemaining} seats left!</span>
+        <div
+          className={cn(
+            'mb-4 flex items-center gap-2 rounded-xl px-3.5 py-2.5',
+            'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text)]',
+          )}
+        >
+          <Flame
+            size={16}
+            aria-hidden="true"
+            className="text-[var(--color-wise-warning)]"
+          />
+          <span className="text-[13px] font-bold">
+            Only {cohort.seatsRemaining} seats left!
+          </span>
         </div>
       )}
 
       {/* Primary CTA */}
-      <button
+      <Button
+        variant="primary"
+        size="lg"
         onClick={() => navigate(`/checkout/${cohort.slug}`)}
-        style={{ display: 'block', width: '100%', padding: '15px 0', borderRadius: 9999, background: 'linear-gradient(135deg,#4a9ad4,#1a6aaa)', color: '#fff', fontSize: 16, fontWeight: 800, border: 'none', cursor: 'pointer', marginBottom: 10, letterSpacing: 0.2 }}
+        className="mb-2.5 w-full"
       >
         Enroll Now {cohort.price > 0 ? `— ${fmt(cohort.price)}` : '— Free'}
-      </button>
+      </Button>
 
       {/* Installment CTA */}
       {cohort.installmentPrice != null && (
-        <button
+        <Button
+          variant="outline"
+          size="md"
           onClick={() => navigate(`/checkout/${cohort.slug}?plan=installment`)}
-          style={{ display: 'block', width: '100%', padding: '13px 0', borderRadius: 9999, background: 'transparent', border: '2px solid #ff8c5a', color: '#cc4a00', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginBottom: 10 }}
+          className="mb-2.5 w-full"
         >
-          Pay {cohort.installmentCount ?? 3} installments of {fmt(cohort.installmentPrice)}
-        </button>
+          Pay {cohort.installmentCount ?? 3} installments of{' '}
+          {fmt(cohort.installmentPrice)}
+        </Button>
       )}
 
       {/* Manual payment link */}
       <Link
         to={`/manual-payment/${cohort.slug}`}
-        style={{ display: 'block', textAlign: 'center', padding: '10px 0', fontSize: 13, fontWeight: 600, color: '#717182', textDecoration: 'underline', marginBottom: 20 }}
+        className={cn(
+          'mb-5 block py-2.5 text-center',
+          'text-[13px] font-semibold text-[var(--color-wise-text-muted)] underline',
+          'hover:text-[var(--color-wise-text)]',
+          'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2 rounded',
+        )}
       >
         Upload payment receipt
       </Link>
 
-      <div style={{ height: 1, background: 'rgba(26,39,68,0.08)', marginBottom: 18 }} />
+      <div className="mb-4 h-px bg-[var(--color-wise-ring)]" />
 
       {/* What's included */}
-      <p style={{ fontSize: 11, fontWeight: 800, color: '#717182', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
+      <p className="mb-3 text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-wise-text-muted)]">
         What's included
       </p>
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 9 }}>
+      <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {cohort.includes.map((item) => (
-          <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, color: '#4a5568' }}>
-            <span style={{ color: '#4a9ad4', fontWeight: 800, marginTop: 1, flexShrink: 0 }}>✓</span>
+          <li
+            key={item}
+            className="flex items-start gap-2.5 text-[13px] text-[var(--color-wise-text-warm)]"
+          >
+            <Check
+              size={14}
+              strokeWidth={3}
+              aria-hidden="true"
+              className="mt-0.5 flex-shrink-0 text-[var(--color-wise-primary-text)]"
+            />
             {item}
           </li>
         ))}
       </ul>
 
-      <div style={{ height: 1, background: 'rgba(26,39,68,0.08)', margin: '18px 0' }} />
+      <div className="my-5 h-px bg-[var(--color-wise-ring)]" />
 
       {/* Trust row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#717182', background: '#f3f4f6', padding: '4px 10px', borderRadius: 8 }}>🔒 Secure</span>
-        <span style={{ fontSize: 11, color: '#a3a3a3' }}>Visa · Mastercard · Amex</span>
+      <div className="flex items-center justify-center gap-3">
+        <span
+          className={cn(
+            'inline-flex items-center gap-1 rounded-md px-2.5 py-1',
+            'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)]',
+            'text-xs font-semibold',
+          )}
+        >
+          <Lock size={12} aria-hidden="true" />
+          Secure
+        </span>
+        <span className="text-[11px] text-[var(--color-wise-text-muted)]">
+          Visa · Mastercard · Amex
+        </span>
       </div>
     </div>
   )
@@ -254,17 +484,19 @@ function PricingCard({ cohort }: { cohort: CohortDetail }) {
 function Skeleton() {
   return (
     <div>
-      <style>{`
-        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-        .sh { background: linear-gradient(90deg,#f0f2f5 25%,#e4e6ea 50%,#f0f2f5 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:8px; }
-      `}</style>
-      <div className="sh" style={{ height: 420 }} />
-      <div style={{ maxWidth: 1180, margin: '0 auto', padding: '48px 24px', display: 'flex', gap: 32 }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {[140, 280, 200].map((h, i) => <div key={i} className="sh" style={{ height: h }} />)}
+      <div className="h-[420px] animate-pulse bg-[var(--color-wise-surface-soft)]" />
+      <div className="max-w-[1180px] mx-auto px-6 py-12 flex flex-col lg:flex-row gap-8">
+        <div className="flex-1 flex flex-col gap-5">
+          {[140, 280, 200].map((h, i) => (
+            <div
+              key={i}
+              className="animate-pulse rounded-[var(--radius-md)] bg-[var(--color-wise-surface-soft)]"
+              style={{ height: h }}
+            />
+          ))}
         </div>
-        <div style={{ width: 340, flexShrink: 0 }}>
-          <div className="sh" style={{ height: 380, borderRadius: 20 }} />
+        <div className="w-full lg:w-[340px] flex-shrink-0">
+          <div className="h-[380px] animate-pulse rounded-[var(--radius-md)] bg-[var(--color-wise-surface-soft)]" />
         </div>
       </div>
     </div>
@@ -293,16 +525,37 @@ export default function CohortDetailPage() {
 
   usePageMeta({ title: cohort?.title ?? 'Course', description: cohort?.tagline })
 
-  if (isPending) return <div style={{ minHeight: '100vh' }}><TopNav /><Skeleton /></div>
+  if (isPending)
+    return (
+      <div className="min-h-screen">
+        <TopNav />
+        <Skeleton />
+      </div>
+    )
 
   if (isError || cohort == null) {
     return (
-      <div style={{ minHeight: '100vh' }}>
+      <div className="min-h-screen">
         <TopNav />
-        <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-          <p style={{ fontSize: 64, fontWeight: 900, color: '#1a2744', lineHeight: 1 }}>404</p>
-          <p style={{ fontSize: 18, color: '#717182' }}>Course not found</p>
-          <Link to="/courses" style={{ padding: '12px 32px', borderRadius: 9999, background: '#4a9ad4', color: '#0d1a3a', fontWeight: 700, textDecoration: 'none', fontSize: 15 }}>Browse Courses</Link>
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+          <p className="text-[64px] font-black leading-none text-[var(--color-wise-text)]">
+            404
+          </p>
+          <p className="text-lg text-[var(--color-wise-text-muted)]">
+            Course not found
+          </p>
+          <Link
+            to="/courses"
+            className={cn(
+              'inline-flex items-center rounded-[var(--radius-pill)] px-8 py-3',
+              'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+              'text-[15px] font-bold',
+              'hover:bg-[var(--color-wise-primary-hover)]',
+              'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2',
+            )}
+          >
+            Browse Courses
+          </Link>
         </div>
       </div>
     )
@@ -311,97 +564,164 @@ export default function CohortDetailPage() {
   const typeMeta = TYPE_META[cohort.type] ?? TYPE_META.recorded
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fb' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .cohort-body { flex-direction: column !important; padding: 20px 16px 48px !important; }
-          .cohort-sidebar { width: 100% !important; position: static !important; }
-          .cohort-hero-inner { padding: 32px 16px 36px !important; }
-          .cohort-title { font-size: clamp(28px, 7vw, 62px) !important; }
-          .cohort-stats-pills { gap: 8px !important; }
-          .mobile-cta-bottom { display: block !important; }
-          .includes-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+    <div className="min-h-screen bg-[var(--color-wise-canvas)]">
       <TopNav />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <div style={{ background: 'linear-gradient(135deg,#080f24 0%,#0d1a3a 45%,#1a3060 100%)', position: 'relative', overflow: 'hidden' }}>
-
+      <div className="relative overflow-hidden bg-[var(--color-wise-dark)]">
         {/* Decorative blobs */}
-        <div style={{ position: 'absolute', top: -80, right: -80, width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle,rgba(74,154,212,0.18) 0%,transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: -60, left: '30%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle,rgba(26,39,68,0.6) 0%,transparent 70%)', pointerEvents: 'none' }} />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-20 -right-20 h-[400px] w-[400px] rounded-full"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(159,232,112,0.22) 0%, transparent 70%)',
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-16 left-[30%] h-[300px] w-[300px] rounded-full"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(226,246,213,0.12) 0%, transparent 70%)',
+          }}
+        />
 
-        <div className="cohort-hero-inner" style={{ maxWidth: 1180, margin: '0 auto', padding: '52px 24px 56px' }}>
-
+        <div className="relative max-w-[1180px] mx-auto px-4 sm:px-6 py-10 sm:py-14">
           {/* Breadcrumb */}
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 24 }}>
-            <Link to="/" style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Home</Link>
+          <p className="mb-6 text-[13px] text-white/55">
+            <Link
+              to="/"
+              className="text-white/60 hover:text-white focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded"
+            >
+              Home
+            </Link>
             {' › '}
-            <Link to="/courses" style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Courses</Link>
+            <Link
+              to="/courses"
+              className="text-white/60 hover:text-white focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded"
+            >
+              Courses
+            </Link>
             {' › '}
-            <span style={{ color: 'rgba(255,255,255,0.8)' }}>{cohort.title}</span>
+            <span className="text-white/85">{cohort.title}</span>
           </p>
 
           {/* Type badge */}
-          <div style={{ marginBottom: 18 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: typeMeta.color, background: typeMeta.bg, padding: '5px 14px', borderRadius: 9999 }}>
+          <div className="mb-4">
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] px-3.5 py-1.5',
+                'text-xs font-bold',
+                typeMeta.chipClass,
+              )}
+            >
+              <typeMeta.Icon size={14} aria-hidden="true" />
               {typeMeta.label}
             </span>
           </div>
 
           {/* Title */}
-          <h1 className="cohort-title" style={{ fontSize: 'clamp(36px, 6vw, 62px)', fontWeight: 900, color: '#fff', letterSpacing: -1.5, lineHeight: 1.05, marginBottom: 16, maxWidth: 780 }}>
+          <h1
+            className={cn(
+              'mb-4 max-w-[780px] font-black leading-[1.05] tracking-[-1.5px] text-white',
+              'text-4xl sm:text-5xl md:text-6xl lg:text-[62px]',
+            )}
+          >
             {cohort.title}
           </h1>
 
           {/* Tagline */}
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.72)', fontWeight: 400, marginBottom: 32, maxWidth: 620, lineHeight: 1.5 }}>
+          <p className="mb-8 max-w-[620px] text-lg leading-[1.5] text-white/70">
             {cohort.tagline}
           </p>
 
           {/* Stats pills */}
-          <div className="cohort-stats-pills" style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {cohort.lessonCount > 0 && <StatPill icon="📹" label={`${cohort.lessonCount} lessons`} />}
-            {cohort.hoursOfContent > 0 && <StatPill icon="⏱" label={`${cohort.hoursOfContent}h of content`} />}
-            {cohort.startDate && <StatPill icon="📅" label={`Starts ${cohort.startDate}`} />}
-            {cohort.enrolledCount != null && <StatPill icon="👥" label={`${cohort.enrolledCount} enrolled`} />}
-            {cohort.seatsRemaining != null && <StatPill icon="💺" label={`${cohort.seatsRemaining} seats left`} />}
+          <div className="flex flex-wrap gap-2.5">
+            {cohort.lessonCount > 0 && (
+              <StatPill Icon={Video} label={`${cohort.lessonCount} lessons`} />
+            )}
+            {cohort.hoursOfContent > 0 && (
+              <StatPill Icon={Clock} label={`${cohort.hoursOfContent}h of content`} />
+            )}
+            {cohort.startDate && (
+              <StatPill Icon={Calendar} label={`Starts ${cohort.startDate}`} />
+            )}
+            {cohort.enrolledCount != null && (
+              <StatPill Icon={Users} label={`${cohort.enrolledCount} enrolled`} />
+            )}
+            {cohort.seatsRemaining != null && (
+              <StatPill
+                Icon={Armchair}
+                label={`${cohort.seatsRemaining} seats left`}
+              />
+            )}
           </div>
         </div>
       </div>
 
       {/* ── BODY ─────────────────────────────────────────────────────────── */}
-      <div className="cohort-body" style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 24px 80px', display: 'flex', gap: 32, alignItems: 'flex-start' }}>
-
+      <div
+        className={cn(
+          'max-w-[1180px] mx-auto px-4 sm:px-6',
+          'py-10 lg:py-12 pb-20',
+          'flex flex-col lg:flex-row gap-8 lg:items-start',
+        )}
+      >
         {/* LEFT COLUMN */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 20 }}>
-
+        <div className="flex flex-1 min-w-0 flex-col gap-5">
           {/* About */}
-          <section style={{ background: '#fff', borderRadius: 20, padding: 32, boxShadow: 'rgba(26,39,68,0.08) 0 0 0 1px' }}>
-            <p style={{ fontSize: 11, fontWeight: 800, color: '#4a9ad4', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 12 }}>
+          <section
+            className={cn(
+              'rounded-[var(--radius-md)] bg-[var(--color-wise-surface)] p-8',
+              'shadow-[var(--shadow-ring)]',
+            )}
+          >
+            <p className="mb-3 text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-wise-primary-text)]">
               About this course
             </p>
             <div
-              style={{ fontSize: 16, color: '#4a5568', lineHeight: 1.75 }}
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(cohort.description ?? '') }}
+              className="text-base leading-[1.75] text-[var(--color-wise-text-warm)]"
+              // sanitizeHtml() wrap retained from Sprint 1 Story 6.
+              dangerouslySetInnerHTML={{
+                __html: sanitizeHtml(cohort.description ?? ''),
+              }}
             />
           </section>
 
-          {/* What you'll learn — from includes */}
+          {/* What's included */}
           {cohort.includes.length > 0 && (
-            <section style={{ background: 'linear-gradient(135deg,#080f24,#1a2e5a)', borderRadius: 20, padding: 32, boxShadow: 'rgba(26,39,68,0.2) 0 4px 24px' }}>
-              <p style={{ fontSize: 11, fontWeight: 800, color: '#7bb8e0', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 12 }}>
+            <section
+              className={cn(
+                'rounded-[var(--radius-md)] p-8',
+                'bg-[var(--color-wise-dark)] text-white',
+                'shadow-[var(--shadow-card)]',
+              )}
+            >
+              <p className="mb-3 text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-wise-primary)]">
                 What's included
               </p>
-              <h2 style={{ fontSize: 24, fontWeight: 800, color: '#fff', marginBottom: 20, letterSpacing: -0.5 }}>
+              <h2 className="mb-5 text-2xl font-extrabold tracking-[-0.5px]">
                 Everything you need to ship
               </h2>
-              <div className="includes-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
                 {cohort.includes.map((item) => (
-                  <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: '12px 14px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <span style={{ color: '#4a9ad4', fontWeight: 800, marginTop: 1, flexShrink: 0 }}>✓</span>
-                    <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 1.4 }}>{item}</span>
+                  <div
+                    key={item}
+                    className={cn(
+                      'flex items-start gap-2.5 rounded-xl px-3.5 py-3',
+                      'bg-white/5 ring-1 ring-white/10',
+                    )}
+                  >
+                    <Check
+                      size={14}
+                      strokeWidth={3}
+                      aria-hidden="true"
+                      className="mt-0.5 flex-shrink-0 text-[var(--color-wise-primary)]"
+                    />
+                    <span className="text-sm leading-snug text-white/85">
+                      {item}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -409,17 +729,23 @@ export default function CohortDetailPage() {
           )}
 
           {/* Curriculum */}
-          <section style={{ background: '#fff', borderRadius: 20, padding: 32, boxShadow: 'rgba(26,39,68,0.08) 0 0 0 1px' }}>
-            <p style={{ fontSize: 11, fontWeight: 800, color: '#4a9ad4', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 8 }}>
+          <section
+            className={cn(
+              'rounded-[var(--radius-md)] bg-[var(--color-wise-surface)] p-8',
+              'shadow-[var(--shadow-ring)]',
+            )}
+          >
+            <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-wise-primary-text)]">
               Curriculum
             </p>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 8 }}>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1a2744', letterSpacing: -0.5 }}>
+            <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-[22px] font-extrabold tracking-[-0.5px] text-[var(--color-wise-text)]">
                 {cohort.modules.length} modules · {cohort.lessonCount} lessons
               </h2>
               {previewLessons.length > 0 && (
-                <span style={{ fontSize: 13, color: '#4a9ad4', fontWeight: 600 }}>
-                  {previewLessons.length} free preview{previewLessons.length !== 1 ? 's' : ''} available
+                <span className="text-[13px] font-semibold text-[var(--color-wise-primary-text)]">
+                  {previewLessons.length} free preview
+                  {previewLessons.length !== 1 ? 's' : ''} available
                 </span>
               )}
             </div>
@@ -439,38 +765,88 @@ export default function CohortDetailPage() {
           </section>
 
           {/* Instructor */}
-          <section style={{ background: '#fff', borderRadius: 20, padding: 32, boxShadow: 'rgba(26,39,68,0.08) 0 0 0 1px' }}>
-            <p style={{ fontSize: 11, fontWeight: 800, color: '#4a9ad4', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 20 }}>
+          <section
+            className={cn(
+              'rounded-[var(--radius-md)] bg-[var(--color-wise-surface)] p-8',
+              'shadow-[var(--shadow-ring)]',
+            )}
+          >
+            <p className="mb-5 text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-wise-primary-text)]">
               Your instructor
             </p>
-            <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-              <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg,#4a9ad4,#1a2744)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, flexShrink: 0 }}>
-                👨‍💻
+            <div className="flex items-start gap-5">
+              <div
+                className={cn(
+                  'h-[72px] w-[72px] flex-shrink-0 rounded-full',
+                  'flex items-center justify-center text-2xl font-black',
+                  'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+                )}
+                aria-hidden="true"
+              >
+                {(cohort.instructorName ?? 'I').charAt(0)}
               </div>
               <div>
-                <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1a2744', marginBottom: 3 }}>{cohort.instructorName}</h3>
-                <p style={{ fontSize: 14, color: '#4a9ad4', fontWeight: 600, marginBottom: 10 }}>{cohort.instructorTitle}</p>
-                <p style={{ fontSize: 15, color: '#717182', lineHeight: 1.65 }}>{cohort.instructorBio}</p>
+                <h3 className="mb-1 text-xl font-extrabold text-[var(--color-wise-text)]">
+                  {cohort.instructorName}
+                </h3>
+                <p className="mb-2.5 text-sm font-semibold text-[var(--color-wise-primary-text)]">
+                  {cohort.instructorTitle}
+                </p>
+                <p className="text-[15px] leading-[1.65] text-[var(--color-wise-text-muted)]">
+                  {cohort.instructorBio}
+                </p>
               </div>
             </div>
           </section>
 
           {/* Live sessions */}
           {cohort.liveSessions != null && cohort.liveSessions.length > 0 && (
-            <section style={{ background: '#fff', borderRadius: 20, padding: 32, boxShadow: 'rgba(26,39,68,0.08) 0 0 0 1px' }}>
-              <p style={{ fontSize: 11, fontWeight: 800, color: '#4a9ad4', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 8 }}>
+            <section
+              className={cn(
+                'rounded-[var(--radius-md)] bg-[var(--color-wise-surface)] p-8',
+                'shadow-[var(--shadow-ring)]',
+              )}
+            >
+              <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-wise-primary-text)]">
                 Live Sessions
               </p>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1a2744', marginBottom: 20, letterSpacing: -0.5 }}>Weekly office hours</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <h2 className="mb-5 text-[22px] font-extrabold tracking-[-0.5px] text-[var(--color-wise-text)]">
+                Weekly office hours
+              </h2>
+              <div className="flex flex-col gap-2.5">
                 {cohort.liveSessions.map((s) => (
-                  <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8f9fb', borderRadius: 14, padding: '14px 18px', border: '1px solid rgba(26,39,68,0.06)' }}>
+                  <div
+                    key={s.id}
+                    className={cn(
+                      'flex items-center justify-between gap-3 rounded-[var(--radius-sm)] px-4 py-3.5',
+                      'bg-[var(--color-wise-canvas)] ring-1 ring-[var(--color-wise-ring)]',
+                    )}
+                  >
                     <div>
-                      <p style={{ fontSize: 15, fontWeight: 700, color: '#1a2744', marginBottom: 2 }}>{s.title}</p>
-                      <p style={{ fontSize: 13, color: '#717182' }}>{s.date}</p>
+                      <p className="mb-0.5 text-[15px] font-bold text-[var(--color-wise-text)]">
+                        {s.title}
+                      </p>
+                      <p className="text-[13px] text-[var(--color-wise-text-muted)]">
+                        {s.date}
+                      </p>
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 9999, background: s.status === 'upcoming' ? '#fff0e8' : '#e8ecf4', color: s.status === 'upcoming' ? '#cc4a00' : '#717182' }}>
-                      {s.status === 'upcoming' ? '🔴 Upcoming' : 'Completed'}
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1',
+                        'text-xs font-semibold',
+                        s.status === 'upcoming'
+                          ? 'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]'
+                          : 'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)]',
+                      )}
+                    >
+                      {s.status === 'upcoming' ? (
+                        <>
+                          <Radio size={12} aria-hidden="true" />
+                          Upcoming
+                        </>
+                      ) : (
+                        'Completed'
+                      )}
                     </span>
                   </div>
                 ))}
@@ -478,19 +854,26 @@ export default function CohortDetailPage() {
             </section>
           )}
 
-          {/* Bottom mobile CTA (hidden on desktop) */}
-          <div style={{ display: 'none' }} className="mobile-cta-bottom">
+          {/* Bottom mobile CTA */}
+          <div className="block lg:hidden">
             <Link
               to={`/checkout/${cohort.slug}`}
-              style={{ display: 'block', width: '100%', textAlign: 'center', padding: '16px 0', borderRadius: 9999, background: 'linear-gradient(135deg,#4a9ad4,#1a6aaa)', color: '#fff', fontSize: 16, fontWeight: 800, textDecoration: 'none' }}
+              className={cn(
+                'block w-full rounded-[var(--radius-pill)] px-6 py-4 text-center',
+                'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+                'text-base font-extrabold',
+                'hover:bg-[var(--color-wise-primary-hover)]',
+                'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2',
+              )}
             >
-              Enroll Now {cohort.price > 0 ? `— ${fmt(cohort.price)}` : '— Free'}
+              Enroll Now{' '}
+              {cohort.price > 0 ? `— ${fmt(cohort.price)}` : '— Free'}
             </Link>
           </div>
         </div>
 
         {/* RIGHT COLUMN — sticky pricing card */}
-        <div className="cohort-sidebar" style={{ width: 340, flexShrink: 0 }}>
+        <div className="w-full lg:w-[340px] flex-shrink-0 hidden lg:block">
           <PricingCard cohort={cohort} />
         </div>
       </div>
@@ -498,7 +881,12 @@ export default function CohortDetailPage() {
       <Footer />
 
       {/* Preview player modal */}
-      {activePreview && <PreviewPlayer lesson={activePreview} onClose={() => setActivePreview(null)} />}
+      {activePreview && (
+        <PreviewPlayer
+          lesson={activePreview}
+          onClose={() => setActivePreview(null)}
+        />
+      )}
     </div>
   )
 }
