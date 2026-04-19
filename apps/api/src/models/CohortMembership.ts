@@ -6,6 +6,7 @@ export interface ICohortMembership extends Document {
   cohortId: Types.ObjectId
   completionStatus: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETE' | 'DEADLINE_MISSED'
   joinedAt: Date
+  enrolledAt: Date
 }
 
 const cohortMembershipSchema = new Schema<ICohortMembership>(
@@ -18,6 +19,7 @@ const cohortMembershipSchema = new Schema<ICohortMembership>(
       default: 'NOT_STARTED',
     },
     joinedAt: { type: Date, default: () => new Date() },
+    enrolledAt: { type: Date, default: () => new Date() },
   },
   { timestamps: true },
 )

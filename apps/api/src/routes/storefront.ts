@@ -81,7 +81,7 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
 
       // Build human-readable meta string
       let meta = ''
-      if (c.type === 'recorded') {
+      if (c.type === 'RECORDED') {
         meta = '📅 Self-paced'
       } else if (c.liveStartDate) {
         const dateStr = new Date(c.liveStartDate).toLocaleDateString('en-US', {
@@ -213,7 +213,7 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         (cohort.enrollmentCount ?? 0) >= cohort.maxSeats
 
       let meta = ''
-      if (cohort.type === 'recorded') {
+      if (cohort.type === 'RECORDED') {
         meta = `📅 Self-paced · ${totalLessonCount} lessons`
       } else if (cohort.liveStartDate) {
         const dateStr = new Date(cohort.liveStartDate).toLocaleDateString('en-US', {
