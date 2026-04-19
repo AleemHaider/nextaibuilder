@@ -1,7 +1,14 @@
 // FIR-164 — Badges page: earned badges grid + locked badges
+// Sprint 3 Story 15 — Wise theme migration. Badge chips moved onto the mint
+// surface with Award lucide glyphs; locked variant uses opacity + grayscale
+// rather than a separate locked emoji. Empty state now routes through the
+// canonical <EmptyState>.
 import { useQuery } from '@tanstack/react-query'
+import { Award, Lock } from 'lucide-react'
 import { TopNav } from '../../components/TopNav'
 import { fetchStudentBadges, type StudentBadge } from '../../lib/api'
+import { CardSkeleton } from '../../components/ui/LoadingSkeleton'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { cn } from '../../lib/utils'
 
 // ---------------------------------------------------------------------------
@@ -9,66 +16,59 @@ import { cn } from '../../lib/utils'
 // ---------------------------------------------------------------------------
 
 function BadgeCard({ badge }: { badge: StudentBadge }) {
+  const earned = badge.earned
+
   return (
     <div
       className={cn(
-        'bg-white rounded-[20px] p-6 text-center flex flex-col items-center gap-3',
-        'shadow-[rgba(26,39,68,0.12)_0_0_0_1px] transition-transform hover:scale-[1.02]',
-        !badge.earned && 'opacity-50',
+        'bg-[var(--color-wise-surface)] rounded-[var(--radius-md)] p-6 text-center flex flex-col items-center gap-3',
+        'shadow-[var(--shadow-ring)] transition-transform hover:scale-[1.02]',
+        'focus-within:outline-2 focus-within:outline-[var(--color-wise-primary)]',
+        !earned && 'opacity-60 grayscale',
       )}
-      aria-label={badge.earned ? `${badge.name} badge — earned` : `${badge.name} badge — locked`}
+      aria-label={earned ? `${badge.name} badge — earned` : `${badge.name} badge — locked`}
     >
-      {/* Badge circle */}
+      {/* Badge chip — circular mint surface with Award glyph. Locked badges
+          render the Lock icon and rely on the grayscale filter from the
+          wrapper for the muted aesthetic. */}
       <div
         className={cn(
-          'w-20 h-20 rounded-full flex items-center justify-center text-[40px]',
-          badge.earned
-            ? 'shadow-[rgba(26,39,68,0.15)_0_4px_20px]'
-            : 'bg-[#f0f0f0]',
+          'w-20 h-20 rounded-full flex items-center justify-center',
+          'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+          earned && 'shadow-[var(--shadow-ring)]',
         )}
-        style={badge.earned ? { background: 'linear-gradient(135deg,#eef6fd,#c8e4f7)' } : undefined}
+        aria-hidden="true"
       >
-        {badge.earned ? (badge.iconUrl ?? '🏅') : '🔒'}
+        {earned ? (
+          <Award className="h-10 w-10" />
+        ) : (
+          <Lock className="h-9 w-9" />
+        )}
       </div>
 
       <div>
         <p
           className={cn(
-            'text-[16px] font-700 mb-1',
-            badge.earned ? 'text-[#1a2744]' : 'text-[#a3a3a3]',
+            'text-[16px] font-bold mb-1',
+            earned ? 'text-[var(--color-wise-text)]' : 'text-[var(--color-wise-text-muted)]',
           )}
         >
           {badge.name}
         </p>
-        <p className="text-[13px] text-[#717182] leading-snug max-w-[160px]">
+        <p className="text-[13px] text-[var(--color-wise-text-muted)] leading-snug max-w-[160px]">
           {badge.description}
         </p>
       </div>
 
-      {badge.earned ? (
-        <span className="text-[11px] font-700 bg-[#e6f4ec] text-[#054d28] px-3 py-1 rounded-full">
+      {earned ? (
+        <span className="text-[11px] font-bold bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)] px-3 py-1 rounded-[var(--radius-pill)]">
           Earned
         </span>
       ) : (
-        <span className="text-[11px] font-600 bg-[#f0f0f0] text-[#a3a3a3] px-3 py-1 rounded-full">
+        <span className="text-[11px] font-semibold bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)] px-3 py-1 rounded-[var(--radius-pill)]">
           Locked
         </span>
       )}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Skeleton
-// ---------------------------------------------------------------------------
-
-function BadgeSkeleton() {
-  return (
-    <div className="bg-white rounded-[20px] p-6 flex flex-col items-center gap-3 shadow-[rgba(26,39,68,0.12)_0_0_0_1px] animate-pulse">
-      <div className="w-20 h-20 rounded-full bg-[#e8ecf4]" />
-      <div className="h-3.5 w-24 bg-[#e8ecf4] rounded-full" />
-      <div className="h-3 w-32 bg-[#e8ecf4] rounded-full" />
-      <div className="h-6 w-16 bg-[#e8ecf4] rounded-full" />
     </div>
   )
 }
@@ -87,40 +87,44 @@ export default function BadgesPage() {
   const earnedCount = badges.filter((b) => b.earned).length
 
   return (
-    <div className="min-h-screen bg-[#f8f9fb]">
+    <div className="min-h-screen bg-[var(--color-wise-canvas)]">
       <TopNav />
 
       <main className="p-4 sm:p-10">
-        <h1 className="text-[32px] font-700 text-[#1a2744] mb-2">My Badges</h1>
-        <p className="text-[16px] text-[#717182] mb-8">
+        <h1 className="text-[32px] font-bold text-[var(--color-wise-text)] mb-2 tracking-[-0.5px]">
+          My Badges
+        </h1>
+        <p className="text-[16px] text-[var(--color-wise-text-muted)] mb-8">
           {isLoading
             ? 'Loading your badges…'
             : `${earnedCount} of ${badges.length} badges earned. Keep learning to unlock more!`}
         </p>
 
         {error && (
-          <div className="mb-6 bg-[#fdeaeb] text-[#d03238] text-[14px] font-[600] rounded-[12px] px-4 py-3">
+          <div className="mb-6 bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] text-[14px] font-semibold rounded-[var(--radius-sm)] px-4 py-3">
             Failed to load badges. Please refresh.
           </div>
         )}
 
-        <p className="text-[13px] font-700 text-[#717182] uppercase tracking-[0.8px] mb-5">
+        <p className="text-[13px] font-bold text-[var(--color-wise-text-muted)] uppercase tracking-[0.8px] mb-5">
           All Badges
         </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 max-w-[900px]">
           {isLoading ? (
             <>
-              <BadgeSkeleton />
-              <BadgeSkeleton />
-              <BadgeSkeleton />
-              <BadgeSkeleton />
+              <CardSkeleton />
+              <CardSkeleton />
+              <CardSkeleton />
+              <CardSkeleton />
             </>
           ) : badges.length === 0 ? (
-            <div className="col-span-full bg-white rounded-[20px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] py-16 px-10 text-center">
-              <div className="text-[56px] mb-4">🏅</div>
-              <h2 className="text-[20px] font-700 text-[#1a2744] mb-2">No badges yet</h2>
-              <p className="text-[15px] text-[#717182]">Complete lessons to start earning badges.</p>
+            <div className="col-span-full bg-[var(--color-wise-surface)] rounded-[var(--radius-md)] shadow-[var(--shadow-ring)]">
+              <EmptyState
+                icon={Award}
+                title="Earn your first badge"
+                description="Complete lessons and milestones to start earning badges."
+              />
             </div>
           ) : (
             badges.map((badge) => (

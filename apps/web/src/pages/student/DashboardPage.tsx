@@ -1,6 +1,28 @@
 // FIR-51 — Student dashboard: enrolled courses grid with progress + installment schedule
+// Sprint 3 Story 15 — Wise theme migration. Converts the navy/blue gradients
+// and emoji meta to Wise tokens + lucide icons, reroutes the empty state
+// through <EmptyState>, and swaps the hand-rolled CTAs for <Button>. Gradient
+// hero is replaced by a flat Wise surface with a mint accent so the same
+// surface can be used on light + dark backdrops.
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
+import {
+  AlertTriangle,
+  ArrowRight,
+  Award,
+  BookOpen,
+  Calendar,
+  CircleCheck,
+  Clock,
+  Flame,
+  GraduationCap,
+  PartyPopper,
+  Radio,
+  Users,
+  Video,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import {
   fetchStudentDashboard,
@@ -10,6 +32,9 @@ import {
   type CohortSummary,
 } from '../../lib/api'
 import { TopNav } from '../../components/TopNav'
+import { Button } from '../../components/ui/Button'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { CardSkeleton } from '../../components/ui/LoadingSkeleton'
 import { cn } from '../../lib/utils'
 
 // ---------------------------------------------------------------------------
@@ -21,11 +46,11 @@ function getFirstName(fullName: string): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+  return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  })
+  }).format(new Date(iso))
 }
 
 function relativeTime(iso: string): string {
@@ -48,16 +73,15 @@ function getGreeting(): string {
   return 'Good evening'
 }
 
-const GRADIENT_MAP: Record<string, string> = {
-  live:     'linear-gradient(135deg,#1a2744,#4a9ad4)',
-  combined: 'linear-gradient(135deg,#0d1a3a,#2d4a8a)',
-  recorded: 'linear-gradient(135deg,#054d28,#16a34a)',
+interface CohortTypeMeta {
+  label: string
+  icon: LucideIcon
 }
 
-const TYPE_LABEL: Record<string, string> = {
-  live:     '🔴 Live Cohort',
-  combined: '⚡ Combined',
-  recorded: '📹 Recorded',
+const COHORT_TYPE_META: Record<string, CohortTypeMeta> = {
+  live:     { label: 'Live Cohort', icon: Radio },
+  combined: { label: 'Combined',    icon: Zap },
+  recorded: { label: 'Recorded',    icon: Video },
 }
 
 // ---------------------------------------------------------------------------
@@ -65,25 +89,27 @@ const TYPE_LABEL: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 function InstallmentTimeline({ installments }: { installments: Installment[] }) {
-  const statusColor: Record<Installment['status'], string> = {
-    PAID: 'bg-[#e6f4ec] text-[#054d28]',
-    DUE: 'bg-[#fff8e6] text-[#8a5a00]',
-    OVERDUE: 'bg-[#fdeaeb] text-[#d03238]',
+  const statusStyle: Record<Installment['status'], string> = {
+    PAID:    'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+    DUE:     'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text)]',
+    OVERDUE: 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)]',
   }
 
   return (
-    <div className="mt-3 pt-3 border-t border-[rgba(26,39,68,0.06)]">
-      <p className="text-[11px] font-700 text-[#717182] uppercase tracking-[0.6px] mb-2">
+    <div className="mt-3 pt-3 border-t border-[var(--color-wise-ring)]">
+      <p className="text-[11px] font-bold text-[var(--color-wise-text-muted)] uppercase tracking-[0.6px] mb-2">
         Payment Schedule
       </p>
       <div className="flex flex-col gap-1.5">
         {installments.map((inst, i) => (
           <div key={inst.id} className="flex items-center justify-between">
-            <span className="text-[12px] text-[#717182]">Month {i + 1} · {formatDate(inst.dueDate)}</span>
+            <span className="text-[12px] text-[var(--color-wise-text-muted)]">
+              Month {i + 1} · {formatDate(inst.dueDate)}
+            </span>
             <span
               className={cn(
-                'text-[11px] font-600 px-2.5 py-0.5 rounded-full',
-                statusColor[inst.status],
+                'text-[11px] font-semibold px-2.5 py-0.5 rounded-[var(--radius-pill)]',
+                statusStyle[inst.status],
               )}
             >
               {inst.status}
@@ -96,34 +122,7 @@ function InstallmentTimeline({ installments }: { installments: Installment[] }) 
 }
 
 // ---------------------------------------------------------------------------
-// Course card skeleton
-// ---------------------------------------------------------------------------
-
-function CardSkeleton() {
-  return (
-    <div
-      style={{
-        background: '#fff',
-        borderRadius: 20,
-        overflow: 'hidden',
-        boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.04)',
-        border: '1px solid rgba(26,39,68,0.07)',
-      }}
-      className="animate-pulse"
-    >
-      <div style={{ height: 80, background: 'linear-gradient(135deg,#e8ecf4,#dde3ee)' }} />
-      <div style={{ padding: '20px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ height: 13, background: '#e8ecf4', borderRadius: 6, width: '75%' }} />
-        <div style={{ height: 8, background: '#e8ecf4', borderRadius: 9999, width: '100%' }} />
-        <div style={{ height: 11, background: '#e8ecf4', borderRadius: 6, width: '50%' }} />
-        <div style={{ height: 44, background: '#e8ecf4', borderRadius: 12, marginTop: 4 }} />
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Enrollment card — premium redesign
+// Enrollment card
 // ---------------------------------------------------------------------------
 
 interface EnrollmentCardProps {
@@ -132,14 +131,19 @@ interface EnrollmentCardProps {
 
 function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
   const navigate = useNavigate()
-  const { cohort, completionPercentage, lessonsCompleted, totalLessons,
-          paymentStatus, status, installments, lastActivityAt,
-          nextLessonTitle, nextLiveSession } = enrollment
+  const {
+    cohort, completionPercentage, lessonsCompleted, totalLessons,
+    paymentStatus, status, installments, lastActivityAt,
+    nextLessonTitle, nextLiveSession,
+  } = enrollment
 
   const isCompleted = status === 'COMPLETED'
   const isPending = paymentStatus === 'PENDING'
   const isPartial = paymentStatus === 'PARTIAL'
   const hasFailed = paymentStatus === 'FAILED'
+
+  const meta = COHORT_TYPE_META[cohort.type] ?? COHORT_TYPE_META.recorded
+  const TypeIcon = meta.icon
 
   function handleContinue() {
     navigate(`/student/course/${cohort.slug}`)
@@ -149,315 +153,209 @@ function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
     navigate('/student/certificate')
   }
 
-  const nextDueInstallment = installments?.find((i) => i.status === 'DUE' || i.status === 'OVERDUE')
-
-  const coverGradient = GRADIENT_MAP[cohort.type] ?? GRADIENT_MAP.recorded
+  const nextDueInstallment = installments?.find(
+    (i) => i.status === 'DUE' || i.status === 'OVERDUE',
+  )
 
   return (
     <article
-      style={{
-        background: '#fff',
-        borderRadius: 20,
-        overflow: 'hidden',
-        boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.04)',
-        border: '1px solid rgba(26,39,68,0.07)',
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-      }}
+      className={cn(
+        'bg-[var(--color-wise-surface)] rounded-[var(--radius-lg)] overflow-hidden',
+        'shadow-[var(--shadow-ring)] flex flex-col',
+        'transition-transform duration-200 hover:-translate-y-[3px]',
+      )}
       aria-label={`Course: ${cohort.title}`}
-      onMouseEnter={(e) => {
-        ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'
-        ;(e.currentTarget as HTMLElement).style.boxShadow = '0 8px 32px rgba(26,39,68,0.12), 0 0 0 1px rgba(26,39,68,0.08)'
-      }}
-      onMouseLeave={(e) => {
-        ;(e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
-        ;(e.currentTarget as HTMLElement).style.boxShadow = '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.04)'
-      }}
     >
-      {/* Gradient banner — 80px tall */}
+      {/* Banner — Wise mint surface with type chip */}
       <div
-        style={{
-          height: 80,
-          background: coverGradient,
-          position: 'relative',
-          opacity: isPending ? 0.7 : 1,
-          flexShrink: 0,
-          overflow: 'hidden',
-        }}
+        className={cn(
+          'h-20 relative flex items-end px-4 pb-3',
+          'bg-[var(--color-wise-mint)]',
+          isPending && 'opacity-70',
+        )}
       >
-        {/* Dot pattern overlay */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.07) 1px, transparent 0)',
-            backgroundSize: '16px 16px',
-          }}
-        />
-        {/* Type badge */}
-        <div style={{ position: 'absolute', bottom: 10, left: 14 }}>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              padding: '3px 10px',
-              borderRadius: 9999,
-              background: 'rgba(255,255,255,0.15)',
-              color: '#fff',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255,255,255,0.22)',
-              letterSpacing: '0.3px',
-            }}
-          >
-            {TYPE_LABEL[cohort.type]}
-          </span>
-        </div>
-        {/* Completion badge */}
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 text-[11px] font-bold',
+            'px-[10px] py-[3px] rounded-[var(--radius-pill)]',
+            'bg-[var(--color-wise-surface)] text-[var(--color-wise-primary-text)]',
+            'shadow-[var(--shadow-ring)]',
+          )}
+        >
+          <TypeIcon className="h-3 w-3" aria-hidden="true" />
+          {meta.label}
+        </span>
         {isCompleted && (
-          <div style={{ position: 'absolute', top: 10, right: 12 }}>
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                padding: '3px 10px',
-                borderRadius: 9999,
-                background: 'rgba(22,163,74,0.9)',
-                color: '#fff',
-                backdropFilter: 'blur(8px)',
-              }}
-            >
-              Completed
-            </span>
-          </div>
+          <span
+            className={cn(
+              'absolute top-3 right-3 inline-flex items-center gap-1.5 text-[11px] font-bold',
+              'px-[10px] py-[3px] rounded-[var(--radius-pill)]',
+              'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+            )}
+          >
+            <CircleCheck className="h-3 w-3" aria-hidden="true" />
+            Completed
+          </span>
         )}
       </div>
 
       {/* Body */}
-      <div style={{ padding: '20px 20px 22px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-
-        {/* Title */}
-        <h3
-          style={{
-            fontSize: 16,
-            fontWeight: 800,
-            color: '#1a2744',
-            marginBottom: 14,
-            lineHeight: 1.3,
-            letterSpacing: -0.3,
-          }}
-        >
+      <div className="p-5 flex flex-col flex-1">
+        <h3 className="text-[16px] font-extrabold text-[var(--color-wise-text)] mb-3.5 leading-[1.3] tracking-[-0.3px]">
           {cohort.title}
         </h3>
 
         {/* Alert banners */}
         {isPartial && nextDueInstallment && (
           <div
-            style={{
-              background: '#fffbeb',
-              borderRadius: 10,
-              padding: '10px 12px',
-              marginBottom: 12,
-              fontSize: 12,
-              color: '#92400e',
-              fontWeight: 500,
-              border: '1px solid rgba(245,158,11,0.2)',
-            }}
+            className={cn(
+              'flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2.5 mb-3',
+              'bg-[var(--color-wise-warning-soft)] border border-[var(--color-wise-warning)]/40',
+              'text-[12px] font-medium text-[var(--color-wise-text)]',
+            )}
           >
-            🕐 Next installment due {formatDate(nextDueInstallment.dueDate)}
+            <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>Next installment due {formatDate(nextDueInstallment.dueDate)}</span>
           </div>
         )}
 
         {hasFailed && (
           <div
-            style={{
-              background: '#fef2f2',
-              borderRadius: 10,
-              padding: '10px 12px',
-              marginBottom: 12,
-              fontSize: 12,
-              color: '#dc2626',
-              fontWeight: 500,
-              border: '1px solid rgba(220,38,38,0.2)',
-            }}
+            className={cn(
+              'flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2.5 mb-3',
+              'bg-[var(--color-wise-danger-soft)] border border-[var(--color-wise-danger)]/30',
+              'text-[12px] font-medium text-[var(--color-wise-danger)]',
+            )}
           >
-            ⚠️ Payment failed — update your payment method
+            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>Payment failed — update your payment method</span>
           </div>
         )}
 
         {isPending ? (
           <div
-            style={{
-              background: '#fffbeb',
-              borderRadius: 10,
-              padding: '10px 12px',
-              marginBottom: 12,
-              fontSize: 12,
-              color: '#92400e',
-              fontWeight: 500,
-              border: '1px solid rgba(245,158,11,0.2)',
-            }}
+            className={cn(
+              'flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2.5 mb-3',
+              'bg-[var(--color-wise-warning-soft)] border border-[var(--color-wise-warning)]/40',
+              'text-[12px] font-medium text-[var(--color-wise-text)]',
+            )}
           >
-            🕐 Payment receipt under review. Access unlocks upon approval.
+            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>Payment receipt under review. Access unlocks upon approval.</span>
           </div>
         ) : (
           <>
-            {/* Progress bar — 8px height */}
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ height: 8, background: 'rgba(26,39,68,0.06)', borderRadius: 9999, overflow: 'hidden' }}>
+            {/* Progress bar — Wise tokens, mint track, primary fill */}
+            <div className="mb-2.5">
+              <div className="h-2 bg-[var(--color-wise-surface-soft)] rounded-[var(--radius-pill)] overflow-hidden">
                 <div
-                  style={{
-                    height: '100%',
-                    width: `${completionPercentage}%`,
-                    background: isCompleted
-                      ? 'linear-gradient(90deg,#16a34a,#22c55e)'
-                      : 'linear-gradient(90deg,#4a9ad4,#7bb8e0)',
-                    borderRadius: 9999,
-                    transition: 'width 0.4s ease',
-                  }}
+                  className={cn(
+                    'h-full rounded-[var(--radius-pill)] transition-[width] duration-400',
+                    isCompleted
+                      ? 'bg-[var(--color-wise-success)]'
+                      : 'bg-[var(--color-wise-primary)]',
+                  )}
+                  style={{ width: `${completionPercentage}%` }}
                 />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#4a9ad4' }}>
+              <div className="flex items-center justify-between mt-1.5">
+                <span className="text-[12px] font-bold text-[var(--color-wise-primary-text)]">
                   {completionPercentage}% complete
                 </span>
-                <span style={{ fontSize: 12, color: '#717182' }}>
+                <span className="text-[12px] text-[var(--color-wise-text-muted)]">
                   {lessonsCompleted}/{totalLessons} lessons
                 </span>
               </div>
             </div>
 
             {isCompleted ? (
-              <p style={{ fontSize: 12, color: '#717182', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                🎉 <span style={{ fontWeight: 600, color: '#1a2744' }}>
+              <p className="text-[12px] text-[var(--color-wise-text-muted)] mb-2 flex items-center gap-1.5">
+                <PartyPopper className="h-4 w-4 text-[var(--color-wise-primary-text)]" aria-hidden="true" />
+                <span className="font-semibold text-[var(--color-wise-text)]">
                   Completed on {lastActivityAt ? formatDate(lastActivityAt) : '—'}
                 </span>
               </p>
             ) : nextLessonTitle ? (
-              <p style={{ fontSize: 12, color: '#717182', marginBottom: 8 }}>
-                <span style={{ fontWeight: 600, color: '#1a2744' }}>Next:</span> {nextLessonTitle}
-              </p>
+              <div
+                className={cn(
+                  'inline-flex items-center gap-1.5 text-[12px] mb-2 max-w-full',
+                  'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+                  'px-2.5 py-1 rounded-[var(--radius-pill)]',
+                )}
+              >
+                <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span className="truncate font-semibold">Next: {nextLessonTitle}</span>
+              </div>
             ) : null}
 
             {nextLiveSession && !isCompleted && (
-              <p
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: '#cc4a00',
-                  marginBottom: 8,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
+              <div
+                className={cn(
+                  'inline-flex items-center gap-1.5 text-[12px] mb-2 max-w-full',
+                  'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+                  'px-2.5 py-1 rounded-[var(--radius-pill)]',
+                )}
               >
-                📅 Next live: {nextLiveSession}
-              </p>
+                <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span className="truncate font-semibold">Next live: {nextLiveSession}</span>
+              </div>
             )}
           </>
         )}
 
-        {/* CTA button */}
-        <div style={{ marginTop: 'auto', paddingTop: 10 }}>
+        {/* CTA */}
+        <div className="mt-auto pt-3">
           {isPending ? (
-            <button
-              type="button"
-              style={{
-                width: '100%',
-                padding: '11px 20px',
-                borderRadius: 12,
-                background: '#f4f6f9',
-                color: '#1a2744',
-                fontSize: 13,
-                fontWeight: 700,
-                border: '1px solid rgba(26,39,68,0.12)',
-                cursor: 'pointer',
-                fontFamily: "'Inter', sans-serif",
-                transition: 'all 0.2s ease',
-              }}
+            <Button
+              variant="outline"
+              size="md"
+              className="w-full"
               onClick={() => navigate(`/manual-payment/${cohort.slug}`)}
             >
               View Payment Status
-            </button>
+            </Button>
           ) : isCompleted ? (
-            <button
-              type="button"
-              style={{
-                width: '100%',
-                padding: '11px 20px',
-                borderRadius: 12,
-                background: '#1a2744',
-                color: '#fff',
-                fontSize: 13,
-                fontWeight: 700,
-                border: 'none',
-                cursor: 'pointer',
-                fontFamily: "'Inter', sans-serif",
-                transition: 'all 0.2s ease',
-                boxShadow: '0 4px 12px rgba(26,39,68,0.2)',
-              }}
+            <Button
+              variant="primary"
+              size="md"
+              className="w-full"
+              leftIcon={<Award className="h-4 w-4" />}
               onClick={handleViewCertificate}
             >
               View Certificate
-            </button>
+            </Button>
           ) : (
-            <button
-              type="button"
-              style={{
-                width: '100%',
-                padding: '11px 20px',
-                borderRadius: 12,
-                background: '#4a9ad4',
-                color: '#fff',
-                fontSize: 13,
-                fontWeight: 700,
-                border: 'none',
-                cursor: 'pointer',
-                fontFamily: "'Inter', sans-serif",
-                transition: 'all 0.2s ease',
-                boxShadow: '0 4px 12px rgba(74,154,212,0.3)',
-              }}
+            <Button
+              variant="primary"
+              size="md"
+              className="w-full"
+              rightIcon={<ArrowRight className="h-4 w-4" />}
               onClick={handleContinue}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#3a8ac4' }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = '#4a9ad4' }}
             >
-              Continue Learning →
-            </button>
+              Continue Learning
+            </Button>
           )}
         </div>
 
         {/* Footer row */}
         <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingTop: 12,
-            marginTop: 12,
-            borderTop: '1px solid rgba(26,39,68,0.06)',
-          }}
+          className={cn(
+            'flex items-center justify-between pt-3 mt-3',
+            'border-t border-[var(--color-wise-ring)]',
+          )}
         >
-          <span style={{ fontSize: 11, color: '#a3a3b8' }}>
+          <span className="text-[11px] text-[var(--color-wise-text-muted)]">
             {lastActivityAt ? relativeTime(lastActivityAt) : 'Enrolled'}
           </span>
           <span
-            style={{
-              fontSize: 10,
-              fontWeight: 600,
-              padding: '3px 10px',
-              borderRadius: 9999,
-              background: isCompleted
-                ? '#e8ecf4'
+            className={cn(
+              'text-[10px] font-semibold px-[10px] py-[3px] rounded-[var(--radius-pill)]',
+              isCompleted
+                ? 'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text)]'
                 : isPending
-                ? '#fffbeb'
-                : '#e6f4ec',
-              color: isCompleted
-                ? '#1a2744'
-                : isPending
-                ? '#92400e'
-                : '#15803d',
-            }}
+                  ? 'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text)]'
+                  : 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+            )}
           >
             {isCompleted ? 'Completed' : isPending ? 'Pending' : 'Active'}
           </span>
@@ -475,141 +373,57 @@ function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
 // Discover cohort card (empty state)
 // ---------------------------------------------------------------------------
 
-const DISCOVER_GRADIENTS: Record<string, string[]> = {
-  live:     ['#0d1b42', '#1e4080', '#4a9ad4'],
-  combined: ['#100d30', '#2a1f6e', '#6b5ce7'],
-  recorded: ['#0a2a1a', '#0f5132', '#16a34a'],
-}
-
-const DISCOVER_ACCENT: Record<string, string> = {
-  live:     '#4a9ad4',
-  combined: '#6b5ce7',
-  recorded: '#16a34a',
-}
-
-const DISCOVER_TYPE_LABEL: Record<string, { label: string; icon: string }> = {
-  live:     { label: 'Live Cohort', icon: '🔴' },
-  combined: { label: 'Combined',    icon: '⚡' },
-  recorded: { label: 'Recorded',    icon: '📹' },
-}
-
 function DiscoverCard({ cohort }: { cohort: CohortSummary }) {
   const navigate = useNavigate()
-  const stops = DISCOVER_GRADIENTS[cohort.type] ?? DISCOVER_GRADIENTS.recorded
-  const accent = DISCOVER_ACCENT[cohort.type] ?? '#4a9ad4'
-  const meta = DISCOVER_TYPE_LABEL[cohort.type] ?? { label: cohort.type, icon: '📦' }
-  const gradient = `linear-gradient(145deg, ${stops[0]} 0%, ${stops[1]} 55%, ${stops[2]} 100%)`
+  const meta = COHORT_TYPE_META[cohort.type] ?? COHORT_TYPE_META.recorded
+  const TypeIcon = meta.icon
 
   return (
     <article
       onClick={() => navigate(`/courses/${cohort.slug}`)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') navigate(`/courses/${cohort.slug}`)
+      }}
+      role="button"
+      tabIndex={0}
       aria-label={`View ${cohort.title}`}
-      style={{
-        background: '#fff',
-        borderRadius: 20,
-        overflow: 'hidden',
-        boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.04)',
-        border: '1px solid rgba(26,39,68,0.07)',
-        display: 'flex',
-        flexDirection: 'column',
-        cursor: 'pointer',
-        transition: 'transform 0.18s ease, box-shadow 0.18s ease',
-      }}
-      onMouseEnter={(e) => {
-        ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'
-        ;(e.currentTarget as HTMLElement).style.boxShadow =
-          '0 12px 40px rgba(26,39,68,0.14), 0 0 0 1px rgba(26,39,68,0.08)'
-      }}
-      onMouseLeave={(e) => {
-        ;(e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
-        ;(e.currentTarget as HTMLElement).style.boxShadow =
-          '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.04)'
-      }}
+      className={cn(
+        'bg-[var(--color-wise-surface)] rounded-[var(--radius-lg)] overflow-hidden',
+        'shadow-[var(--shadow-ring)] flex flex-col cursor-pointer',
+        'transition-transform duration-150 hover:-translate-y-1',
+        'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary)] focus-visible:outline-offset-2',
+      )}
     >
-      {/* Cover */}
+      {/* Cover — Wise mint canvas with lucide type icon. */}
       <div
-        style={{
-          height: 160,
-          background: gradient,
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          padding: '18px 20px',
-          overflow: 'hidden',
-        }}
+        className={cn(
+          'h-40 flex flex-col justify-between p-5 relative overflow-hidden',
+          'bg-[var(--color-wise-mint)]',
+        )}
       >
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            top: -30,
-            right: -30,
-            width: 130,
-            height: 130,
-            borderRadius: '50%',
-            background: `radial-gradient(circle, ${accent}30 0%, transparent 70%)`,
-            pointerEvents: 'none',
-          }}
-        />
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            bottom: -20,
-            left: '30%',
-            width: 90,
-            height: 90,
-            borderRadius: '50%',
-            background: `radial-gradient(circle, ${accent}20 0%, transparent 70%)`,
-            pointerEvents: 'none',
-          }}
-        />
-
         <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 5,
-            background: 'rgba(255,255,255,0.12)',
-            backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(255,255,255,0.22)',
-            borderRadius: 100,
-            padding: '4px 12px',
-            fontSize: 11,
-            fontWeight: 700,
-            color: '#fff',
-            letterSpacing: '0.3px',
-            alignSelf: 'flex-start',
-          }}
+          className={cn(
+            'inline-flex items-center gap-1.5 self-start',
+            'bg-[var(--color-wise-surface)] rounded-[var(--radius-pill)] px-3 py-1',
+            'text-[11px] font-bold text-[var(--color-wise-primary-text)]',
+            'shadow-[var(--shadow-ring)]',
+          )}
         >
-          {meta.icon} {meta.label}
+          <TypeIcon className="h-3 w-3" aria-hidden="true" />
+          {meta.label}
         </span>
 
-        <p
-          style={{
-            fontSize: 17,
-            fontWeight: 800,
-            color: '#fff',
-            lineHeight: 1.3,
-            margin: 0,
-            textShadow: '0 1px 4px rgba(0,0,0,0.4)',
-          }}
-        >
+        <p className="text-[17px] font-extrabold text-[var(--color-wise-text)] leading-[1.3]">
           {cohort.title}
         </p>
       </div>
 
       {/* Body */}
-      <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', flex: 1, gap: 0 }}>
+      <div className="p-5 flex flex-col flex-1">
         {cohort.tagline && (
           <p
+            className="text-[13px] text-[var(--color-wise-text-muted)] leading-[1.5] mb-4 flex-1"
             style={{
-              fontSize: 13,
-              color: '#717182',
-              lineHeight: 1.5,
-              marginBottom: 16,
-              flex: 1,
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
@@ -620,36 +434,17 @@ function DiscoverCard({ cohort }: { cohort: CohortSummary }) {
           </p>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-          <div>
-            <span style={{ fontSize: 22, fontWeight: 800, color: '#1a2744', lineHeight: 1 }}>
-              {cohort.price === 0 ? 'Free' : `$${cohort.price}`}
-            </span>
-          </div>
-          <button
-            type="button"
+        <div className="flex items-center justify-between mt-auto gap-3">
+          <span className="text-[22px] font-extrabold text-[var(--color-wise-text)] leading-none">
+            {cohort.price === 0 ? 'Free' : `$${cohort.price}`}
+          </span>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={(e) => { e.stopPropagation(); navigate(`/courses/${cohort.slug}`) }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: accent,
-              color: '#fff',
-              border: 'none',
-              borderRadius: 100,
-              padding: '9px 18px',
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: 'pointer',
-              letterSpacing: '0.2px',
-              transition: 'opacity 0.15s',
-              boxShadow: `0 4px 14px ${accent}40`,
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.85' }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
           >
             View details
-          </button>
+          </Button>
         </div>
       </div>
     </article>
@@ -657,28 +452,7 @@ function DiscoverCard({ cohort }: { cohort: CohortSummary }) {
 }
 
 function DiscoverCardSkeleton() {
-  return (
-    <div
-      style={{
-        background: '#fff',
-        borderRadius: 20,
-        overflow: 'hidden',
-        boxShadow: '0 1px 3px rgba(26,39,68,0.06)',
-        border: '1px solid rgba(26,39,68,0.07)',
-      }}
-    >
-      <div style={{ height: 160, background: 'linear-gradient(135deg,#e8ecf4,#dde3ee)' }} />
-      <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ height: 14, width: '70%', background: '#e8ecf4', borderRadius: 8 }} />
-        <div style={{ height: 12, width: '90%', background: '#e8ecf4', borderRadius: 8 }} />
-        <div style={{ height: 12, width: '55%', background: '#e8ecf4', borderRadius: 8 }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-          <div style={{ height: 22, width: 50, background: '#e8ecf4', borderRadius: 8 }} />
-          <div style={{ height: 36, width: 110, background: '#e8ecf4', borderRadius: 100 }} />
-        </div>
-      </div>
-    </div>
-  )
+  return <CardSkeleton className="h-[320px]" />
 }
 
 // ---------------------------------------------------------------------------
@@ -686,44 +460,35 @@ function DiscoverCardSkeleton() {
 // ---------------------------------------------------------------------------
 
 interface PerkProps {
-  icon: string
+  Icon: LucideIcon
   title: string
   desc: string
-  bg: string
 }
 
-function PerkCard({ icon, title, desc, bg }: PerkProps) {
+function PerkCard({ Icon, title, desc }: PerkProps) {
   return (
     <div
-      style={{
-        background: '#fff',
-        borderRadius: 18,
-        padding: '22px 20px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 12,
-        boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.04)',
-        border: '1px solid rgba(26,39,68,0.07)',
-      }}
+      className={cn(
+        'bg-[var(--color-wise-surface)] rounded-[var(--radius-md)] p-5',
+        'flex flex-col gap-3 shadow-[var(--shadow-ring)]',
+      )}
     >
       <div
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: 14,
-          background: bg,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 22,
-          flexShrink: 0,
-        }}
+        className={cn(
+          'w-12 h-12 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0',
+          'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+        )}
+        aria-hidden="true"
       >
-        {icon}
+        <Icon className="h-6 w-6" />
       </div>
       <div>
-        <p style={{ fontSize: 14, fontWeight: 700, color: '#1a2744', marginBottom: 4, lineHeight: 1.3 }}>{title}</p>
-        <p style={{ fontSize: 13, color: '#717182', lineHeight: 1.5, margin: 0 }}>{desc}</p>
+        <p className="text-[14px] font-bold text-[var(--color-wise-text)] mb-1 leading-[1.3]">
+          {title}
+        </p>
+        <p className="text-[13px] text-[var(--color-wise-text-muted)] leading-[1.5]">
+          {desc}
+        </p>
       </div>
     </div>
   )
@@ -733,198 +498,62 @@ function PerkCard({ icon, title, desc, bg }: PerkProps) {
 // Empty + discover section
 // ---------------------------------------------------------------------------
 
-function EmptyState({ cohorts, cohortsLoading }: { cohorts: CohortSummary[]; cohortsLoading: boolean }) {
+function EmptyDashboard({
+  cohorts,
+  cohortsLoading,
+}: {
+  cohorts: CohortSummary[]
+  cohortsLoading: boolean
+}) {
   const published = cohorts.filter((c) => c.published)
 
   return (
     <div>
-      {/* Hero card */}
+      {/* Hero */}
       <div
-        className="dashboard-empty-hero"
-        style={{
-          borderRadius: 24,
-          background: 'linear-gradient(135deg, #080f24 0%, #102040 45%, #1a3060 100%)',
-          padding: '48px 44px',
-          marginBottom: 28,
-          position: 'relative',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 36,
-          flexWrap: 'wrap',
-        }}
+        className={cn(
+          'rounded-[var(--radius-lg)] bg-[var(--color-wise-surface)] shadow-[var(--shadow-ring)]',
+          'mb-7 overflow-hidden',
+        )}
       >
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            top: -80,
-            right: -60,
-            width: 340,
-            height: 340,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(74,154,212,0.18) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }}
+        <EmptyState
+          icon={GraduationCap}
+          title="Build real AI products. Not toy demos."
+          description="Join a cohort and ship production-grade AI apps alongside a community of founders and engineers."
+          action={{ label: 'Browse all cohorts', href: '/courses' }}
         />
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            bottom: -60,
-            left: '40%',
-            width: 220,
-            height: 220,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(74,154,212,0.10) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }}
-        />
-
-        <div
-          className="dashboard-empty-hero-icon"
-          style={{
-            width: 88,
-            height: 88,
-            borderRadius: 22,
-            flexShrink: 0,
-            background: 'rgba(74,154,212,0.15)',
-            border: '1px solid rgba(74,154,212,0.30)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 40,
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          🚀
-        </div>
-
-        <div style={{ flex: 1, minWidth: 240, position: 'relative', zIndex: 1 }}>
-          <p
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: '1.4px',
-              color: 'rgba(74,154,212,0.85)',
-              textTransform: 'uppercase',
-              marginBottom: 10,
-            }}
-          >
-            Start your journey
-          </p>
-          <h2
-            style={{
-              fontSize: 'clamp(22px, 3vw, 30px)',
-              fontWeight: 800,
-              color: '#fff',
-              lineHeight: 1.25,
-              marginBottom: 10,
-            }}
-          >
-            Build real AI products.
-            <br />
-            <span style={{ color: '#7bb8e0' }}>Not toy demos.</span>
-          </h2>
-          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.62)', lineHeight: 1.55, marginBottom: 24 }}>
-            Join a cohort and ship production-grade AI apps alongside a community of founders and engineers.
-          </p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <Link
-              to="/courses"
-              style={{
-                display: 'inline-block',
-                background: '#ff8c5a',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: 14,
-                padding: '11px 24px',
-                borderRadius: 12,
-                textDecoration: 'none',
-                letterSpacing: '0.2px',
-                boxShadow: '0 4px 16px rgba(255,140,90,0.4)',
-              }}
-            >
-              Browse all cohorts
-            </Link>
-            <Link
-              to="/courses?type=live"
-              style={{
-                display: 'inline-block',
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.18)',
-                color: '#fff',
-                fontWeight: 600,
-                fontSize: 14,
-                padding: '11px 24px',
-                borderRadius: 12,
-                textDecoration: 'none',
-                backdropFilter: 'blur(4px)',
-              }}
-            >
-              Live cohorts →
-            </Link>
-          </div>
-        </div>
       </div>
 
-      {/* Perk cards */}
-      <div
-        className="dashboard-perk-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 16,
-          marginBottom: 40,
-        }}
-      >
+      {/* Perks */}
+      <div className="dashboard-perk-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
         <PerkCard
-          icon="🎯"
+          Icon={GraduationCap}
           title="Project-based"
           desc="Ship real products. Every cohort ends with something you can show off."
-          bg="linear-gradient(135deg,#eef6fd,#c8e4f7)"
         />
         <PerkCard
-          icon="👥"
+          Icon={Users}
           title="Live community"
           desc="Weekly live sessions and a private Slack with builders like you."
-          bg="linear-gradient(135deg,#f3f0ff,#d6c9fc)"
         />
         <PerkCard
-          icon="🏆"
+          Icon={Award}
           title="Certificate"
           desc="Earn a verified credential once you complete the full cohort."
-          bg="linear-gradient(135deg,#ecfdf5,#a7f3d0)"
         />
       </div>
 
       {/* Available cohorts */}
       {(cohortsLoading || published.length > 0) && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-            <p
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                color: '#717182',
-                textTransform: 'uppercase',
-                letterSpacing: '1.2px',
-                margin: 0,
-                whiteSpace: 'nowrap',
-              }}
-            >
+          <div className="flex items-center gap-3.5 mb-5">
+            <p className="text-[11px] font-extrabold text-[var(--color-wise-text-muted)] uppercase tracking-[1.2px] m-0 whitespace-nowrap">
               Available cohorts
             </p>
-            <div style={{ flex: 1, height: 1, background: 'rgba(26,39,68,0.08)' }} />
+            <div className="flex-1 h-px bg-[var(--color-wise-ring)]" />
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: 20,
-            }}
-          >
+          <div className="dashboard-discover-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {cohortsLoading ? (
               <>
                 <DiscoverCardSkeleton />
@@ -944,51 +573,39 @@ function EmptyState({ cohorts, cohortsLoading }: { cohorts: CohortSummary[]; coh
 }
 
 // ---------------------------------------------------------------------------
-// KPI stats bar
+// KPI cards
 // ---------------------------------------------------------------------------
 
 interface KpiCardProps {
   label: string
   value: string | number
-  sub: string
-  iconBg: string
-  icon: string
+  Icon: LucideIcon
 }
 
-function KpiCard({ label, value, sub, iconBg, icon }: KpiCardProps) {
+function KpiCard({ label, value, Icon }: KpiCardProps) {
   return (
     <div
-      style={{
-        background: '#fff',
-        borderRadius: 16,
-        padding: '20px 24px',
-        boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.04)',
-        border: '1px solid rgba(26,39,68,0.07)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-      }}
+      className={cn(
+        'bg-[var(--color-wise-surface)] rounded-[var(--radius-md)] p-5',
+        'shadow-[var(--shadow-ring)] flex items-center gap-3.5',
+      )}
     >
       <div
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 12,
-          background: iconBg,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 18,
-          flexShrink: 0,
-        }}
+        className={cn(
+          'w-10 h-10 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0',
+          'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+        )}
+        aria-hidden="true"
       >
-        {icon}
+        <Icon className="h-5 w-5" />
       </div>
       <div>
-        <p style={{ fontSize: 'clamp(24px,3vw,32px)', fontWeight: 900, color: '#1a2744', lineHeight: 1, letterSpacing: -0.5 }}>
+        <p className="text-[clamp(24px,3vw,32px)] font-black text-[var(--color-wise-text)] leading-none tracking-[-0.5px]">
           {value}
         </p>
-        <p style={{ fontSize: 12, fontWeight: 600, color: '#717182', marginTop: 3 }}>{label}</p>
+        <p className="text-[12px] font-semibold text-[var(--color-wise-text-muted)] mt-1">
+          {label}
+        </p>
       </div>
     </div>
   )
@@ -997,6 +614,18 @@ function KpiCard({ label, value, sub, iconBg, icon }: KpiCardProps) {
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
+
+// Responsive rules collected in one <style> block so we don't scatter inline
+// media queries across the tree.
+const DASHBOARD_RESPONSIVE_STYLES = `
+  @media (max-width: 768px) {
+    .dashboard-greeting { padding: 20px 20px !important; flex-direction: column !important; align-items: flex-start !important; }
+    .dashboard-kpi-grid { grid-template-columns: 1fr 1fr !important; }
+    .dashboard-courses-grid { grid-template-columns: 1fr !important; }
+    .dashboard-discover-grid { grid-template-columns: 1fr !important; }
+    .dashboard-perk-grid { grid-template-columns: 1fr !important; }
+  }
+`
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -1039,214 +668,135 @@ export default function DashboardPage() {
   const completedCount = enrollments.filter((e) => e.status === 'COMPLETED').length
   const isEmpty = !isLoading && enrollments.length === 0
 
+  // PENDING payment alert — any enrollment whose payment is pending should
+  // surface at the top of the dashboard.
+  const pendingPaymentEnrollment = enrollments.find(
+    (e) => e.paymentStatus === 'PENDING',
+  )
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f7f8fc', fontFamily: "'Inter', sans-serif" }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .dashboard-greeting { padding: 20px 20px !important; flex-direction: column !important; align-items: flex-start !important; }
-          .dashboard-kpi-grid { grid-template-columns: 1fr 1fr !important; }
-          .dashboard-courses-grid { grid-template-columns: 1fr !important; }
-          .dashboard-discover-grid { grid-template-columns: 1fr !important; }
-          .dashboard-empty-hero { padding: 28px 20px !important; gap: 20px !important; }
-          .dashboard-empty-hero-icon { display: none !important; }
-          .dashboard-perk-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+    <div className="min-h-screen bg-[var(--color-wise-canvas)] font-sans">
+      <style>{DASHBOARD_RESPONSIVE_STYLES}</style>
       <TopNav />
 
-      <main style={{ padding: 'clamp(24px,3vw,40px) clamp(16px,3vw,32px) 64px', maxWidth: 1200, margin: '0 auto' }}>
+      <main
+        className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 pt-6 md:pt-10 pb-16"
+      >
 
-        {/* ------------------------------------------------------------------ */}
-        {/* GREETING BANNER                                                      */}
-        {/* ------------------------------------------------------------------ */}
+        {/* Greeting banner */}
         <div
-          className="dashboard-greeting"
-          style={{
-            background: '#fff',
-            borderRadius: 20,
-            padding: '32px 40px',
-            marginBottom: 24,
-            boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.04)',
-            border: '1px solid rgba(26,39,68,0.07)',
-            position: 'relative',
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 20,
-          }}
+          className={cn(
+            'dashboard-greeting bg-[var(--color-wise-surface)] rounded-[var(--radius-lg)]',
+            'p-6 md:p-8 mb-6 shadow-[var(--shadow-ring)]',
+            'flex items-center justify-between flex-wrap gap-5',
+          )}
         >
-          {/* Subtle right-side gradient */}
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              width: '50%',
-              height: '100%',
-              background: 'radial-gradient(ellipse 60% 100% at 100% 50%, rgba(74,154,212,0.06), transparent)',
-              pointerEvents: 'none',
-            }}
-          />
-
-          <div style={{ position: 'relative', zIndex: 1 }}>
+          <div className="relative z-10">
             <h1
-              style={{
-                fontSize: 'clamp(28px, 3vw, 38px)',
-                fontWeight: 900,
-                color: '#1a2744',
-                letterSpacing: -1,
-                lineHeight: 1.15,
-                marginBottom: 8,
-              }}
+              className={cn(
+                'text-[clamp(28px,3vw,38px)] font-black text-[var(--color-wise-text)]',
+                'tracking-[-1px] leading-[1.15] mb-2',
+              )}
             >
-              {getGreeting()}, {firstName} 👋
+              {getGreeting()}, {firstName}
             </h1>
-            <p style={{ fontSize: 15, color: '#717182', lineHeight: 1.5 }}>
+            <p className="text-[15px] text-[var(--color-wise-text-muted)] leading-[1.5]">
               {isLoading
                 ? 'Loading your courses…'
                 : activeCount > 0
-                ? `You have ${activeCount} course${activeCount !== 1 ? 's' : ''} in progress. Keep the momentum going!`
-                : 'Your learning journey starts here. Browse a cohort and get building.'}
+                  ? `You have ${activeCount} course${activeCount !== 1 ? 's' : ''} in progress. Keep the momentum going!`
+                  : 'Your learning journey starts here. Browse a cohort and get building.'}
             </p>
           </div>
 
           {!isLoading && (
-            <Link
-              to="/courses"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '12px 24px',
-                borderRadius: 12,
-                background: '#ff8c5a',
-                color: '#fff',
-                fontSize: 14,
-                fontWeight: 700,
-                textDecoration: 'none',
-                boxShadow: '0 4px 16px rgba(255,140,90,0.3)',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap',
-                position: 'relative',
-                zIndex: 1,
-              }}
+            <Button
+              variant="primary"
+              size="md"
+              rightIcon={<ArrowRight className="h-4 w-4" />}
+              onClick={() => { window.location.href = '/courses' }}
             >
-              Browse Courses →
-            </Link>
+              Browse Courses
+            </Button>
           )}
         </div>
 
-        {/* ------------------------------------------------------------------ */}
-        {/* KPI STATS ROW (only when enrolled)                                  */}
-        {/* ------------------------------------------------------------------ */}
+        {/* PENDING payment banner */}
+        {pendingPaymentEnrollment && (
+          <div
+            role="alert"
+            className={cn(
+              'flex items-center gap-3 mb-6 rounded-[var(--radius-sm)] px-4 py-3',
+              'bg-[var(--color-wise-warning-soft)] border border-[var(--color-wise-warning)]/50',
+              'text-[14px] font-medium text-[var(--color-wise-text)]',
+            )}
+          >
+            <AlertTriangle
+              className="h-5 w-5 shrink-0 text-[var(--color-wise-text)]"
+              aria-hidden="true"
+            />
+            <p>
+              We're reviewing your payment for
+              {' '}<strong>{pendingPaymentEnrollment.cohort.title}</strong>.
+              You'll unlock full access once it's approved.
+            </p>
+          </div>
+        )}
+
+        {/* KPI stats (only when enrolled) */}
         {!isLoading && enrollments.length > 0 && (
           <div
-            className="dashboard-kpi-grid"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: 16,
-              marginBottom: 32,
-            }}
+            className={cn(
+              'dashboard-kpi-grid grid gap-4 mb-8',
+              'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+            )}
           >
-            <KpiCard
-              icon="📚"
-              iconBg="linear-gradient(135deg,#eef6fd,#c8e4f7)"
-              label="Courses Enrolled"
-              value={enrollments.length}
-              sub="total programs"
-            />
-            <KpiCard
-              icon="✅"
-              iconBg="linear-gradient(135deg,#ecfdf5,#a7f3d0)"
-              label="Completed"
-              value={completedCount}
-              sub={completedCount === 1 ? 'course finished' : 'courses finished'}
-            />
-            <KpiCard
-              icon="🔥"
-              iconBg="linear-gradient(135deg,#fff7ed,#fed7aa)"
-              label="Active Courses"
-              value={activeCount}
-              sub="in progress"
-            />
-            <KpiCard
-              icon="🏆"
-              iconBg="linear-gradient(135deg,#fefce8,#fef08a)"
-              label="Certificates"
-              value={completedCount}
-              sub="earned"
-            />
+            <KpiCard Icon={BookOpen} label="Courses Enrolled" value={enrollments.length} />
+            <KpiCard Icon={CircleCheck} label="Completed" value={completedCount} />
+            <KpiCard Icon={Flame} label="Active Courses" value={activeCount} />
+            <KpiCard Icon={Award} label="Certificates" value={completedCount} />
           </div>
         )}
 
-        {/* Error */}
         {error && (
           <div
-            style={{
-              marginBottom: 24,
-              background: '#fef2f2',
-              borderRadius: 14,
-              padding: '14px 18px',
-              color: '#dc2626',
-              fontSize: 14,
-              fontWeight: 600,
-              border: '1px solid rgba(220,38,38,0.2)',
-            }}
+            role="alert"
+            className={cn(
+              'flex items-center gap-2 mb-6 rounded-[var(--radius-sm)] px-4 py-3.5',
+              'bg-[var(--color-wise-danger-soft)] border border-[var(--color-wise-danger)]/30',
+              'text-[14px] font-semibold text-[var(--color-wise-danger)]',
+            )}
           >
-            ⚠️ {error}
+            <AlertTriangle className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <span>{error}</span>
           </div>
         )}
 
-        {/* ------------------------------------------------------------------ */}
-        {/* MY COURSES SECTION                                                   */}
-        {/* ------------------------------------------------------------------ */}
+        {/* My Courses section */}
         {(isLoading || enrollments.length > 0) && (
           <>
-            {/* Section header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-              <h2
-                style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: '#1a2744',
-                  letterSpacing: -0.5,
-                  margin: 0,
-                  whiteSpace: 'nowrap',
-                }}
-              >
+            <div className="flex items-center gap-3 mb-5">
+              <h2 className="text-[22px] font-extrabold text-[var(--color-wise-text)] tracking-[-0.5px] m-0 whitespace-nowrap">
                 My Courses
               </h2>
               {!isLoading && (
                 <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: '#4a9ad4',
-                    background: 'rgba(74,154,212,0.1)',
-                    border: '1px solid rgba(74,154,212,0.2)',
-                    borderRadius: 20,
-                    padding: '3px 12px',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className={cn(
+                    'text-[12px] font-semibold px-3 py-0.5 rounded-[var(--radius-pill)] whitespace-nowrap',
+                    'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+                  )}
                 >
                   {enrollments.length} enrolled
                 </span>
               )}
-              <div style={{ flex: 1, height: 1, background: 'rgba(26,39,68,0.08)' }} />
+              <div className="flex-1 h-px bg-[var(--color-wise-ring)]" />
             </div>
 
             <div
-              className="dashboard-courses-grid"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                gap: 20,
-                marginBottom: 40,
-              }}
+              className={cn(
+                'dashboard-courses-grid grid gap-5 mb-10',
+                'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+              )}
             >
               {isLoading ? (
                 <>
@@ -1265,7 +815,7 @@ export default function DashboardPage() {
 
         {/* Empty + discover */}
         {isEmpty && (
-          <EmptyState cohorts={cohorts} cohortsLoading={cohortsLoading} />
+          <EmptyDashboard cohorts={cohorts} cohortsLoading={cohortsLoading} />
         )}
       </main>
     </div>

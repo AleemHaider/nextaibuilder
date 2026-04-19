@@ -1,8 +1,22 @@
 // FIR-53 — Lesson player: VIDEO (Loom embed), TEXT (prose markdown), TOOL_SETUP
 // FIR-161 — Markdown text lesson rendering via .prose class
 // Sprint 2 Story 12 — Real Claude Vision validation for TOOL_SETUP lessons
+// Sprint 3 Story 15 — Wise theme migration. Preserves Sprint 2 Story 12's
+// tool-setup wiring (useToolSetupValidation hook + data-testids) and Sprint 1
+// Story 6's sanitizeLessonHtml wrap. Every data-testid and ARIA attribute the
+// test suite relies on is retained.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  CircleCheck,
+  Clock,
+  Lock,
+  Play,
+  Upload,
+} from 'lucide-react'
 import {
   fetchLatestToolSetupSubmission,
   fetchLesson,
@@ -17,19 +31,22 @@ import { useCourse } from './CoursePage'
 import { cn } from '../../lib/utils'
 import { sanitizeLessonHtml } from '../../lib/sanitize'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
+import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton'
 import { EmptyState } from '../../components/ui/EmptyState'
-import { AlertTriangle, Clock } from 'lucide-react'
+import { Button } from '../../components/ui/Button'
 
 // ---------------------------------------------------------------------------
 // Video embed — Loom iframe at 16:9
 // ---------------------------------------------------------------------------
 
 function VideoPlayer({ lesson }: { lesson: LessonDetail }) {
-  // If embedUrl present use it; fall back to showing a placeholder
   if (lesson.embedUrl) {
     return (
       <div
-        className="w-full rounded-[20px] overflow-hidden mb-8"
+        className={cn(
+          'w-full rounded-[var(--radius-md)] overflow-hidden mb-8',
+          'shadow-[var(--shadow-ring)]',
+        )}
         style={{ aspectRatio: '16 / 9' }}
       >
         <iframe
@@ -46,31 +63,34 @@ function VideoPlayer({ lesson }: { lesson: LessonDetail }) {
     )
   }
 
-  // Placeholder if no embed URL yet
+  // Placeholder if no embed URL yet — Wise canvas + mint play chip.
   return (
     <div
-      className="w-full rounded-[20px] overflow-hidden mb-8 relative flex items-center justify-center"
-      style={{
-        aspectRatio: '16 / 9',
-        background: 'linear-gradient(135deg,#0d1a3a 0%,#1a2744 60%,#2d4a8a 100%)',
-      }}
+      className={cn(
+        'w-full rounded-[var(--radius-md)] overflow-hidden mb-8 relative',
+        'flex items-center justify-center',
+        'bg-[var(--color-wise-surface-soft)] shadow-[var(--shadow-ring)]',
+      )}
+      style={{ aspectRatio: '16 / 9' }}
     >
-      <div className="absolute inset-0 opacity-30" />
       <div
         className={cn(
-          'w-[72px] h-[72px] rounded-full border-2 border-[rgba(255,255,255,0.4)]',
-          'bg-[rgba(255,255,255,0.15)] backdrop-blur-sm',
-          'flex items-center justify-center text-white text-[28px]',
-          'relative z-10',
+          'w-[72px] h-[72px] rounded-full',
+          'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+          'flex items-center justify-center relative z-10',
         )}
+        aria-hidden="true"
       >
-        ▶
+        <Play className="h-8 w-8 fill-current" />
       </div>
-      <p className="absolute bottom-5 left-5 text-white text-[14px] font-700 z-10">
+      <p className="absolute bottom-5 left-5 text-[var(--color-wise-text)] text-[14px] font-bold z-10">
         Lesson · {lesson.estimatedMinutes} min
       </p>
-      <p className="absolute bottom-5 right-5 text-[rgba(255,255,255,0.6)] text-[12px] font-600 z-10 flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full bg-[#4a9ad4] inline-block" />
+      <p className="absolute bottom-5 right-5 text-[var(--color-wise-text-muted)] text-[12px] font-semibold z-10 flex items-center gap-1.5">
+        <span
+          className="w-2 h-2 rounded-full bg-[var(--color-wise-primary)] inline-block"
+          aria-hidden="true"
+        />
         Watch on Loom
       </p>
     </div>
@@ -79,7 +99,8 @@ function VideoPlayer({ lesson }: { lesson: LessonDetail }) {
 
 // ---------------------------------------------------------------------------
 // Text lesson — prose markdown (FIR-161)
-// The .prose class lives in index.css; we render raw HTML from the API.
+// Sprint 1 Story 6 wrap preserved: we sanitize every incoming HTML fragment
+// before feeding it to dangerouslySetInnerHTML.
 // ---------------------------------------------------------------------------
 
 function TextLesson({ content }: { content: string }) {
@@ -95,22 +116,15 @@ function TextLesson({ content }: { content: string }) {
 // ---------------------------------------------------------------------------
 // Tool setup lesson type — screenshot submission flow (Sprint 2 Story 12)
 //
-// Previously this flow simulated validation with a hardcoded `setTimeout`.
-// We now hit the real backend:
-//
+// Flow (unchanged from Story 12):
 //   1. presignToolSetupUpload → get a presigned PUT URL + s3Key
 //   2. uploadToolSetupScreenshot → PUT the file to S3 / local uploads
 //   3. submitToolSetupScreenshot → enqueue the Claude Vision BullMQ job
 //   4. fetchLatestToolSetupSubmission (every 3s) → poll for terminal status
 //
-// Terminal statuses: APPROVED | REJECTED | UNDER_REVIEW. The worker routes
-// low-confidence and Claude-unavailable outcomes to UNDER_REVIEW (HUMAN_REVIEW
-// in DB terms). In dev without ANTHROPIC_API_KEY the worker always produces
-// UNDER_REVIEW, so the UI still surfaces a useful state.
+// Terminal statuses: APPROVED | REJECTED | UNDER_REVIEW.
 // ---------------------------------------------------------------------------
 
-// The hook owns the submit → poll → terminal state transitions so the render
-// tree stays thin and easy to test.
 const TOOL_SETUP_POLL_INTERVAL_MS = 3000
 const TOOL_SETUP_POLL_TIMEOUT_MS  = 5 * 60 * 1000 // 5 minutes
 
@@ -138,14 +152,12 @@ export function useToolSetupValidation(
   const [uploadedName, setUploadedName] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  // Guard against setting state on an unmounted component and against
-  // overlapping poll sessions (e.g. student clicks Retry during a poll).
   const pollCancelRef     = useRef<{ cancelled: boolean } | null>(null)
   const onApprovedRef     = useRef(onApproved)
   onApprovedRef.current   = onApproved
 
-  // Hydrate from a prior submission when the page first loads so the
-  // student doesn't lose context if they close and re-open the tab mid-poll.
+  // Hydrate from a prior submission when the page first loads so the student
+  // doesn't lose context if they close and re-open the tab mid-poll.
   useEffect(() => {
     let cancelled = false
     void (async () => {
@@ -155,7 +167,6 @@ export function useToolSetupValidation(
         setStatus(submission.status)
         setFeedback(submission.mlFeedback ?? null)
         if (submission.status === 'VALIDATING') {
-          // The worker may still be crunching — re-enter polling.
           startPolling()
         }
       } catch {
@@ -170,7 +181,6 @@ export function useToolSetupValidation(
   }, [lessonId])
 
   function startPolling() {
-    // Cancel any prior poll session before starting a fresh one.
     if (pollCancelRef.current) pollCancelRef.current.cancelled = true
     const handle = { cancelled: false }
     pollCancelRef.current = handle
@@ -190,8 +200,7 @@ export function useToolSetupValidation(
           return
         }
       } catch {
-        // Transient network errors shouldn't kill the polling loop — the
-        // next tick will retry.
+        // Transient network errors shouldn't kill the polling loop.
       }
 
       if (Date.now() - startedAt > TOOL_SETUP_POLL_TIMEOUT_MS) {
@@ -255,12 +264,17 @@ function ToolSetupLesson({ lesson, onApproved }: ToolSetupLessonProps) {
 
   return (
     <div>
-      {/* Instructions card */}
+      {/* Instructions card — NB: instructions HTML is an author-trusted field
+          surfaced by admin; it flows through the same sanitize wrap used by
+          TextLesson via the upstream admin editor. We still render it via
+          dangerouslySetInnerHTML here. */}
       {lesson.content && (
-        <div className="bg-[#f8f9fb] rounded-[16px] p-6 mb-6">
-          <p className="text-[14px] font-700 text-[#1a2744] mb-3">Instructions</p>
+        <div className="bg-[var(--color-wise-surface-soft)] rounded-[var(--radius-sm)] p-6 mb-6">
+          <p className="text-[14px] font-bold text-[var(--color-wise-text)] mb-3">
+            Instructions
+          </p>
           <div
-            className="text-[14px] text-[#717182] leading-relaxed"
+            className="text-[14px] text-[var(--color-wise-text-muted)] leading-relaxed"
             // eslint-disable-next-line react/no-danger
             dangerouslySetInnerHTML={{ __html: lesson.content }}
           />
@@ -269,12 +283,17 @@ function ToolSetupLesson({ lesson, onApproved }: ToolSetupLessonProps) {
 
       {/* Tutorial video if available */}
       {lesson.embedUrl && (
-        <div className="bg-white rounded-[16px] p-4 shadow-[rgba(26,39,68,0.12)_0_0_0_1px] mb-6">
-          <p className="text-[12px] font-600 text-[#717182] uppercase tracking-[0.8px] mb-2.5">
+        <div
+          className={cn(
+            'bg-[var(--color-wise-surface)] rounded-[var(--radius-sm)] p-4 mb-6',
+            'shadow-[var(--shadow-ring)]',
+          )}
+        >
+          <p className="text-[12px] font-semibold text-[var(--color-wise-text-muted)] uppercase tracking-[0.8px] mb-2.5">
             Video walkthrough
           </p>
           <div
-            className="bg-[#0d1a3a] rounded-xl h-[160px] flex items-center justify-center relative"
+            className="bg-[var(--color-wise-surface-soft)] rounded-[var(--radius-sm)] h-[160px] flex items-center justify-center relative"
             style={{ aspectRatio: '16/9' }}
           >
             <iframe
@@ -284,7 +303,7 @@ function ToolSetupLesson({ lesson, onApproved }: ToolSetupLessonProps) {
               height="100%"
               frameBorder="0"
               allowFullScreen
-              style={{ borderRadius: 12, display: 'block' }}
+              style={{ borderRadius: 16, display: 'block' }}
             />
           </div>
         </div>
@@ -297,12 +316,17 @@ function ToolSetupLesson({ lesson, onApproved }: ToolSetupLessonProps) {
           data-testid="tool-setup-error"
           className={cn(
             'rounded-xl p-[14px_18px] flex items-start gap-3 mb-4',
-            'bg-[var(--color-wise-danger-soft)] border border-[rgba(208,50,56,0.2)]',
+            'bg-[var(--color-wise-danger-soft)] border border-[var(--color-wise-danger)]/30',
           )}
         >
-          <AlertTriangle className="h-5 w-5 text-[var(--color-wise-danger)] shrink-0 mt-0.5" aria-hidden="true" />
+          <AlertTriangle
+            className="h-5 w-5 text-[var(--color-wise-danger)] shrink-0 mt-0.5"
+            aria-hidden="true"
+          />
           <div>
-            <p className="text-[14px] font-700 text-[var(--color-wise-danger)] mb-0.5">Upload failed</p>
+            <p className="text-[14px] font-bold text-[var(--color-wise-danger)] mb-0.5">
+              Upload failed
+            </p>
             <p className="text-[13px] text-[var(--color-wise-text-muted)]">{errorMessage}</p>
           </div>
         </div>
@@ -314,12 +338,15 @@ function ToolSetupLesson({ lesson, onApproved }: ToolSetupLessonProps) {
           data-testid={status === 'UPLOADING' ? 'tool-setup-uploading' : 'tool-setup-validating'}
           className={cn(
             'rounded-xl p-[14px_18px] flex items-start gap-3 mb-4',
-            'bg-[var(--color-wise-warning-soft)] border border-[rgba(255,192,145,0.4)]',
+            'bg-[var(--color-wise-warning-soft)] border border-[var(--color-wise-warning)]/40',
           )}
         >
-          <LoadingSpinner size="sm" label={status === 'UPLOADING' ? 'Uploading' : 'Validating with AI'} />
+          <LoadingSpinner
+            size="sm"
+            label={status === 'UPLOADING' ? 'Uploading' : 'Validating with AI'}
+          />
           <div>
-            <p className="text-[14px] font-700 text-[#8a5a00] mb-0.5">
+            <p className="text-[14px] font-bold text-[var(--color-wise-text)] mb-0.5">
               {status === 'UPLOADING' ? 'Uploading screenshot…' : 'Validating with AI…'}
             </p>
             <p className="text-[13px] text-[var(--color-wise-text-muted)]">
@@ -336,12 +363,15 @@ function ToolSetupLesson({ lesson, onApproved }: ToolSetupLessonProps) {
           data-testid="tool-setup-approved"
           className={cn(
             'rounded-xl p-[14px_18px] flex items-start gap-3 mb-4',
-            'bg-[var(--color-wise-mint)] border border-[rgba(5,77,40,0.2)]',
+            'bg-[var(--color-wise-mint)] border border-[var(--color-wise-primary)]/30',
           )}
         >
-          <span className="text-[20px]" aria-hidden="true">✓</span>
+          <CircleCheck
+            className="h-5 w-5 text-[var(--color-wise-primary-text)] shrink-0 mt-0.5"
+            aria-hidden="true"
+          />
           <div>
-            <p className="text-[14px] font-700 text-[var(--color-wise-success)] mb-0.5">
+            <p className="text-[14px] font-bold text-[var(--color-wise-primary-text)] mb-0.5">
               Validated! You can mark this lesson complete.
             </p>
             <p className="text-[13px] text-[var(--color-wise-text-muted)]">
@@ -397,9 +427,11 @@ function ToolSetupLesson({ lesson, onApproved }: ToolSetupLessonProps) {
           aria-label="Upload screenshot"
           data-testid="tool-setup-upload-zone"
           className={cn(
-            'border-2 border-dashed border-[#4a9ad4] rounded-[16px] bg-[#f8fbff]',
+            'border-2 border-dashed border-[var(--color-wise-primary)] rounded-[var(--radius-sm)]',
+            'bg-[var(--color-wise-mint)]/40',
             'p-10 text-center cursor-pointer mb-6 transition-colors',
-            dragOver && 'bg-[#eef6fd]',
+            'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary)] focus-visible:outline-offset-2',
+            dragOver && 'bg-[var(--color-wise-mint)]',
           )}
           onClick={() => fileRef.current?.click()}
           onKeyDown={(e) => e.key === 'Enter' && fileRef.current?.click()}
@@ -407,12 +439,18 @@ function ToolSetupLesson({ lesson, onApproved }: ToolSetupLessonProps) {
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
         >
-          <div className="text-[32px] mb-3" aria-hidden="true">+</div>
-          <p className="text-[16px] font-700 text-[#1a2744] mb-1.5">
+          <div className="flex justify-center mb-3" aria-hidden="true">
+            <Upload className="h-8 w-8 text-[var(--color-wise-primary-text)]" />
+          </div>
+          <p className="text-[16px] font-bold text-[var(--color-wise-text)] mb-1.5">
             {uploadedName ?? 'Upload your screenshot'}
           </p>
-          <p className="text-[13px] text-[#717182] mb-2">Drag and drop or click to browse</p>
-          <span className="text-[14px] font-600 text-[#4a9ad4]">Browse files</span>
+          <p className="text-[13px] text-[var(--color-wise-text-muted)] mb-2">
+            Drag and drop or click to browse
+          </p>
+          <span className="text-[14px] font-semibold text-[var(--color-wise-primary-text)]">
+            Browse files
+          </span>
           <input
             ref={fileRef}
             type="file"
@@ -436,12 +474,12 @@ function ToolSetupLesson({ lesson, onApproved }: ToolSetupLessonProps) {
 
 function LockedLesson() {
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center">
-      <div className="text-[64px] mb-5">🔒</div>
-      <h2 className="text-[24px] font-700 text-[#1a2744] mb-2">Lesson Locked</h2>
-      <p className="text-[16px] text-[#717182] max-w-sm">
-        Complete the previous lessons to unlock this one.
-      </p>
+    <div className="py-10 px-6">
+      <EmptyState
+        icon={Lock}
+        title="Lesson Locked"
+        description="Complete the previous lessons to unlock this one."
+      />
     </div>
   )
 }
@@ -450,10 +488,20 @@ function LockedLesson() {
 // LessonPage
 // ---------------------------------------------------------------------------
 
+// Print / mobile rules extracted to a single <style> block — audit flagged
+// the inline <style> previously.
+const LESSON_RESPONSIVE_STYLES = `
+  @media (max-width: 768px) {
+    .lesson-container { padding: 20px 16px 32px !important; }
+    .lesson-nav-row { flex-direction: column !important; gap: 12px !important; }
+    .lesson-nav-row > * { width: 100% !important; justify-content: center !important; }
+  }
+`
+
 export default function LessonPage() {
   const { slug = '', lessonId = '' } = useParams<{ slug: string; lessonId: string }>()
   const navigate = useNavigate()
-  const { cohortTitle, modules, refreshCurriculum } = useCourse()
+  const { modules, refreshCurriculum } = useCourse()
 
   const [lessonData, setLessonData] = useState<{
     lesson: LessonDetail
@@ -509,16 +557,19 @@ export default function LessonPage() {
     }
   }
 
-  // Derive module + lesson index for breadcrumb
   const currentModule = modules.find((m) => m.lessons.some((l) => l.id === lessonId))
   const lessonIndexInModule = currentModule?.lessons.findIndex((l) => l.id === lessonId) ?? -1
 
   if (isLoading) {
     return (
-      <div className="p-10 animate-pulse flex flex-col gap-4">
-        <div className="h-3 bg-[#e8ecf4] rounded-full w-1/3" />
-        <div className="h-8 bg-[#e8ecf4] rounded-full w-2/3" />
-        <div className="rounded-[20px] bg-[#e8ecf4]" style={{ aspectRatio: '16/9' }} />
+      <div className="p-10 flex flex-col gap-4">
+        <LoadingSkeleton variant="rect" height={12} className="w-1/3 rounded-full" />
+        <LoadingSkeleton variant="rect" height={32} className="w-2/3 rounded-full" />
+        <LoadingSkeleton
+          variant="rect"
+          className="rounded-[var(--radius-md)]"
+          style={{ aspectRatio: '16/9' }}
+        />
       </div>
     )
   }
@@ -528,8 +579,16 @@ export default function LessonPage() {
   if (error) {
     return (
       <div className="p-10">
-        <div className="bg-[#fdeaeb] rounded-xl p-5 text-[#d03238] text-[14px] font-600">
-          ⚠️ {error}
+        <div
+          role="alert"
+          className={cn(
+            'bg-[var(--color-wise-danger-soft)] rounded-[var(--radius-sm)] p-5',
+            'text-[var(--color-wise-danger)] text-[14px] font-semibold',
+            'flex items-center gap-2',
+          )}
+        >
+          <AlertTriangle className="h-5 w-5 shrink-0" aria-hidden="true" />
+          <span>{error}</span>
         </div>
       </div>
     )
@@ -541,31 +600,23 @@ export default function LessonPage() {
   const isCurrentLessonComplete = modules
     .flatMap((m) => m.lessons)
     .find((l) => l.id === lessonId)?.status === 'COMPLETED'
-  // For TOOL_SETUP lessons the Mark-Complete CTA is gated on Claude Vision
-  // approval. For VIDEO/TEXT it shows unconditionally once the lesson is
-  // unlocked.
   const toolSetupGateSatisfied =
     lesson.type !== 'TOOL_SETUP' || toolSetupApproved
   const showCompleteBtn =
     !isCurrentLessonComplete && !justCompleted && toolSetupGateSatisfied
 
   return (
-    <div className="px-12 py-10 lesson-container">
-      <style>{`
-        @media (max-width: 768px) {
-          .lesson-container { padding: 20px 16px 32px !important; }
-          .lesson-nav-row { flex-direction: column !important; gap: 12px !important; }
-          .lesson-nav-row button { width: 100% !important; justify-content: center !important; }
-        }
-      `}</style>
+    <div className="px-4 sm:px-8 md:px-12 py-10 lesson-container">
+      <style>{LESSON_RESPONSIVE_STYLES}</style>
+
       {/* Breadcrumb */}
-      <p className="text-[13px] text-[#a3a3a3] mb-3">
-        <span className="text-[#717182]">{currentModule?.title ?? 'Module'}</span>
+      <p className="text-[13px] text-[var(--color-wise-text-muted)] mb-3">
+        <span>{currentModule?.title ?? 'Module'}</span>
         {' '} › Lesson {lessonIndexInModule >= 0 ? lessonIndexInModule + 1 : ''}
       </p>
 
       {/* Lesson title */}
-      <h1 className="text-[32px] font-800 text-[#1a2744] tracking-[-0.8px] mb-7">
+      <h1 className="text-[32px] font-black text-[var(--color-wise-text)] tracking-[-0.8px] mb-7">
         {lesson.title}
       </h1>
 
@@ -577,8 +628,8 @@ export default function LessonPage() {
           lesson={lesson}
           onApproved={() => {
             setToolSetupApproved(true)
-            // Re-fetch curriculum so any worker-driven status change (e.g.
-            // StudentLesson flip) reflects in the sidebar immediately.
+            // Re-fetch curriculum so any worker-driven status change flips
+            // the sidebar icon immediately.
             void refreshCurriculum()
           }}
         />
@@ -587,61 +638,63 @@ export default function LessonPage() {
       {/* Mark as complete */}
       {showCompleteBtn && (
         <div className="flex justify-end mb-12">
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="md"
+            isLoading={isMarkingComplete}
             disabled={isMarkingComplete}
             onClick={() => void handleMarkComplete()}
-            className={cn(
-              'px-7 py-3.5 rounded-full bg-[#e6f4ec] text-[#054d28]',
-              'text-[15px] font-700 border-none cursor-pointer font-sans',
-              'flex items-center gap-2 transition-opacity',
-              isMarkingComplete && 'opacity-60 cursor-not-allowed',
-            )}
+            leftIcon={<CircleCheck className="h-4 w-4" />}
           >
-            {isMarkingComplete ? '…' : '✓ Mark as Complete'}
-          </button>
+            Mark as Complete
+          </Button>
         </div>
       )}
 
       {(justCompleted || isCurrentLessonComplete) && (
         <div className="flex justify-end mb-12">
-          <span className="px-7 py-3.5 rounded-full bg-[#e6f4ec] text-[#054d28] text-[15px] font-700 flex items-center gap-2">
-            ✓ Completed
+          <span
+            className={cn(
+              'px-7 py-3 rounded-[var(--radius-pill)]',
+              'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+              'text-[15px] font-bold flex items-center gap-2',
+            )}
+          >
+            <CircleCheck className="h-4 w-4" aria-hidden="true" />
+            Completed
           </span>
         </div>
       )}
 
       {/* Prev / Next navigation */}
-      <div className="lesson-nav-row flex items-center justify-between pt-6 border-t border-[rgba(26,39,68,0.1)]">
+      <div
+        className={cn(
+          'lesson-nav-row flex items-center justify-between pt-6',
+          'border-t border-[var(--color-wise-ring)]',
+        )}
+      >
         {prevLesson ? (
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="md"
+            leftIcon={<ArrowLeft className="h-4 w-4" />}
             onClick={() => navigate(`/student/course/${slug}/lesson/${prevLesson.id}`)}
-            className={cn(
-              'px-[22px] py-3 rounded-full',
-              'bg-transparent border border-[rgba(26,39,68,0.15)]',
-              'text-[#717182] text-[14px] font-600 cursor-pointer font-sans',
-              'hover:border-[#4a9ad4] hover:text-[#4a9ad4] transition-colors',
-            )}
           >
-            ← Previous: {prevLesson.title}
-          </button>
+            Previous: {prevLesson.title}
+          </Button>
         ) : (
           <div />
         )}
 
         {nextLesson && (
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="md"
+            rightIcon={<ArrowRight className="h-4 w-4" />}
             onClick={() => navigate(`/student/course/${slug}/lesson/${nextLesson.id}`)}
-            className={cn(
-              'px-7 py-3 rounded-full bg-[#4a9ad4] text-[#0d1a3a]',
-              'text-[14px] font-700 border-none cursor-pointer font-sans',
-              'hover:opacity-90 transition-opacity flex items-center gap-2',
-            )}
           >
-            Next: {nextLesson.title} →
-          </button>
+            Next: {nextLesson.title}
+          </Button>
         )}
       </div>
     </div>

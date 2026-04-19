@@ -1,8 +1,28 @@
 // FIR-169 — Full notifications page with mark-all-read and empty state
+// Sprint 3 Story 15 — Wise theme migration. Rows now ride on Wise surface
+// tokens with lucide type-icons; the mark-all-read CTA is a ghost <Button>.
+// The empty-state path consolidates onto the canonical <EmptyState>.
+//
+// NB: the hook does not expose a per-row delete mutation today, so we don't
+// render a delete/confirm dialog here — adding that business logic is out of
+// scope for a theme migration story. When delete lands in a later sprint it
+// should wire through <Button variant="danger"> + <ConfirmDialog>.
 import { Link } from 'react-router'
-import { ArrowLeft } from 'lucide-react'
+import {
+  ArrowLeft,
+  Bell,
+  BellOff,
+  GraduationCap,
+  CircleCheck,
+  Zap,
+  Megaphone,
+  type LucideIcon,
+} from 'lucide-react'
 import { useNotifications } from '../../hooks/useNotifications'
 import { TopNav } from '../../components/TopNav'
+import { Button } from '../../components/ui/Button'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { ListItemSkeleton } from '../../components/ui/LoadingSkeleton'
 import { cn } from '../../lib/utils'
 import type { Notification } from '../../lib/api'
 
@@ -23,23 +43,23 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function typeIcon(type: string): string {
+function typeIcon(type: string): LucideIcon {
   switch (type) {
-    case 'enrollment_confirmed': return '🎓'
-    case 'payment_approved': return '✅'
-    case 're_engagement': return '⚡'
-    case 'broadcast': return '📢'
-    default: return '🔔'
+    case 'enrollment_confirmed': return GraduationCap
+    case 'payment_approved':     return CircleCheck
+    case 're_engagement':        return Zap
+    case 'broadcast':            return Megaphone
+    default:                     return Bell
   }
 }
 
 function typeLabel(type: string): string {
   switch (type) {
     case 'enrollment_confirmed': return 'Enrollment'
-    case 'payment_approved': return 'Payment'
-    case 're_engagement': return 'Re-engagement'
-    case 'broadcast': return 'Announcement'
-    default: return 'Notification'
+    case 'payment_approved':     return 'Payment'
+    case 're_engagement':        return 'Re-engagement'
+    case 'broadcast':            return 'Announcement'
+    default:                     return 'Notification'
   }
 }
 
@@ -54,6 +74,7 @@ interface NotificationRowProps {
 
 function NotificationRow({ notification, onRead }: NotificationRowProps) {
   const { _id, title, body, isRead, createdAt, type, link } = notification
+  const Icon = typeIcon(type)
 
   function handleClick() {
     if (!isRead) onRead(_id)
@@ -62,10 +83,11 @@ function NotificationRow({ notification, onRead }: NotificationRowProps) {
   const inner = (
     <div
       className={cn(
-        'flex items-start gap-4 p-5 rounded-[16px] border transition-all cursor-pointer',
+        'flex items-start gap-4 p-5 rounded-[var(--radius-md)] border transition-colors cursor-pointer',
+        'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary)] focus-visible:outline-offset-2',
         isRead
-          ? 'bg-white border-[rgba(26,39,68,0.08)] hover:border-[rgba(26,39,68,0.15)]'
-          : 'bg-[#f0f7ff] border-[#4a9ad4]/20 hover:border-[#4a9ad4]/40',
+          ? 'bg-[var(--color-wise-surface)] border-[var(--color-wise-ring)] hover:border-[var(--color-wise-ring-strong)]'
+          : 'bg-[var(--color-wise-mint)] border-[var(--color-wise-primary)]',
       )}
       onClick={handleClick}
       role="button"
@@ -73,15 +95,17 @@ function NotificationRow({ notification, onRead }: NotificationRowProps) {
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick() }}
       aria-label={`${isRead ? '' : 'Unread: '}${title}`}
     >
-      {/* Type icon */}
+      {/* Type icon chip — mint surface, primary-text glyph. */}
       <div
         className={cn(
-          'w-11 h-11 rounded-[12px] flex items-center justify-center text-[22px] flex-shrink-0',
-          isRead ? 'bg-[#f0f0f0]' : 'bg-[#eef6fd]',
+          'w-11 h-11 rounded-[var(--radius-sm)] flex items-center justify-center flex-shrink-0',
+          isRead
+            ? 'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-warm)]'
+            : 'bg-[var(--color-wise-surface)] text-[var(--color-wise-primary-text)]',
         )}
         aria-hidden="true"
       >
-        {typeIcon(type)}
+        <Icon className="h-5 w-5" />
       </div>
 
       {/* Content */}
@@ -89,27 +113,29 @@ function NotificationRow({ notification, onRead }: NotificationRowProps) {
         <div className="flex items-start justify-between gap-2 mb-1">
           <div className="flex items-center gap-2 flex-wrap">
             <p className={cn(
-              'text-[15px] text-[#1a2744] leading-snug',
-              !isRead ? 'font-[700]' : 'font-[600]',
+              'text-[15px] text-[var(--color-wise-text)] leading-snug',
+              !isRead ? 'font-bold' : 'font-semibold',
             )}>
               {title}
             </p>
             <span className={cn(
-              'text-[11px] font-[600] px-[8px] py-[2px] rounded-full',
-              isRead ? 'bg-[#f0f0f0] text-[#717182]' : 'bg-[#4a9ad4]/10 text-[#4a9ad4]',
+              'text-[11px] font-semibold px-[8px] py-[2px] rounded-[var(--radius-pill)]',
+              isRead
+                ? 'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)]'
+                : 'bg-[var(--color-wise-surface)] text-[var(--color-wise-primary-text)]',
             )}>
               {typeLabel(type)}
             </span>
           </div>
           {!isRead && (
             <div
-              className="w-2.5 h-2.5 rounded-full bg-[#4a9ad4] flex-shrink-0 mt-1"
+              className="w-2.5 h-2.5 rounded-full bg-[var(--color-wise-primary)] flex-shrink-0 mt-1"
               aria-label="Unread"
             />
           )}
         </div>
-        <p className="text-[14px] text-[#717182] leading-relaxed mb-2">{body}</p>
-        <p className="text-[12px] text-[#a3a3a3]">{relativeTime(createdAt)}</p>
+        <p className="text-[14px] text-[var(--color-wise-text-muted)] leading-relaxed mb-2">{body}</p>
+        <p className="text-[12px] text-[var(--color-wise-text-muted)]">{relativeTime(createdAt)}</p>
       </div>
     </div>
   )
@@ -123,24 +149,6 @@ function NotificationRow({ notification, onRead }: NotificationRowProps) {
   }
 
   return inner
-}
-
-// ---------------------------------------------------------------------------
-// Skeleton
-// ---------------------------------------------------------------------------
-
-function NotificationSkeleton() {
-  return (
-    <div className="flex items-start gap-4 p-5 rounded-[16px] bg-white border border-[rgba(26,39,68,0.08)] animate-pulse">
-      <div className="w-11 h-11 rounded-[12px] bg-[#e8ecf4] flex-shrink-0" />
-      <div className="flex-1 space-y-2">
-        <div className="h-3.5 bg-[#e8ecf4] rounded-full w-3/5" />
-        <div className="h-3 bg-[#e8ecf4] rounded-full w-full" />
-        <div className="h-3 bg-[#e8ecf4] rounded-full w-2/3" />
-        <div className="h-2.5 bg-[#e8ecf4] rounded-full w-1/4 mt-1" />
-      </div>
-    </div>
-  )
 }
 
 // ---------------------------------------------------------------------------
@@ -159,7 +167,7 @@ export default function NotificationsPage() {
   } = useNotifications()
 
   return (
-    <div className="min-h-screen bg-[#f8f9fb]">
+    <div className="min-h-screen bg-[var(--color-wise-canvas)]">
       <TopNav />
 
       <main className="max-w-[720px] mx-auto px-4 sm:px-6 py-8 sm:py-10">
@@ -167,7 +175,11 @@ export default function NotificationsPage() {
         <div className="mb-6">
           <Link
             to="/student/dashboard"
-            className="inline-flex items-center gap-1.5 text-[13px] font-[600] text-[#717182] hover:text-[#1a2744] no-underline mb-4 transition-colors"
+            className={cn(
+              'inline-flex items-center gap-1.5 text-[13px] font-semibold',
+              'text-[var(--color-wise-text-muted)] hover:text-[var(--color-wise-text)]',
+              'no-underline mb-4 transition-colors',
+            )}
           >
             <ArrowLeft size={14} aria-hidden="true" />
             Back to Dashboard
@@ -175,36 +187,33 @@ export default function NotificationsPage() {
 
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-[28px] sm:text-[32px] font-[800] text-[#1a2744] leading-tight">
+              <h1 className="text-[28px] sm:text-[32px] font-black text-[var(--color-wise-text)] leading-tight tracking-[-0.5px]">
                 Notifications
               </h1>
               {unreadCount > 0 && (
-                <p className="text-[14px] text-[#717182] mt-1">
+                <p className="text-[14px] text-[var(--color-wise-text-muted)] mt-1">
                   {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
                 </p>
               )}
             </div>
 
             {unreadCount > 0 && (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => markAllRead()}
+                isLoading={isMarkingAll}
                 disabled={isMarkingAll}
-                className={cn(
-                  'flex-shrink-0 px-4 py-2 rounded-full text-[13px] font-[700]',
-                  'bg-[#1a2744] text-white hover:opacity-90 transition-opacity',
-                  'disabled:opacity-50 disabled:cursor-not-allowed border-none cursor-pointer',
-                )}
               >
-                {isMarkingAll ? 'Marking…' : 'Mark all read'}
-              </button>
+                Mark all read
+              </Button>
             )}
           </div>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="mb-4 bg-[#fdeaeb] text-[#d03238] text-[14px] font-[600] rounded-[12px] px-4 py-3">
+          <div className="mb-4 bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] text-[14px] font-semibold rounded-[var(--radius-sm)] px-4 py-3">
             Failed to load notifications. Please try again.
           </div>
         )}
@@ -213,21 +222,22 @@ export default function NotificationsPage() {
         <div className="flex flex-col gap-3">
           {isLoading ? (
             <>
-              <NotificationSkeleton />
-              <NotificationSkeleton />
-              <NotificationSkeleton />
-              <NotificationSkeleton />
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="p-5 rounded-[var(--radius-md)] bg-[var(--color-wise-surface)] border border-[var(--color-wise-ring)]"
+                >
+                  <ListItemSkeleton />
+                </div>
+              ))}
             </>
           ) : notifications.length === 0 ? (
-            // Empty state
-            <div className="bg-white rounded-[20px] border border-[rgba(26,39,68,0.08)] py-20 text-center">
-              <div className="text-[56px] mb-4">🔔</div>
-              <h2 className="text-[20px] font-[700] text-[#1a2744] mb-2">
-                You're all caught up!
-              </h2>
-              <p className="text-[15px] text-[#717182]">
-                No notifications right now. Check back later.
-              </p>
+            <div className="bg-[var(--color-wise-surface)] rounded-[var(--radius-md)] border border-[var(--color-wise-ring)]">
+              <EmptyState
+                icon={BellOff}
+                title="You're all caught up!"
+                description="No notifications right now. Check back later."
+              />
             </div>
           ) : (
             notifications.map((n) => (

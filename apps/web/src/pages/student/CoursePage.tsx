@@ -1,34 +1,75 @@
 // FIR-52 — Curriculum browser: two-column LMS shell with sidebar accordion + content area
 // FIR-73 — Mobile responsive: sidebar collapses to a toggle drawer on small screens
+// Sprint 3 Story 15 — Wise theme migration.
+//
+// Curriculum sidebar now rides on Wise surface tokens with mint-accented
+// active lessons. Lesson-status glyphs are lucide icons. The mobile drawer
+// preserves the Wave 6 hamburger pattern (Menu + X) and is rendered via
+// role="dialog" with a scrim. User dropdown is inline only for now — a later
+// story may consolidate on a shared primitive.
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useNavigate, useParams } from 'react-router'
-import { Menu, X } from 'lucide-react'
+import {
+  Menu,
+  X,
+  Check,
+  Play,
+  Lock,
+  ArrowLeft,
+  LogOut,
+  GraduationCap,
+  Bell,
+  Settings as SettingsIcon,
+  Calendar,
+} from 'lucide-react'
 import { fetchCurriculum, type CurriculumModule, type LessonSummary } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
+import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton'
 import { cn } from '../../lib/utils'
 
 // ---------------------------------------------------------------------------
-// Lesson status icon
+// Lesson status icon — Wise mint for completed, primary for in-progress,
+// muted for locked.
 // ---------------------------------------------------------------------------
 
 function LessonIcon({ status }: { status: LessonSummary['status'] }) {
+  const base = 'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0'
+
   if (status === 'COMPLETED') {
     return (
-      <div className="w-6 h-6 rounded-full bg-[#e8f4fd] text-[#4a9ad4] text-[11px] font-700 flex items-center justify-center flex-shrink-0">
-        ✓
+      <div
+        className={cn(
+          base,
+          'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+        )}
+        aria-hidden="true"
+      >
+        <Check className="h-3.5 w-3.5" strokeWidth={3} />
       </div>
     )
   }
   if (status === 'IN_PROGRESS') {
     return (
-      <div className="w-6 h-6 rounded-full bg-[#4a9ad4] text-white text-[11px] font-700 flex items-center justify-center flex-shrink-0">
-        ▶
+      <div
+        className={cn(
+          base,
+          'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+        )}
+        aria-hidden="true"
+      >
+        <Play className="h-3 w-3 fill-current" />
       </div>
     )
   }
   return (
-    <div className="w-6 h-6 rounded-full bg-[#f0f0f0] text-[#d4d4d4] text-[10px] flex items-center justify-center flex-shrink-0">
-      🔒
+    <div
+      className={cn(
+        base,
+        'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)]',
+      )}
+      aria-hidden="true"
+    >
+      <Lock className="h-3 w-3" />
     </div>
   )
 }
@@ -56,28 +97,33 @@ function ModuleRow({ module, currentLessonId, slug, defaultOpen = false }: Modul
   }, [currentLessonId, module.lessons])
 
   return (
-    <div className="border-b border-[rgba(26,39,68,0.06)]">
+    <div className="border-b border-[var(--color-wise-ring)]">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={cn(
           'w-full flex items-center justify-between px-4 py-[14px]',
-          'cursor-pointer hover:bg-[#f8f9fb] transition-colors',
+          'cursor-pointer hover:bg-[var(--color-wise-surface-soft)] transition-colors',
           'bg-transparent border-none text-left font-sans',
+          'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary)] focus-visible:outline-offset-[-2px]',
         )}
         aria-expanded={open}
       >
-        <span className="text-[14px] font-700 text-[#1a2744]">{module.title}</span>
+        <span className="text-[14px] font-bold text-[var(--color-wise-text)]">
+          {module.title}
+        </span>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-600 bg-[#e8ecf4] text-[#717182] px-2 py-0.5 rounded-full">
+          <span className="text-[11px] font-semibold bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)] px-2 py-0.5 rounded-[var(--radius-pill)]">
             {module.lessons.length}
           </span>
-          <span className="text-[14px] text-[#a3a3a3]">{open ? '↑' : '›'}</span>
+          <span className="text-[14px] text-[var(--color-wise-text-muted)]">
+            {open ? '↑' : '›'}
+          </span>
         </div>
       </button>
 
       {open && (
-        <div className="bg-[#f8f9fb]">
+        <div className="bg-[var(--color-wise-canvas)]">
           {module.lessons.map((lesson) => {
             const isCurrent = lesson.id === currentLessonId
             const isLocked = lesson.status === 'LOCKED'
@@ -93,10 +139,11 @@ function ModuleRow({ module, currentLessonId, slug, defaultOpen = false }: Modul
                 className={cn(
                   'w-full flex items-center gap-2.5 py-[10px] pr-4 font-sans text-left',
                   'cursor-pointer border-none bg-transparent',
-                  'border-b border-[rgba(26,39,68,0.04)] transition-colors',
+                  'border-b border-[var(--color-wise-ring)] transition-colors',
+                  'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary)] focus-visible:outline-offset-[-2px]',
                   isCurrent
-                    ? 'bg-[#eef6fd] border-l-[3px] border-l-[#4a9ad4] pl-[25px]'
-                    : 'pl-7 hover:bg-[#f0f4f8]',
+                    ? 'bg-[var(--color-wise-mint)] border-l-[3px] border-l-[var(--color-wise-primary)] pl-[25px]'
+                    : 'pl-7 hover:bg-[var(--color-wise-surface-soft)]',
                   isLocked && 'cursor-not-allowed',
                 )}
                 aria-current={isCurrent ? 'true' : undefined}
@@ -104,15 +151,15 @@ function ModuleRow({ module, currentLessonId, slug, defaultOpen = false }: Modul
                 <LessonIcon status={lesson.status} />
                 <span
                   className={cn(
-                    'text-[13px] font-500 flex-1 leading-snug',
-                    isCurrent && 'text-[#4a9ad4] font-600',
-                    isLocked && 'text-[#a3a3a3]',
-                    !isCurrent && !isLocked && 'text-[#1a2744]',
+                    'text-[13px] font-medium flex-1 leading-snug',
+                    isCurrent && 'text-[var(--color-wise-primary-text)] font-semibold',
+                    isLocked && 'text-[var(--color-wise-text-muted)]',
+                    !isCurrent && !isLocked && 'text-[var(--color-wise-text)]',
                   )}
                 >
                   {lesson.title}
                 </span>
-                <span className="text-[11px] text-[#a3a3a3] flex-shrink-0">
+                <span className="text-[11px] text-[var(--color-wise-text-muted)] flex-shrink-0">
                   {lesson.estimatedMinutes}m
                 </span>
               </button>
@@ -153,16 +200,16 @@ export function useCourse(): CourseContextValue {
 
 function SidebarSkeleton() {
   return (
-    <div className="p-4 flex flex-col gap-3 animate-pulse">
-      <div className="h-3 bg-[#e8ecf4] rounded-full w-4/5" />
-      <div className="h-2 bg-[#e8ecf4] rounded-full w-full" />
-      <div className="h-2 bg-[#e8ecf4] rounded-full w-1/2" />
+    <div className="p-4 flex flex-col gap-3">
+      <LoadingSkeleton variant="rect" height={12} className="w-4/5 rounded-full" />
+      <LoadingSkeleton variant="rect" height={8} className="w-full rounded-full" />
+      <LoadingSkeleton variant="rect" height={8} className="w-1/2 rounded-full" />
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// User dropdown (Sign Out, Dashboard, Settings)
+// User dropdown (Sign Out, Dashboard, Settings) — migrated to Wise tokens
 // ---------------------------------------------------------------------------
 
 function UserDropdown({ initials }: { initials: string }) {
@@ -171,7 +218,6 @@ function UserDropdown({ initials }: { initials: string }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  // Close on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
@@ -192,8 +238,12 @@ function UserDropdown({ initials }: { initials: string }) {
         onClick={() => setOpen((o) => !o)}
         aria-label="User menu"
         aria-expanded={open}
-        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-700 border-none cursor-pointer"
-        style={{ background: 'linear-gradient(135deg,#4a9ad4,#1a2744)' }}
+        className={cn(
+          'w-8 h-8 rounded-full flex items-center justify-center',
+          'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+          'text-[12px] font-bold border-none cursor-pointer',
+          'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2',
+        )}
       >
         {initials}
       </button>
@@ -201,48 +251,67 @@ function UserDropdown({ initials }: { initials: string }) {
       {open && (
         <div
           className={cn(
-            'absolute right-0 top-[calc(100%+8px)] z-50 w-[180px]',
-            'bg-white rounded-[14px] shadow-[0_8px_32px_rgba(13,26,58,0.18)]',
-            'border border-[rgba(26,39,68,0.08)] overflow-hidden py-1',
+            'absolute right-0 top-[calc(100%+8px)] z-50 w-[200px]',
+            'bg-[var(--color-wise-surface)] rounded-[var(--radius-sm)]',
+            'shadow-[var(--shadow-card)]',
+            'border border-[var(--color-wise-ring)] overflow-hidden py-1',
           )}
           role="menu"
         >
-          <button
-            type="button"
-            role="menuitem"
+          <DropdownItem
+            icon={<GraduationCap className="h-4 w-4" />}
+            label="My Courses"
             onClick={() => { setOpen(false); navigate('/student/dashboard') }}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-[600] text-[#1a2744] hover:bg-[#f0f7ff] text-left bg-transparent border-none cursor-pointer"
-          >
-            <span>📚</span> My Courses
-          </button>
-          <button
-            type="button"
-            role="menuitem"
+          />
+          <DropdownItem
+            icon={<Bell className="h-4 w-4" />}
+            label="Notifications"
             onClick={() => { setOpen(false); navigate('/student/notifications') }}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-[600] text-[#1a2744] hover:bg-[#f0f7ff] text-left bg-transparent border-none cursor-pointer"
-          >
-            <span>🔔</span> Notifications
-          </button>
-          <button
-            type="button"
-            role="menuitem"
+          />
+          <DropdownItem
+            icon={<SettingsIcon className="h-4 w-4" />}
+            label="Settings"
             onClick={() => { setOpen(false); navigate('/student/settings') }}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-[600] text-[#1a2744] hover:bg-[#f0f7ff] text-left bg-transparent border-none cursor-pointer"
-          >
-            <span>⚙️</span> Settings
-          </button>
-          <div className="h-px bg-[rgba(26,39,68,0.08)] mx-3 my-1" />
-          <button
-            type="button"
-            role="menuitem"
+          />
+          <div className="h-px bg-[var(--color-wise-ring)] mx-3 my-1" />
+          <DropdownItem
+            icon={<LogOut className="h-4 w-4" />}
+            label="Sign out"
             onClick={handleSignOut}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-[600] text-[#d03238] hover:bg-[#fdeaeb] text-left bg-transparent border-none cursor-pointer"
-          >
-            <span>↩</span> Sign out
-          </button>
+            variant="danger"
+          />
         </div>
       )}
     </div>
+  )
+}
+
+interface DropdownItemProps {
+  icon: React.ReactNode
+  label: string
+  onClick: () => void
+  variant?: 'default' | 'danger'
+}
+
+function DropdownItem({ icon, label, onClick, variant = 'default' }: DropdownItemProps) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className={cn(
+        'w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-semibold',
+        'text-left bg-transparent border-none cursor-pointer transition-colors',
+        variant === 'danger'
+          ? 'text-[var(--color-wise-danger)] hover:bg-[var(--color-wise-danger-soft)]'
+          : 'text-[var(--color-wise-text)] hover:bg-[var(--color-wise-surface-soft)]',
+      )}
+    >
+      <span className="text-[var(--color-wise-text-muted)]" aria-hidden="true">
+        {icon}
+      </span>
+      {label}
+    </button>
   )
 }
 
@@ -319,13 +388,13 @@ export default function CoursePage() {
 
   return (
     <CourseContext.Provider value={contextValue}>
-      <div className="min-h-screen bg-[#f8f9fb] flex flex-col">
+      <div className="min-h-screen bg-[var(--color-wise-canvas)] flex flex-col">
 
         {/* Top bar */}
         <header
           className={cn(
-            'h-14 bg-white flex items-center px-4 sm:px-5 gap-3 sm:gap-4 flex-shrink-0',
-            '[box-shadow:inset_0_-1px_0_rgba(26,39,68,0.1)]',
+            'h-14 bg-[var(--color-wise-surface)] flex items-center px-4 sm:px-5 gap-3 sm:gap-4 flex-shrink-0',
+            'border-b border-[var(--color-wise-ring)]',
           )}
         >
           {/* Mobile sidebar toggle */}
@@ -333,22 +402,36 @@ export default function CoursePage() {
             type="button"
             onClick={() => setSidebarOpen(true)}
             aria-label="Open course curriculum"
-            className="lg:hidden p-2 rounded-lg text-[#717182] hover:bg-[#f0f0f0] transition-colors flex-shrink-0 bg-transparent border-none cursor-pointer"
+            className={cn(
+              'lg:hidden p-2 rounded-[var(--radius-sm)] text-[var(--color-wise-text-muted)]',
+              'hover:bg-[var(--color-wise-surface-soft)] transition-colors flex-shrink-0',
+              'bg-transparent border-none cursor-pointer',
+              'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary)] focus-visible:outline-offset-2',
+            )}
           >
             <Menu size={18} aria-hidden="true" />
           </button>
 
           <Link
             to="/student/dashboard"
-            className="hidden sm:flex items-center gap-1.5 text-[14px] font-600 text-[#717182] no-underline hover:text-[#1a2744] transition-colors flex-shrink-0"
+            className={cn(
+              'hidden sm:flex items-center gap-1.5 text-[14px] font-semibold',
+              'text-[var(--color-wise-text-muted)] no-underline',
+              'hover:text-[var(--color-wise-text)] transition-colors flex-shrink-0',
+            )}
           >
-            <span className="text-[18px]">←</span> Dashboard
+            <ArrowLeft size={16} aria-hidden="true" /> Dashboard
           </Link>
-          <div className="hidden sm:block w-px h-6 bg-[rgba(26,39,68,0.12)]" />
-          <p className="text-[14px] sm:text-[15px] font-600 text-[#1a2744] flex-1 text-center truncate">
+          <div className="hidden sm:block w-px h-6 bg-[var(--color-wise-ring)]" />
+          <p className="text-[14px] sm:text-[15px] font-semibold text-[var(--color-wise-text)] flex-1 text-center truncate">
             {isLoading ? '…' : cohortTitle}
           </p>
-          <span className="hidden sm:inline text-[13px] font-600 text-[#717182] bg-[#f0f0f0] px-3 py-1 rounded-full flex-shrink-0">
+          <span
+            className={cn(
+              'hidden sm:inline text-[13px] font-semibold text-[var(--color-wise-primary-text)]',
+              'bg-[var(--color-wise-mint)] px-3 py-1 rounded-[var(--radius-pill)] flex-shrink-0',
+            )}
+          >
             {lessonFraction}
           </span>
           <UserDropdown initials={initials} />
@@ -366,18 +449,35 @@ export default function CoursePage() {
               aria-label="Course curriculum"
             >
               <div
-                className="fixed inset-0 bg-[rgba(13,26,58,0.4)]"
+                className="fixed inset-0 bg-black/40"
                 aria-hidden="true"
                 onClick={() => setSidebarOpen(false)}
               />
-              <aside className="relative z-50 w-[280px] bg-white h-full overflow-y-auto shadow-xl flex flex-col">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-[rgba(26,39,68,0.08)]">
-                  <span className="text-[14px] font-[700] text-[#1a2744]">Curriculum</span>
+              <aside
+                className={cn(
+                  'relative z-50 w-[280px] bg-[var(--color-wise-surface)] h-full',
+                  'overflow-y-auto shadow-[var(--shadow-card)] flex flex-col',
+                )}
+              >
+                <div
+                  className={cn(
+                    'flex items-center justify-between px-5 py-4',
+                    'border-b border-[var(--color-wise-ring)]',
+                  )}
+                >
+                  <span className="text-[14px] font-bold text-[var(--color-wise-text)]">
+                    Curriculum
+                  </span>
                   <button
                     type="button"
                     onClick={() => setSidebarOpen(false)}
                     aria-label="Close curriculum"
-                    className="p-1 rounded-lg text-[#717182] hover:bg-[#f0f0f0] transition-colors bg-transparent border-none cursor-pointer"
+                    className={cn(
+                      'p-1 rounded-[var(--radius-sm)] text-[var(--color-wise-text-muted)]',
+                      'hover:bg-[var(--color-wise-surface-soft)] transition-colors',
+                      'bg-transparent border-none cursor-pointer',
+                      'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary)] focus-visible:outline-offset-2',
+                    )}
                   >
                     <X size={18} />
                   </button>
@@ -385,7 +485,9 @@ export default function CoursePage() {
                 {isLoading ? (
                   <SidebarSkeleton />
                 ) : error ? (
-                  <p className="p-4 text-[13px] text-[#d03238]">Failed to load curriculum</p>
+                  <p className="p-4 text-[13px] text-[var(--color-wise-danger)]">
+                    Failed to load curriculum
+                  </p>
                 ) : (
                   modules.map((mod, i) => (
                     <ModuleRow
@@ -403,19 +505,28 @@ export default function CoursePage() {
 
           {/* Desktop Sidebar */}
           <aside
-            className="hidden lg:flex w-[280px] bg-white border-r border-[rgba(26,39,68,0.1)] flex-col flex-shrink-0 overflow-y-auto"
+            className={cn(
+              'hidden lg:flex w-[280px] bg-[var(--color-wise-surface)]',
+              'border-r border-[var(--color-wise-ring)] flex-col flex-shrink-0 overflow-y-auto',
+            )}
             aria-label="Course curriculum"
           >
             {/* Sidebar header */}
-            <div className="p-5 border-b border-[rgba(26,39,68,0.08)]">
-              <p className="text-[15px] font-700 text-[#1a2744] mb-1 truncate">{cohortTitle}</p>
+            <div className="p-5 border-b border-[var(--color-wise-ring)]">
+              <p className="text-[15px] font-bold text-[var(--color-wise-text)] mb-1 truncate">
+                {cohortTitle}
+              </p>
               <div className="flex justify-between mb-1.5">
-                <span className="text-[13px] font-700 text-[#1a2744]">{completionPercentage}% complete</span>
-                <span className="text-[12px] text-[#717182]">{lessonsCompleted} / {totalLessons}</span>
+                <span className="text-[13px] font-bold text-[var(--color-wise-text)]">
+                  {completionPercentage}% complete
+                </span>
+                <span className="text-[12px] text-[var(--color-wise-text-muted)]">
+                  {lessonsCompleted} / {totalLessons}
+                </span>
               </div>
-              <div className="h-1 bg-[#e8ecf4] rounded-full">
+              <div className="h-1 bg-[var(--color-wise-surface-soft)] rounded-[var(--radius-pill)] overflow-hidden">
                 <div
-                  className="h-full bg-[#4a9ad4] rounded-full transition-all"
+                  className="h-full bg-[var(--color-wise-primary)] rounded-[var(--radius-pill)] transition-all"
                   style={{ width: `${completionPercentage}%` }}
                 />
               </div>
@@ -425,7 +536,9 @@ export default function CoursePage() {
             {isLoading ? (
               <SidebarSkeleton />
             ) : error ? (
-              <p className="p-4 text-[13px] text-[#d03238]">Failed to load curriculum</p>
+              <p className="p-4 text-[13px] text-[var(--color-wise-danger)]">
+                Failed to load curriculum
+              </p>
             ) : (
               modules.map((mod, i) => (
                 <ModuleRow
@@ -439,12 +552,17 @@ export default function CoursePage() {
             )}
 
             {/* Footer links */}
-            <div className="mt-auto p-4 border-t border-[rgba(26,39,68,0.08)]">
+            <div className="mt-auto p-4 border-t border-[var(--color-wise-ring)]">
               <Link
                 to={`/student/course/${slug}/sessions`}
-                className="flex items-center gap-2 text-[13px] font-600 text-[#717182] px-3 py-2 rounded-lg hover:bg-[#f0f0f0] hover:text-[#1a2744] transition-colors no-underline"
+                className={cn(
+                  'flex items-center gap-2 text-[13px] font-semibold',
+                  'text-[var(--color-wise-text-muted)] px-3 py-2 rounded-[var(--radius-sm)]',
+                  'hover:bg-[var(--color-wise-surface-soft)] hover:text-[var(--color-wise-text)]',
+                  'transition-colors no-underline',
+                )}
               >
-                <span className="text-[16px]">📅</span> Live Sessions
+                <Calendar className="h-4 w-4" aria-hidden="true" /> Live Sessions
               </Link>
             </div>
           </aside>
