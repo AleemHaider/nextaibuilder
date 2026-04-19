@@ -9,11 +9,11 @@ import { Types } from 'mongoose'
 import { requireStudent } from '../../middleware/authenticate.js'
 import type { JwtPayload } from '../../middleware/authenticate.js'
 import { Cohort } from '../../models/Cohort.js'
-import { PaymentPlan } from '../../models/PaymentPlan.js'
+import { PaymentPlan, type IPaymentPlan } from '../../models/PaymentPlan.js'
 import { Enrollment } from '../../models/Enrollment.js'
 import { User } from '../../models/User.js'
 import { stripe } from '../../lib/stripe.js'
-import type Stripe from 'stripe'
+import Stripe from 'stripe'
 
 // ── Request body schema ────────────────────────────────────────────────────
 const checkoutBodySchema = z.object({
@@ -27,7 +27,7 @@ type CheckoutBody = z.infer<typeof checkoutBodySchema>
 interface ValidatedCheckoutContext {
   cohortId: Types.ObjectId
   planId: Types.ObjectId
-  plan: Awaited<ReturnType<typeof PaymentPlan.findById>> & NonNullable<unknown>
+  plan: IPaymentPlan
 }
 
 async function validateCheckoutRequest(
@@ -135,11 +135,11 @@ export async function checkoutRoutes(fastify: FastifyInstance) {
       let stripeCustomerId: string
       try {
         stripeCustomerId = await ensureStripeCustomer(studentId)
-      } catch (err) {
-        const stripeErr = err as Stripe.errors.StripeError
+      } catch (err: unknown) {
+        const stripeErr = err instanceof Stripe.errors.StripeError ? err : null
         fastify.log.error({ err, studentId }, '[FIR-39] Failed to create/retrieve Stripe customer')
-        return reply.code(stripeErr.statusCode ?? 500).send({
-          error:   stripeErr.code ?? 'STRIPE_ERROR',
+        return reply.code(stripeErr?.statusCode ?? 500).send({
+          error:   stripeErr?.code ?? 'STRIPE_ERROR',
           message: 'Failed to initialise payment. Please try again.',
         })
       }
@@ -163,12 +163,12 @@ export async function checkoutRoutes(fastify: FastifyInstance) {
           },
           { idempotencyKey: `intent_${studentId}_${planId.toString()}` },
         )
-      } catch (err) {
-        const stripeErr = err as Stripe.errors.StripeError
+      } catch (err: unknown) {
+        const stripeErr = err instanceof Stripe.errors.StripeError ? err : null
         fastify.log.error({ err, studentId, planId: planId.toString() }, '[FIR-39] PaymentIntent creation failed')
-        return reply.code(stripeErr.statusCode ?? 500).send({
-          error:   stripeErr.code ?? 'STRIPE_ERROR',
-          message: stripeErr.message ?? 'Failed to create payment. Please try again.',
+        return reply.code(stripeErr?.statusCode ?? 500).send({
+          error:   stripeErr?.code ?? 'STRIPE_ERROR',
+          message: stripeErr?.message ?? 'Failed to create payment. Please try again.',
         })
       }
 
@@ -197,11 +197,11 @@ export async function checkoutRoutes(fastify: FastifyInstance) {
       let stripeCustomerId: string
       try {
         stripeCustomerId = await ensureStripeCustomer(studentId)
-      } catch (err) {
-        const stripeErr = err as Stripe.errors.StripeError
+      } catch (err: unknown) {
+        const stripeErr = err instanceof Stripe.errors.StripeError ? err : null
         fastify.log.error({ err, studentId }, '[FIR-40] Failed to create/retrieve Stripe customer')
-        return reply.code(stripeErr.statusCode ?? 500).send({
-          error:   stripeErr.code ?? 'STRIPE_ERROR',
+        return reply.code(stripeErr?.statusCode ?? 500).send({
+          error:   stripeErr?.code ?? 'STRIPE_ERROR',
           message: 'Failed to initialise payment. Please try again.',
         })
       }
@@ -236,11 +236,11 @@ export async function checkoutRoutes(fastify: FastifyInstance) {
           },
           { idempotencyKey: `price_${cohortId.toString()}_${planId.toString()}` },
         )
-      } catch (err) {
-        const stripeErr = err as Stripe.errors.StripeError
+      } catch (err: unknown) {
+        const stripeErr = err instanceof Stripe.errors.StripeError ? err : null
         fastify.log.error({ err, planId: planId.toString() }, '[FIR-40] Stripe Price creation failed')
-        return reply.code(stripeErr.statusCode ?? 500).send({
-          error:   stripeErr.code ?? 'STRIPE_ERROR',
+        return reply.code(stripeErr?.statusCode ?? 500).send({
+          error:   stripeErr?.code ?? 'STRIPE_ERROR',
           message: 'Failed to set up installment plan. Please try again.',
         })
       }
@@ -257,7 +257,9 @@ export async function checkoutRoutes(fastify: FastifyInstance) {
             items: [{ price: price.id }],
             payment_behavior:    'default_incomplete',
             payment_settings:    { save_default_payment_method: 'on_subscription' },
-            expand:              ['latest_invoice.payment_intent'],
+            // Stripe 2025 API: Invoice.payment_intent was replaced by
+            // Invoice.confirmation_secret (contains the client_secret directly).
+            expand:              ['latest_invoice.confirmation_secret'],
             cancel_at:           cancelAt,
             billing_cycle_anchor: 'now' as unknown as number, // Stripe accepts 'now' as special string
             metadata: {
@@ -269,22 +271,23 @@ export async function checkoutRoutes(fastify: FastifyInstance) {
           },
           { idempotencyKey: `sub_${studentId}_${planId.toString()}` },
         )
-      } catch (err) {
-        const stripeErr = err as Stripe.errors.StripeError
+      } catch (err: unknown) {
+        const stripeErr = err instanceof Stripe.errors.StripeError ? err : null
         fastify.log.error({ err, studentId, planId: planId.toString() }, '[FIR-40] Subscription creation failed')
-        return reply.code(stripeErr.statusCode ?? 500).send({
-          error:   stripeErr.code ?? 'STRIPE_ERROR',
-          message: stripeErr.message ?? 'Failed to create installment plan. Please try again.',
+        return reply.code(stripeErr?.statusCode ?? 500).send({
+          error:   stripeErr?.code ?? 'STRIPE_ERROR',
+          message: stripeErr?.message ?? 'Failed to create installment plan. Please try again.',
         })
       }
 
-      // Extract client_secret from latest_invoice.payment_intent
+      // Extract client_secret from latest_invoice.confirmation_secret.
+      // Stripe 2025 API moved the client_secret off PaymentIntent onto
+      // Invoice.confirmation_secret (still references the same PaymentIntent).
       const latestInvoice = subscription.latest_invoice as Stripe.Invoice | null
-      const paymentIntent = latestInvoice?.payment_intent as Stripe.PaymentIntent | null
-      const clientSecret  = paymentIntent?.client_secret ?? null
+      const clientSecret  = latestInvoice?.confirmation_secret?.client_secret ?? null
 
       if (!clientSecret) {
-        fastify.log.error({ subscriptionId: subscription.id }, '[FIR-40] No client_secret on latest_invoice.payment_intent')
+        fastify.log.error({ subscriptionId: subscription.id }, '[FIR-40] No client_secret on latest_invoice.confirmation_secret')
         return reply.code(500).send({
           error:   'STRIPE_INCOMPLETE',
           message: 'Subscription created but could not retrieve payment confirmation. Contact support.',

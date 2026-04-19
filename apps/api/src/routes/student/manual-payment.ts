@@ -49,8 +49,6 @@ export async function studentManualPaymentRoutes(fastify: FastifyInstance) {
     '/request',
     {
       preHandler: requireStudent,
-      // Override the global 2 MB multipart cap for this route only
-      config: { rawBody: false },
       // @fastify/multipart respects bodyLimit set in addContentTypeParser;
       // we guard size inline after reading the file part.
     },

@@ -54,7 +54,11 @@ async function findActiveEnrollment(
 
 // ── Shared helper: resolve cohort by slug ────────────────────────────────
 async function findCohortBySlug(slug: string): Promise<ICohort | null> {
-  return Cohort.findOne({ slug }).lean()
+  // Cast through unknown: recent Mongoose versions wrap .lean() results in
+  // FlattenMaps<T>, whose deeply-nested Db typing is not structurally
+  // assignable to the plain Db used by ICohort. The runtime shape is
+  // identical — only the nominal type differs.
+  return Cohort.findOne({ slug }).lean() as unknown as ICohort | null
 }
 
 // ── Internal: generate certificate when 100% complete ────────────────────
@@ -370,7 +374,7 @@ export async function studentLmsRoutes(fastify: FastifyInstance) {
         lessonsByModule.get(moduleKey)!.push({
           ...lesson,
           status: statusMap.get((lesson._id as Types.ObjectId).toString()) ?? 'LOCKED',
-        })
+        } as unknown as ILesson & { status: string })
       }
 
       const modulesWithLessons = modules.map((mod) => ({

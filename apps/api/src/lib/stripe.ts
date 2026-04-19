@@ -9,5 +9,5 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 export const stripe = new Stripe(key, {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2026-03-25.dahlia',
 })

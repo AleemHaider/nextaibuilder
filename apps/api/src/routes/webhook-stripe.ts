@@ -96,7 +96,10 @@ export async function stripeWebhookRoutes(fastify: FastifyInstance) {
       const jobData: StripeWebhookJobData = {
         eventId:   event.id,
         eventType: event.type,
-        data:      event.data.object as Record<string, unknown>,
+        // Cast via unknown: the Stripe.Event.Data.Object union includes some
+        // resource types (e.g. ReceivedDebit) that lack an index signature,
+        // which blocks a direct cast to Record<string, unknown>.
+        data:      event.data.object as unknown as Record<string, unknown>,
       }
 
       await stripeWebhookQueue.add(event.type, jobData, {
