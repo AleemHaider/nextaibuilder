@@ -1,8 +1,9 @@
 // FIR-165 — Admin Course Builder: list + edit with tabs (Overview, Curriculum, Live Sessions, Pricing)
 // Wave 5 Story Y — Curriculum tab is API-backed with drag-reorder for modules + lessons.
+// Sprint 2 Story 11 — handleSave / Pricing / Live Sessions wired to the admin API.
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, GripVertical, ChevronDown, ChevronUp, Video, FileText, Wrench } from 'lucide-react'
+import { Search, Plus, GripVertical, ChevronDown, ChevronUp, Video, FileText, Wrench, Calendar, DollarSign } from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
 import {
   fetchAdminCourses,
@@ -10,12 +11,35 @@ import {
   fetchAdminModuleLessons,
   reorderModules,
   reorderLessons,
+  createAdminCourse,
+  updateAdminCourse,
+  publishAdminCourse,
+  fetchAdminPaymentPlans,
+  createAdminPaymentPlan,
+  updateAdminPaymentPlan,
+  toggleAdminPaymentPlan,
+  fetchAdminLiveSessions,
+  createAdminLiveSession,
+  updateAdminLiveSession,
+  deleteAdminLiveSession,
   type AdminCourse,
   type AdminModule,
   type AdminLesson,
+  type AdminPaymentPlan,
+  type AdminLiveSession,
+  type AdminCourseType,
+  type CreatePaymentPlanPayload,
+  type CreateLiveSessionPayload,
 } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
 import { SortableList } from '../../components/common/SortableList'
+import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
+import { FormField } from '../../components/ui/FormField'
+import { Modal } from '../../components/ui/Modal'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { cn } from '../../lib/utils'
 
 // ---------------------------------------------------------------------------
@@ -1005,111 +1029,895 @@ function ServerLessonList({
 }
 
 // ---------------------------------------------------------------------------
-// Live Sessions Tab (placeholder table matching 20-admin-live-sessions design)
+// Live Sessions Tab — Sprint 2 Story 11
+//
+// API-backed. When no cohortId is set (draft course) we render an empty
+// state with guidance, matching the Pricing tab's behaviour. CRUD is done
+// via a shared Schedule modal that also handles edit (prefilled), plus a
+// ConfirmDialog for the destructive Cancel action.
 // ---------------------------------------------------------------------------
 
-const DEMO_SESSIONS = [
-  {
-    id: '1',
-    title: 'Week 1: AI Fundamentals',
-    scheduledAt: '2025-01-20T18:00:00Z',
-    durationMinutes: 90,
-    zoomUrl: 'https://zoom.us/j/12345678',
-    status: 'UPCOMING',
-  },
-  {
-    id: '2',
-    title: 'Week 2: Building with Claude API',
-    scheduledAt: '2025-01-27T18:00:00Z',
-    durationMinutes: 90,
-    zoomUrl: 'https://zoom.us/j/87654321',
-    status: 'PAST',
-  },
-]
+// Derive a display status from scheduledAt + durationMinutes since the
+// back-end stores absolute dates only. LIVE = within the session window.
+function deriveSessionStatus(
+  scheduledAt: string,
+  durationMinutes: number,
+  now: Date = new Date(),
+): 'LIVE' | 'UPCOMING' | 'PAST' {
+  const start = new Date(scheduledAt).getTime()
+  const end = start + durationMinutes * 60_000
+  const t = now.getTime()
+  if (t < start) return 'UPCOMING'
+  if (t <= end) return 'LIVE'
+  return 'PAST'
+}
 
-function LiveSessionsTab() {
+interface LiveSessionFormState {
+  title: string
+  scheduledAt: string
+  durationMinutes: string
+  zoomUrl: string
+}
+
+function blankSessionForm(): LiveSessionFormState {
+  return { title: '', scheduledAt: '', durationMinutes: '90', zoomUrl: '' }
+}
+
+function sessionToForm(s: AdminLiveSession): LiveSessionFormState {
+  // HTML `datetime-local` expects `YYYY-MM-DDTHH:mm` in local time. Convert
+  // the stored ISO by trimming seconds/ms and Z suffix after shifting to the
+  // browser's local zone (matches the datetime-local control's contract).
+  const d = new Date(s.scheduledAt)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const localValue = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+    d.getDate(),
+  )}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return {
+    title: s.title,
+    scheduledAt: localValue,
+    durationMinutes: String(s.durationMinutes),
+    zoomUrl: s.zoomUrl,
+  }
+}
+
+function LiveSessionsTab({
+  cohortId,
+  isAdmin,
+  addToast,
+}: {
+  cohortId: string | null
+  isAdmin: boolean
+  addToast: (message: string, variant: 'success' | 'error') => void
+}) {
+  const queryClient = useQueryClient()
+  const sessionsKey = ['admin', 'courses', cohortId ?? '__draft__', 'sessions'] as const
+
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingSession, setEditingSession] = useState<AdminLiveSession | null>(null)
+  const [form, setForm] = useState<LiveSessionFormState>(blankSessionForm)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [deletingSession, setDeletingSession] = useState<AdminLiveSession | null>(null)
+
+  const {
+    data: sessions = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: sessionsKey,
+    queryFn: () => fetchAdminLiveSessions(cohortId as string),
+    enabled: Boolean(cohortId),
+    staleTime: 30_000,
+  })
+
+  const createMutation = useMutation({
+    mutationFn: (payload: CreateLiveSessionPayload) =>
+      createAdminLiveSession(cohortId as string, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: sessionsKey })
+      addToast('Session scheduled', 'success')
+      setModalOpen(false)
+      setForm(blankSessionForm())
+    },
+    onError: (err: Error) => {
+      setFormError(err.message)
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: (args: { sessionId: string; payload: CreateLiveSessionPayload }) =>
+      updateAdminLiveSession(cohortId as string, args.sessionId, args.payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: sessionsKey })
+      addToast('Session updated', 'success')
+      setModalOpen(false)
+      setEditingSession(null)
+      setForm(blankSessionForm())
+    },
+    onError: (err: Error) => {
+      setFormError(err.message)
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (sessionId: string) => deleteAdminLiveSession(cohortId as string, sessionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: sessionsKey })
+      addToast('Session cancelled', 'success')
+      setDeletingSession(null)
+    },
+    onError: (err: Error) => {
+      addToast(err.message, 'error')
+    },
+  })
+
+  function openScheduleModal() {
+    setEditingSession(null)
+    setForm(blankSessionForm())
+    setFormError(null)
+    setModalOpen(true)
+  }
+
+  function openEditModal(s: AdminLiveSession) {
+    setEditingSession(s)
+    setForm(sessionToForm(s))
+    setFormError(null)
+    setModalOpen(true)
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setFormError(null)
+    if (!form.title.trim()) {
+      setFormError('Title is required')
+      return
+    }
+    if (!form.scheduledAt) {
+      setFormError('Scheduled date/time is required')
+      return
+    }
+    if (!form.zoomUrl.trim()) {
+      setFormError('Zoom URL is required')
+      return
+    }
+    const duration = Number(form.durationMinutes)
+    if (!Number.isFinite(duration) || duration < 1) {
+      setFormError('Duration must be at least 1 minute')
+      return
+    }
+    const payload: CreateLiveSessionPayload = {
+      title: form.title.trim(),
+      // `datetime-local` values are local; convert to ISO via Date.
+      scheduledAt: new Date(form.scheduledAt).toISOString(),
+      durationMinutes: duration,
+      zoomUrl: form.zoomUrl.trim(),
+    }
+    if (editingSession) {
+      updateMutation.mutate({ sessionId: editingSession.id, payload })
+    } else {
+      createMutation.mutate(payload)
+    }
+  }
+
   const statusStyles: Record<string, string> = {
     LIVE: 'bg-[#fdeaeb] text-[#d03238]',
     UPCOMING: 'bg-[#e8f4fd] text-[#1a2744]',
     PAST: 'bg-[#e6f4ec] text-[#054d28]',
-    CANCELLED: 'bg-[#f0f0f0] text-[#717182]',
+  }
+
+  const isSaving = createMutation.isPending || updateMutation.isPending
+
+  // Draft mode (no saved cohort yet)
+  if (!cohortId) {
+    return (
+      <div className="px-8 py-6">
+        <EmptyState
+          icon={Calendar}
+          title="Save the course first"
+          description="Live sessions are attached to a saved course. Save the draft on the Overview tab to start scheduling sessions."
+        />
+      </div>
+    )
   }
 
   return (
     <div className="px-8 py-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[15px] font-[700] text-[#1a2744]">Live Sessions</h3>
-        <button
-          type="button"
-          className="px-4 py-2 rounded-full bg-[#4a9ad4] text-[#0d1a3a] text-[13px] font-[700] hover:opacity-90 transition-opacity"
-        >
-          + Schedule Session
-        </button>
+        {isAdmin && (
+          <Button
+            variant="primary"
+            size="sm"
+            leftIcon={<Plus size={14} aria-hidden="true" />}
+            onClick={openScheduleModal}
+          >
+            Schedule Session
+          </Button>
+        )}
       </div>
-      <div className="bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden">
-        <table className="w-full border-collapse" aria-label="Live sessions">
-          <thead>
-            <tr>
-              {['Title', 'Date & Time', 'Duration', 'Zoom Link', 'Status', 'Actions'].map((col) => (
-                <th
-                  key={col}
-                  scope="col"
-                  className="text-left text-[12px] font-[600] text-[#717182] px-5 py-3 border-b border-[rgba(26,39,68,0.08)] uppercase tracking-[0.5px] bg-[#f8f9fb]"
-                >
-                  {col}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {DEMO_SESSIONS.map((session) => (
-              <tr key={session.id} className="hover:[&>td]:bg-[#f8f9fb] transition-colors">
-                <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[14px] font-[600] text-[#1a2744]">
-                  {session.title}
-                </td>
-                <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[13px] text-[#717182]">
-                  {new Date(session.scheduledAt).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </td>
-                <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[13px] text-[#717182]">
-                  {session.durationMinutes}m
-                </td>
-                <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
-                  <span className="text-[13px] text-[#717182] font-mono truncate max-w-[180px] block overflow-hidden text-ellipsis whitespace-nowrap">
-                    {session.zoomUrl}
-                  </span>
-                </td>
-                <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
-                  <span className={cn('text-[11px] font-[600] px-[9px] py-[3px] rounded-full', statusStyles[session.status])}>
-                    {session.status.charAt(0) + session.status.slice(1).toLowerCase()}
-                  </span>
-                </td>
-                <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
-                  <div className="flex gap-3">
-                    <button type="button" className="text-[13px] font-[600] text-[#4a9ad4] hover:underline">
-                      Edit
-                    </button>
-                    <button type="button" className="text-[13px] font-[600] text-[#d03238] hover:underline">
-                      Cancel
-                    </button>
-                  </div>
-                </td>
+
+      {isLoading && (
+        <div className="py-10">
+          <LoadingSpinner centered label="Loading live sessions" />
+        </div>
+      )}
+
+      {isError && (
+        <div className="p-6 text-center text-[13px] text-[#d03238]">
+          Failed to load live sessions. Try refreshing.
+        </div>
+      )}
+
+      {!isLoading && !isError && sessions.length === 0 && (
+        <EmptyState
+          icon={Calendar}
+          title="No live sessions yet"
+          description="Schedule the first session for this cohort."
+          action={
+            isAdmin
+              ? { label: 'Schedule Session', onClick: openScheduleModal }
+              : undefined
+          }
+        />
+      )}
+
+      {!isLoading && !isError && sessions.length > 0 && (
+        <div className="bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden">
+          <table className="w-full border-collapse" aria-label="Live sessions">
+            <thead>
+              <tr>
+                {['Title', 'Date & Time', 'Duration', 'Zoom Link', 'Status', 'Actions'].map((col) => (
+                  <th
+                    key={col}
+                    scope="col"
+                    className="text-left text-[12px] font-[600] text-[#717182] px-5 py-3 border-b border-[rgba(26,39,68,0.08)] uppercase tracking-[0.5px] bg-[#f8f9fb]"
+                  >
+                    {col}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {sessions.map((session) => {
+                const status = deriveSessionStatus(
+                  session.scheduledAt,
+                  session.durationMinutes,
+                )
+                return (
+                  <tr key={session.id} className="hover:[&>td]:bg-[#f8f9fb] transition-colors">
+                    <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[14px] font-[600] text-[#1a2744]">
+                      {session.title}
+                    </td>
+                    <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[13px] text-[#717182]">
+                      {new Date(session.scheduledAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </td>
+                    <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[13px] text-[#717182]">
+                      {session.durationMinutes}m
+                    </td>
+                    <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
+                      <span className="text-[13px] text-[#717182] font-mono truncate max-w-[180px] block overflow-hidden text-ellipsis whitespace-nowrap">
+                        {session.zoomUrl}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
+                      <span className={cn('text-[11px] font-[600] px-[9px] py-[3px] rounded-full', statusStyles[status])}>
+                        {status.charAt(0) + status.slice(1).toLowerCase()}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          className="text-[13px] font-[600] text-[#4a9ad4] hover:underline"
+                          onClick={() => openEditModal(session)}
+                          disabled={!isAdmin}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="text-[13px] font-[600] text-[#d03238] hover:underline"
+                          onClick={() => setDeletingSession(session)}
+                          disabled={!isAdmin}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Schedule / Edit session modal */}
+      <Modal
+        open={modalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setModalOpen(false)
+            setEditingSession(null)
+            setFormError(null)
+          }
+        }}
+        title={editingSession ? 'Edit Session' : 'Schedule Session'}
+        description="Add the session details. Students enrolled in this cohort will see the session in their live sessions list."
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setModalOpen(false)
+                setEditingSession(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              type="submit"
+              form="live-session-form"
+              isLoading={isSaving}
+            >
+              {editingSession ? 'Save Changes' : 'Schedule Session'}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id="live-session-form"
+          onSubmit={handleSubmit}
+          className={cn('flex flex-col gap-4')}
+        >
+          <FormField id="session-title" label="Title" required>
+            <Input
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="Week 1: Kickoff"
+            />
+          </FormField>
+          <FormField id="session-scheduled" label="Scheduled at" required>
+            <Input
+              type="datetime-local"
+              value={form.scheduledAt}
+              onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
+            />
+          </FormField>
+          <FormField
+            id="session-duration"
+            label="Duration (minutes)"
+            required
+          >
+            <Input
+              type="number"
+              min={1}
+              value={form.durationMinutes}
+              onChange={(e) =>
+                setForm({ ...form, durationMinutes: e.target.value })
+              }
+            />
+          </FormField>
+          <FormField id="session-zoom" label="Zoom URL" required>
+            <Input
+              type="url"
+              value={form.zoomUrl}
+              onChange={(e) => setForm({ ...form, zoomUrl: e.target.value })}
+              placeholder="https://zoom.us/j/…"
+            />
+          </FormField>
+          {formError && (
+            <p
+              role="alert"
+              className="text-[12px] font-semibold text-[var(--color-wise-danger)]"
+            >
+              {formError}
+            </p>
+          )}
+        </form>
+      </Modal>
+
+      {/* Cancel-session confirm dialog */}
+      <ConfirmDialog
+        open={Boolean(deletingSession)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingSession(null)
+        }}
+        title="Cancel this session?"
+        description={
+          deletingSession
+            ? `This will remove "${deletingSession.title}" from the cohort's live sessions list. Students enrolled will no longer see it.`
+            : ''
+        }
+        confirmLabel="Cancel session"
+        cancelLabel="Keep"
+        variant="danger"
+        isLoading={deleteMutation.isPending}
+        onConfirm={async () => {
+          if (deletingSession) {
+            await deleteMutation.mutateAsync(deletingSession.id)
+          }
+        }}
+      />
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Pricing / Enrollments placeholder tabs
+// Pricing Tab — Sprint 2 Story 11
+//
+// API-backed CRUD for PaymentPlans. Supports ONE_TIME + INSTALLMENT variants
+// with a shared modal for add / edit, a toggle for active/inactive, and a
+// ConfirmDialog-gated deactivation (backend has no DELETE; deactivation is
+// the safe equivalent — historic plans remain tied to past enrolments).
+// ---------------------------------------------------------------------------
+
+interface PaymentPlanFormState {
+  name: string
+  type: 'ONE_TIME' | 'INSTALLMENT'
+  totalAmount: string
+  currency: string
+  intervalDays: string
+}
+
+function blankPlanForm(): PaymentPlanFormState {
+  return {
+    name: '',
+    type: 'ONE_TIME',
+    totalAmount: '',
+    currency: 'usd',
+    intervalDays: '30',
+  }
+}
+
+function planToForm(p: AdminPaymentPlan): PaymentPlanFormState {
+  return {
+    name: p.name,
+    type: p.type,
+    totalAmount: String(p.totalAmount),
+    currency: p.currency,
+    intervalDays: p.intervalDays != null ? String(p.intervalDays) : '30',
+  }
+}
+
+function formatAmount(amount: number, currency: string): string {
+  // Amount is stored in cents (see createPaymentPlanSchema z.number().int().min(100)).
+  // Render as a user-facing currency string.
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+      minimumFractionDigits: 0,
+    }).format(amount / 100)
+  } catch {
+    return `$${(amount / 100).toFixed(0)}`
+  }
+}
+
+function PricingTab({
+  cohortId,
+  isAdmin,
+  addToast,
+}: {
+  cohortId: string | null
+  isAdmin: boolean
+  addToast: (message: string, variant: 'success' | 'error') => void
+}) {
+  const queryClient = useQueryClient()
+  const plansKey = ['admin', 'courses', cohortId ?? '__draft__', 'payment-plans'] as const
+
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingPlan, setEditingPlan] = useState<AdminPaymentPlan | null>(null)
+  const [form, setForm] = useState<PaymentPlanFormState>(blankPlanForm)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [deletingPlan, setDeletingPlan] = useState<AdminPaymentPlan | null>(null)
+
+  const {
+    data: plans = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: plansKey,
+    queryFn: () => fetchAdminPaymentPlans(cohortId as string),
+    enabled: Boolean(cohortId),
+    staleTime: 30_000,
+  })
+
+  const createMutation = useMutation({
+    mutationFn: (payload: CreatePaymentPlanPayload) =>
+      createAdminPaymentPlan(cohortId as string, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: plansKey })
+      addToast('Payment plan created', 'success')
+      setModalOpen(false)
+      setForm(blankPlanForm())
+    },
+    onError: (err: Error) => setFormError(err.message),
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: (args: {
+      planId: string
+      payload: Omit<CreatePaymentPlanPayload, 'type'>
+    }) =>
+      updateAdminPaymentPlan(cohortId as string, args.planId, args.payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: plansKey })
+      addToast('Payment plan updated', 'success')
+      setModalOpen(false)
+      setEditingPlan(null)
+      setForm(blankPlanForm())
+    },
+    onError: (err: Error) => setFormError(err.message),
+  })
+
+  const toggleMutation = useMutation({
+    mutationFn: (planId: string) =>
+      toggleAdminPaymentPlan(cohortId as string, planId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: plansKey })
+      addToast('Payment plan updated', 'success')
+      setDeletingPlan(null)
+    },
+    onError: (err: Error) => addToast(err.message, 'error'),
+  })
+
+  function openAddModal() {
+    setEditingPlan(null)
+    setForm(blankPlanForm())
+    setFormError(null)
+    setModalOpen(true)
+  }
+
+  function openEditModal(plan: AdminPaymentPlan) {
+    setEditingPlan(plan)
+    setForm(planToForm(plan))
+    setFormError(null)
+    setModalOpen(true)
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setFormError(null)
+    if (!form.name.trim()) {
+      setFormError('Plan name is required')
+      return
+    }
+    const amount = Number(form.totalAmount)
+    if (!Number.isFinite(amount) || amount < 100) {
+      setFormError('Total amount must be at least 100 (cents)')
+      return
+    }
+    const currency = form.currency.trim() || 'usd'
+    if (currency.length !== 3) {
+      setFormError('Currency must be a 3-letter ISO code')
+      return
+    }
+    if (editingPlan) {
+      // type is immutable on the back end — we strip it from the PATCH body.
+      updateMutation.mutate({
+        planId: editingPlan.id,
+        payload: {
+          name: form.name.trim(),
+          totalAmount: amount,
+          currency,
+          ...(form.type === 'INSTALLMENT'
+            ? { intervalDays: Number(form.intervalDays) || 30 }
+            : {}),
+        },
+      })
+    } else {
+      createMutation.mutate({
+        name: form.name.trim(),
+        type: form.type,
+        totalAmount: amount,
+        currency,
+        ...(form.type === 'INSTALLMENT'
+          ? { intervalDays: Number(form.intervalDays) || 30 }
+          : {}),
+      })
+    }
+  }
+
+  const isSaving = createMutation.isPending || updateMutation.isPending
+
+  if (!cohortId) {
+    return (
+      <div className="px-8 py-6">
+        <EmptyState
+          icon={DollarSign}
+          title="Save the course first"
+          description="Payment plans are attached to a saved course. Save the draft on the Overview tab to start defining pricing."
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="px-8 py-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[15px] font-[700] text-[#1a2744]">Payment Plans</h3>
+        {isAdmin && (
+          <Button
+            variant="primary"
+            size="sm"
+            leftIcon={<Plus size={14} aria-hidden="true" />}
+            onClick={openAddModal}
+          >
+            Add Plan
+          </Button>
+        )}
+      </div>
+
+      {isLoading && (
+        <div className="py-10">
+          <LoadingSpinner centered label="Loading payment plans" />
+        </div>
+      )}
+
+      {isError && (
+        <div className="p-6 text-center text-[13px] text-[#d03238]">
+          Failed to load payment plans. Try refreshing.
+        </div>
+      )}
+
+      {!isLoading && !isError && plans.length === 0 && (
+        <EmptyState
+          icon={DollarSign}
+          title="No payment plans yet"
+          description="Add a one-time or installment plan to start selling this cohort."
+          action={
+            isAdmin
+              ? { label: 'Add Plan', onClick: openAddModal }
+              : undefined
+          }
+        />
+      )}
+
+      {!isLoading && !isError && plans.length > 0 && (
+        <div
+          className="bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden"
+          data-testid="payment-plans-list"
+        >
+          <table className="w-full border-collapse" aria-label="Payment plans">
+            <thead>
+              <tr>
+                {['Name', 'Type', 'Amount', 'Installments', 'Active', 'Actions'].map((col) => (
+                  <th
+                    key={col}
+                    scope="col"
+                    className="text-left text-[12px] font-[600] text-[#717182] px-5 py-3 border-b border-[rgba(26,39,68,0.08)] uppercase tracking-[0.5px] bg-[#f8f9fb]"
+                  >
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {plans.map((plan) => (
+                <tr key={plan.id} className="hover:[&>td]:bg-[#f8f9fb] transition-colors">
+                  <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[14px] font-[600] text-[#1a2744]">
+                    {plan.name}
+                  </td>
+                  <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[13px] text-[#717182]">
+                    {plan.type === 'ONE_TIME' ? 'One-time' : 'Installment'}
+                  </td>
+                  <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[13px] text-[#1a2744] font-[600]">
+                    {formatAmount(plan.totalAmount, plan.currency)}
+                  </td>
+                  <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[13px] text-[#717182]">
+                    {plan.type === 'INSTALLMENT'
+                      ? `${plan.installments?.length ?? 3} × every ${plan.intervalDays ?? 30}d`
+                      : '—'}
+                  </td>
+                  <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
+                    <span
+                      className={cn(
+                        'text-[11px] font-[600] px-[9px] py-[3px] rounded-full',
+                        plan.isActive
+                          ? 'bg-[#e6f4ec] text-[#054d28]'
+                          : 'bg-[#f0f0f0] text-[#717182]',
+                      )}
+                    >
+                      {plan.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        className="text-[13px] font-[600] text-[#4a9ad4] hover:underline"
+                        onClick={() => openEditModal(plan)}
+                        disabled={!isAdmin}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="text-[13px] font-[600] text-[#d03238] hover:underline"
+                        onClick={() => setDeletingPlan(plan)}
+                        disabled={!isAdmin}
+                      >
+                        {plan.isActive ? 'Deactivate' : 'Activate'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Add / Edit plan modal */}
+      <Modal
+        open={modalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setModalOpen(false)
+            setEditingPlan(null)
+            setFormError(null)
+          }
+        }}
+        title={editingPlan ? 'Edit Payment Plan' : 'Add Payment Plan'}
+        description="Define the price, currency, and schedule for this cohort."
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setModalOpen(false)
+                setEditingPlan(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              type="submit"
+              form="payment-plan-form"
+              isLoading={isSaving}
+            >
+              {editingPlan ? 'Save Changes' : 'Create Plan'}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id="payment-plan-form"
+          onSubmit={handleSubmit}
+          className={cn('flex flex-col gap-4')}
+        >
+          <FormField id="plan-name" label="Plan name" required>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="Founding cohort"
+            />
+          </FormField>
+          <div>
+            <label
+              htmlFor="plan-type"
+              className="block text-[14px] font-semibold text-[var(--color-wise-text)] mb-1.5"
+            >
+              Type
+            </label>
+            <select
+              id="plan-type"
+              value={form.type}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  type: e.target.value as 'ONE_TIME' | 'INSTALLMENT',
+                })
+              }
+              disabled={Boolean(editingPlan)}
+              className={cn(
+                'w-full h-11 px-4 rounded-xl border bg-white text-[15px]',
+                'border-[var(--color-wise-ring)] outline-none',
+                'focus:ring-4 focus:ring-[var(--color-wise-primary)]/25',
+                'disabled:opacity-50',
+              )}
+            >
+              <option value="ONE_TIME">One-time</option>
+              <option value="INSTALLMENT">Installment (3 payments)</option>
+            </select>
+            {editingPlan && (
+              <p className="mt-1.5 text-[12px] text-[var(--color-wise-text-muted)]">
+                Plan type cannot be changed after creation.
+              </p>
+            )}
+          </div>
+          <FormField
+            id="plan-amount"
+            label="Total amount (cents)"
+            helperText="Store the amount in cents — e.g. $499 → 49900."
+            required
+          >
+            <Input
+              type="number"
+              min={100}
+              value={form.totalAmount}
+              onChange={(e) =>
+                setForm({ ...form, totalAmount: e.target.value })
+              }
+              placeholder="49900"
+            />
+          </FormField>
+          <FormField
+            id="plan-currency"
+            label="Currency (3-letter ISO)"
+            required
+          >
+            <Input
+              value={form.currency}
+              onChange={(e) => setForm({ ...form, currency: e.target.value })}
+              placeholder="usd"
+              maxLength={3}
+            />
+          </FormField>
+          {form.type === 'INSTALLMENT' && (
+            <FormField
+              id="plan-interval"
+              label="Days between installments"
+            >
+              <Input
+                type="number"
+                min={1}
+                value={form.intervalDays}
+                onChange={(e) =>
+                  setForm({ ...form, intervalDays: e.target.value })
+                }
+              />
+            </FormField>
+          )}
+          {formError && (
+            <p
+              role="alert"
+              className="text-[12px] font-semibold text-[var(--color-wise-danger)]"
+            >
+              {formError}
+            </p>
+          )}
+        </form>
+      </Modal>
+
+      {/* Delete / toggle confirm dialog */}
+      <ConfirmDialog
+        open={Boolean(deletingPlan)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingPlan(null)
+        }}
+        title={deletingPlan?.isActive ? 'Deactivate plan?' : 'Activate plan?'}
+        description={
+          deletingPlan
+            ? deletingPlan.isActive
+              ? `"${deletingPlan.name}" will no longer be purchasable. Existing enrolments are unaffected.`
+              : `"${deletingPlan.name}" will become purchasable again.`
+            : ''
+        }
+        confirmLabel={deletingPlan?.isActive ? 'Deactivate' : 'Activate'}
+        cancelLabel="Cancel"
+        variant={deletingPlan?.isActive ? 'danger' : 'warning'}
+        isLoading={toggleMutation.isPending}
+        onConfirm={async () => {
+          if (deletingPlan) {
+            await toggleMutation.mutateAsync(deletingPlan.id)
+          }
+        }}
+      />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Enrollments placeholder (still a future epic)
 // ---------------------------------------------------------------------------
 
 function PlaceholderTabContent({ label }: { label: string }) {
@@ -1132,6 +1940,7 @@ interface CourseEditorProps {
   onSave: () => void
   onTogglePublish: () => void
   isSaving: boolean
+  isPublishing: boolean
   isAdmin: boolean
   addToast: (message: string, variant: 'success' | 'error') => void
 }
@@ -1142,6 +1951,7 @@ function CourseEditor({
   onSave,
   onTogglePublish,
   isSaving,
+  isPublishing,
   isAdmin,
   addToast,
 }: CourseEditorProps) {
@@ -1178,9 +1988,17 @@ function CourseEditor({
           <button
             type="button"
             onClick={onTogglePublish}
-            className="px-5 py-2 rounded-full bg-[#4a9ad4] text-[#0d1a3a] text-[14px] font-[700] hover:opacity-90 transition-opacity"
+            disabled={isPublishing}
+            aria-busy={isPublishing || undefined}
+            className="px-5 py-2 rounded-full bg-[#4a9ad4] text-[#0d1a3a] text-[14px] font-[700] hover:opacity-90 disabled:opacity-50 transition-opacity"
           >
-            {draft.status === 'PUBLISHED' ? 'Unpublish' : 'Publish'}
+            {isPublishing
+              ? draft.status === 'PUBLISHED'
+                ? 'Publishing…'
+                : 'Unpublishing…'
+              : draft.status === 'PUBLISHED'
+                ? 'Unpublish'
+                : 'Publish'}
           </button>
         </div>
       </div>
@@ -1224,8 +2042,20 @@ function CourseEditor({
             addToast={addToast}
           />
         )}
-        {activeTab === 'Live Sessions' && <LiveSessionsTab />}
-        {activeTab === 'Pricing' && <PlaceholderTabContent label="Pricing Plans" />}
+        {activeTab === 'Live Sessions' && (
+          <LiveSessionsTab
+            cohortId={draft.id}
+            isAdmin={isAdmin}
+            addToast={addToast}
+          />
+        )}
+        {activeTab === 'Pricing' && (
+          <PricingTab
+            cohortId={draft.id}
+            isAdmin={isAdmin}
+            addToast={addToast}
+          />
+        )}
         {activeTab === 'Enrollments' && <PlaceholderTabContent label="Course Enrollments" />}
       </div>
     </div>
@@ -1236,13 +2066,32 @@ function CourseEditor({
 // CourseBuilderPage
 // ---------------------------------------------------------------------------
 
+// The back-end course `type` enum is upper-cased (`RECORDED` / `LIVE` /
+// `COMBINED`) whereas the UI draft uses lower-case. This keeps conversion in
+// one place so handleSave and handleSelectCourse can't disagree.
+function uiTypeToApi(t: CourseType): AdminCourseType {
+  return t.toUpperCase() as AdminCourseType
+}
+
+// Convert an HTML <input type="date"> value (YYYY-MM-DD) into an ISO datetime
+// string at UTC midnight. Empty / invalid input returns undefined so the
+// field is omitted from the request body.
+function dateInputToIso(value: string): string | undefined {
+  if (!value) return undefined
+  const parsed = new Date(`${value}T00:00:00.000Z`)
+  if (Number.isNaN(parsed.getTime())) return undefined
+  return parsed.toISOString()
+}
+
 export default function CourseBuilderPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [selectedCourse, setSelectedCourse] = useState<AdminCourse | null | undefined>(undefined)
   const [draft, setDraft] = useState<CourseDraft | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
 
+  const queryClient = useQueryClient()
   const { toasts, addToast, dismissToast } = useToast()
 
   // Belt-and-braces role guard on top of <AdminRoute>. The drag handles only
@@ -1291,23 +2140,97 @@ export default function CourseBuilderPage() {
     setDraft((prev) => (prev ? { ...prev, ...updated } : prev))
   }
 
+  // Sprint 2 Story 11 — real handleSave.
+  // Creates a cohort via POST when draft.id is empty, otherwise PATCHes the
+  // existing cohort. On success we flip draft.id (or update the selected
+  // course row) and invalidate the admin-courses list so the sidebar refreshes
+  // without a full refetch loop.
   async function handleSave() {
     if (!draft) return
     setIsSaving(true)
-    // Stub: in a real implementation this calls createAdminCourse / updateAdminCourse
-    await new Promise((resolve) => setTimeout(resolve, 600))
-    setIsSaving(false)
-    addToast('Course saved', 'success')
+
+    // Shared payload — the back-end schema expects specific key names
+    // (liveStartDate / liveEndDate, maxSeats as a number) so we normalise
+    // once here. Empty strings/NaNs are stripped rather than sent as nulls.
+    const maxSeatsNumber =
+      draft.maxSeats.trim() === '' ? undefined : Number(draft.maxSeats)
+    const payload = {
+      title: draft.title,
+      type: uiTypeToApi(draft.type),
+      tagline: draft.tagline || undefined,
+      description: draft.description || undefined,
+      maxSeats:
+        Number.isFinite(maxSeatsNumber) && (maxSeatsNumber as number) > 0
+          ? (maxSeatsNumber as number)
+          : undefined,
+      liveStartDate: dateInputToIso(draft.startDate),
+      liveEndDate: dateInputToIso(draft.endDate),
+    }
+
+    try {
+      if (!draft.id) {
+        const created = await createAdminCourse(payload)
+        // Flip into server-backed mode — setting draft.id unlocks the
+        // ServerCurriculumList / PricingTab / LiveSessionsTab data fetches.
+        setDraft((prev) => (prev ? { ...prev, id: created.id } : prev))
+        queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
+        addToast('Course created', 'success')
+      } else {
+        await updateAdminCourse(draft.id, payload)
+        queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
+        // Also invalidate the per-cohort detail cache used by the curriculum
+        // tab — the title/slug may have changed.
+        queryClient.invalidateQueries({
+          queryKey: ['admin', 'courses', draft.id],
+        })
+        addToast('Course saved', 'success')
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save course'
+      addToast(message, 'error')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  function handleTogglePublish() {
+  // Sprint 2 Story 11 — real publish toggle with optimistic UI and rollback.
+  // Matches the module-reorder pattern from Wave 5 Story Y: flip the status
+  // locally, fire the PATCH, and on failure restore the prior status + toast.
+  async function handleTogglePublish() {
     if (!draft) return
-    const nextStatus: CourseStatus = draft.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED'
+    // Publish is only meaningful once the course is persisted. Early-return
+    // with a toast so users understand why the button is a no-op for drafts.
+    if (!draft.id) {
+      addToast('Save the course before publishing', 'error')
+      return
+    }
+    if (isPublishing) return
+
+    const currentStatus = draft.status
+    const nextStatus: CourseStatus =
+      currentStatus === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED'
+    const targetPublished = nextStatus === 'PUBLISHED'
+
+    setIsPublishing(true)
+    // Optimistic update.
     setDraft((prev) => (prev ? { ...prev, status: nextStatus } : prev))
-    addToast(
-      nextStatus === 'PUBLISHED' ? 'Course published' : 'Course unpublished',
-      'success',
-    )
+
+    try {
+      await publishAdminCourse(draft.id, targetPublished)
+      queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
+      addToast(
+        targetPublished ? 'Course published' : 'Course unpublished',
+        'success',
+      )
+    } catch (err) {
+      // Rollback the optimistic status.
+      setDraft((prev) => (prev ? { ...prev, status: currentStatus } : prev))
+      const message =
+        err instanceof Error ? err.message : 'Failed to toggle publish'
+      addToast(message, 'error')
+    } finally {
+      setIsPublishing(false)
+    }
   }
 
   return (
@@ -1343,6 +2266,7 @@ export default function CourseBuilderPage() {
             onSave={handleSave}
             onTogglePublish={handleTogglePublish}
             isSaving={isSaving}
+            isPublishing={isPublishing}
             isAdmin={isAdmin}
             addToast={addToast}
           />
