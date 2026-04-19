@@ -797,6 +797,44 @@ export async function studentLmsRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ── Sprint 4 Story 21 — Enrollment status (for PAID-gate on Zoom links) ──
+  // GET /api/v1/student/enrollments/:cohortSlug/status
+  //
+  // Lightweight sibling of /dashboard: returns just the fields LiveSessionsPage
+  // needs to decide whether to surface the Zoom URL, so the page can refetch
+  // fresh status without pulling the full enrichment bundle (installments,
+  // lesson counts, next-lesson titles).
+  fastify.get<{ Params: { cohortSlug: string } }>(
+    '/enrollments/:cohortSlug/status',
+    { preHandler: requireStudent },
+    async (request, reply) => {
+      const { sub: studentId } = request.user as JwtPayload
+      const { cohortSlug } = request.params
+
+      const cohort = await findCohortBySlug(cohortSlug)
+      if (!cohort) {
+        return reply.code(404).send({ error: 'NOT_FOUND', message: 'Cohort not found.' })
+      }
+
+      const enrollment = await Enrollment.findOne(
+        {
+          studentId: new Types.ObjectId(studentId),
+          cohortId:  cohort._id,
+        },
+        { paymentStatus: 1, status: 1 },
+      ).lean()
+
+      if (!enrollment) {
+        return reply.code(404).send({ error: 'NOT_ENROLLED', message: 'Enrollment not found.' })
+      }
+
+      return reply.send({
+        paymentStatus: enrollment.paymentStatus,
+        status:        enrollment.status,
+      })
+    },
+  )
+
   // ── FIR-58 — Student certificates list ───────────────────────────────────
   // GET /api/v1/student/certificates
   fastify.get(

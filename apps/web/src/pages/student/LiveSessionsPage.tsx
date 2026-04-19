@@ -1,16 +1,26 @@
 // FIR-57 — Live sessions page: LIVE NOW, upcoming, past recordings
 // Sprint 3 Story 15 — Wise theme migration.
+// Sprint 4 Story 21 — Timezone-aware formatter + PAID-only Zoom gate.
 //
-// - Session cards use Wise surface + ring tokens
-// - Join buttons are <Button variant="primary"> and only render when the
-//   enrollment (if the consumer threads it through via props) is PAID. We do
-//   not currently receive paymentStatus here — the caller route (CoursePage)
-//   gates access before the component renders, so we preserve the existing
-//   visibility contract and accept an optional prop the audit can wire in a
-//   follow-up without touching this file again.
-// - ICS download is <Button variant="outline"> with Calendar icon.
-// - Date/time still formatted with Intl.DateTimeFormat — the audit-flagged
-//   timezone bug is deferred to its own story.
+// Story 21 changes
+// ----------------
+// - Date/time now use `formatSessionDateTime` from lib/date, which renders in
+//   the viewer's resolved timezone and exposes the zone abbreviation so we
+//   can show it next to every time on screen. The previous hand-rolled
+//   `formatScheduledAt` was `en-US`-locked and conflated the time and zone
+//   into one string, making styling and testing painful.
+// - The Zoom CTA is now gated behind the enrollment's `paymentStatus === 'PAID'`
+//   check, as required by the BRD. LiveSessionsPage fetches its own
+//   enrollment status so it stays fresh even if the dashboard cache is stale
+//   (the route can be linked to directly from notifications / email). When
+//   not PAID, we render an inline "complete payment" alert at the top and
+//   replace the Join button with a disabled lock button.
+// - Live/upcoming/past badge is recomputed client-side from scheduledAt +
+//   durationMinutes so a session that starts while the tab is open flips to
+//   LIVE without a refetch (the backend's `status` field is still used as a
+//   correctness fallback). Past sessions hide the Join button entirely.
+// - ICS download is intentionally left open regardless of payment status —
+//   it's a calendar entry, not the meeting link.
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router'
 import {
@@ -22,33 +32,33 @@ import {
   Link as LinkIcon,
   Play,
   Camera,
+  Lock,
+  AlertTriangle,
 } from 'lucide-react'
-import { fetchLiveSessions, type LiveSession } from '../../lib/api'
+import {
+  fetchLiveSessions,
+  fetchStudentEnrollmentStatus,
+  type LiveSession,
+  type StudentEnrollmentStatus,
+} from '../../lib/api'
+import { formatSessionDateTime, computeSessionPhase, type SessionPhase } from '../../lib/date'
 import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton'
 import { cn } from '../../lib/utils'
 
 // ---------------------------------------------------------------------------
-// Helpers — Intl.DateTimeFormat for locale-aware rendering.
+// Helpers — derived labels
 // ---------------------------------------------------------------------------
 
-function formatScheduledAt(iso: string): { month: string; day: string; full: string; time: string } {
+// Short date parts for the left-edge DateChip (still want MONTH / DAY split).
+// Kept separate from formatSessionDateTime because DateChip wants uppercased
+// month + numeric day as discrete strings for its typographic layout.
+function formatDateChip(iso: string): { month: string; day: string } {
   const d = new Date(iso)
   return {
-    month: new Intl.DateTimeFormat('en-US', { month: 'short' }).format(d).toUpperCase(),
-    day: String(d.getDate()),
-    full: new Intl.DateTimeFormat('en-US', {
-      weekday: 'short',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(d),
-    time: new Intl.DateTimeFormat('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZoneName: 'short',
-    }).format(d),
+    month: new Intl.DateTimeFormat(undefined, { month: 'short' }).format(d).toUpperCase(),
+    day:   String(d.getDate()),
   }
 }
 
@@ -60,7 +70,8 @@ function daysFromNow(iso: string): string {
   return `In ${days} days`
 }
 
-// Generate a .ics file and trigger download.
+// Generate a .ics file and trigger download. Unchanged from Story 15 —
+// ICS stays PAID-agnostic (a calendar reminder leaks no Zoom URL).
 function downloadIcs(session: LiveSession): void {
   const start = new Date(session.scheduledAt)
   const end = new Date(start.getTime() + session.durationMinutes * 60_000)
@@ -132,6 +143,111 @@ function DateChip({ month, day, active }: { month: string; day: string; active?:
 }
 
 // ---------------------------------------------------------------------------
+// Phase badge — "Live now" / "Upcoming" / "Past"
+// ---------------------------------------------------------------------------
+
+function PhaseBadge({ phase }: { phase: SessionPhase }) {
+  if (phase === 'LIVE') {
+    return (
+      <span
+        data-testid="phase-badge-live"
+        className={cn(
+          'text-[11px] font-bold bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+          'px-[10px] py-[3px] rounded-[var(--radius-pill)] inline-flex items-center gap-1',
+        )}
+      >
+        <span className="w-2 h-2 rounded-full bg-[var(--color-wise-danger)] inline-block animate-pulse" aria-hidden="true" />
+        Live now
+      </span>
+    )
+  }
+  if (phase === 'UPCOMING') {
+    return (
+      <span
+        data-testid="phase-badge-upcoming"
+        className={cn(
+          'text-[11px] font-semibold bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text)]',
+          'px-[10px] py-[3px] rounded-[var(--radius-pill)]',
+        )}
+      >
+        Upcoming
+      </span>
+    )
+  }
+  return (
+    <span
+      data-testid="phase-badge-past"
+      className={cn(
+        'text-[11px] font-semibold bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)]',
+        'px-[10px] py-[3px] rounded-[var(--radius-pill)]',
+      )}
+    >
+      Past
+    </span>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// PAID-gate alert banner — rendered once at the top of the page when the
+// student's enrollment is not PAID. Sits above every card so the student
+// sees the CTA before scanning the session list.
+// ---------------------------------------------------------------------------
+
+function PaymentGateAlert({ slug }: { slug: string }) {
+  return (
+    <div
+      data-testid="payment-gate-alert"
+      role="alert"
+      className={cn(
+        'bg-[var(--color-wise-danger-soft)] rounded-[var(--radius-md)] p-5 mb-6',
+        'flex items-start gap-3 flex-wrap',
+      )}
+    >
+      <AlertTriangle
+        className="h-5 w-5 text-[var(--color-wise-danger)] flex-shrink-0 mt-0.5"
+        aria-hidden="true"
+      />
+      <div className="flex-1 min-w-[240px]">
+        <p className="text-[14px] font-bold text-[var(--color-wise-text)] mb-0.5">
+          Complete your payment to unlock live session links
+        </p>
+        <p className="text-[13px] text-[var(--color-wise-text-muted)]">
+          You can still see the schedule and add sessions to your calendar.
+        </p>
+      </div>
+      <Button
+        variant="primary"
+        size="sm"
+        onClick={() => { window.location.href = `/checkout/${slug}` }}
+      >
+        Complete payment
+      </Button>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Locked Join button — shown in place of the Zoom CTA when canJoin is false.
+// Uses `title` for the tooltip rather than a Tooltip primitive because no
+// such primitive is shipped in the UI kit yet.
+// ---------------------------------------------------------------------------
+
+function LockedJoinButton() {
+  return (
+    <Button
+      data-testid="locked-join-button"
+      variant="outline"
+      size="md"
+      disabled
+      leftIcon={<Lock className="h-4 w-4" />}
+      title="Available after payment"
+    >
+      Join on Zoom
+    </Button>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Live NOW card
 // ---------------------------------------------------------------------------
 
@@ -140,13 +256,14 @@ interface LiveCardProps {
   /**
    * Whether the student's enrollment is in the PAID state. The join CTA only
    * renders when this is true. Defaults to `true` so callers that don't yet
-   * thread paymentStatus keep working — the route itself gates access.
+   * thread paymentStatus keep working — the parent page owns the real wiring.
    */
   canJoin?: boolean
 }
 
 function LiveCard({ session, canJoin = true }: LiveCardProps) {
-  const dt = formatScheduledAt(session.scheduledAt)
+  const chip = formatDateChip(session.scheduledAt)
+  const dt = formatSessionDateTime(session.scheduledAt)
 
   return (
     <article
@@ -156,30 +273,25 @@ function LiveCard({ session, canJoin = true }: LiveCardProps) {
       )}
       aria-label={`Live now: ${session.title}`}
     >
-      <DateChip month={dt.month} day={dt.day} active />
+      <DateChip month={chip.month} day={chip.day} active />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
           <h3 className="text-[17px] font-bold text-[var(--color-wise-text)]">{session.title}</h3>
-          <span
-            className={cn(
-              'text-[11px] font-bold bg-[var(--color-wise-danger)] text-white',
-              'px-[10px] py-[3px] rounded-[var(--radius-pill)] animate-pulse inline-flex items-center gap-1',
-            )}
-          >
-            <span className="w-2 h-2 rounded-full bg-white inline-block" aria-hidden="true" />
-            LIVE NOW
-          </span>
+          <PhaseBadge phase="LIVE" />
         </div>
 
         <div className="flex gap-5 mb-3 flex-wrap">
           <span className="text-[13px] text-[var(--color-wise-text-muted)] flex items-center gap-1.5">
             <Calendar className="h-4 w-4" aria-hidden="true" />
-            <strong className="text-[var(--color-wise-text)] font-semibold">Today · {dt.full}</strong>
+            <strong className="text-[var(--color-wise-text)] font-semibold">Today · {dt.date}</strong>
           </span>
           <span className="text-[13px] text-[var(--color-wise-text-muted)] flex items-center gap-1.5">
             <Clock className="h-4 w-4" aria-hidden="true" />
-            <strong className="text-[var(--color-wise-text)] font-semibold">{dt.time}</strong>
+            <strong className="text-[var(--color-wise-text)] font-semibold">
+              {dt.time}
+              <span className="font-normal text-[var(--color-wise-text-muted)]"> {dt.zone}</span>
+            </strong>
             <span>· {session.durationMinutes} min</span>
           </span>
         </div>
@@ -193,6 +305,7 @@ function LiveCard({ session, canJoin = true }: LiveCardProps) {
         <div className="flex gap-2.5 items-center flex-wrap">
           {session.zoomUrl && canJoin ? (
             <Button
+              data-testid="join-zoom-button"
               variant="primary"
               size="md"
               leftIcon={<Video className="h-4 w-4" />}
@@ -200,8 +313,10 @@ function LiveCard({ session, canJoin = true }: LiveCardProps) {
             >
               Join on Zoom
             </Button>
+          ) : session.zoomUrl ? (
+            <LockedJoinButton />
           ) : null}
-          {session.zoomUrl && (
+          {session.zoomUrl && canJoin && (
             <Button
               variant="ghost"
               size="sm"
@@ -228,7 +343,8 @@ interface UpcomingCardProps {
 }
 
 function UpcomingCard({ session, onToast, canJoin = true }: UpcomingCardProps) {
-  const dt = formatScheduledAt(session.scheduledAt)
+  const chip = formatDateChip(session.scheduledAt)
+  const dt = formatSessionDateTime(session.scheduledAt)
   const [reminderSet, setReminderSet] = useState(false)
 
   return (
@@ -239,11 +355,12 @@ function UpcomingCard({ session, onToast, canJoin = true }: UpcomingCardProps) {
       )}
       aria-label={`Upcoming: ${session.title}`}
     >
-      <DateChip month={dt.month} day={dt.day} />
+      <DateChip month={chip.month} day={chip.day} />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
           <h3 className="text-[17px] font-bold text-[var(--color-wise-text)]">{session.title}</h3>
+          <PhaseBadge phase="UPCOMING" />
           <span className="text-[11px] font-semibold bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)] px-[10px] py-[3px] rounded-[var(--radius-pill)]">
             {daysFromNow(session.scheduledAt)}
           </span>
@@ -252,11 +369,14 @@ function UpcomingCard({ session, onToast, canJoin = true }: UpcomingCardProps) {
         <div className="flex gap-5 mb-3 flex-wrap">
           <span className="text-[13px] text-[var(--color-wise-text-muted)] flex items-center gap-1.5">
             <Calendar className="h-4 w-4" aria-hidden="true" />
-            <strong className="text-[var(--color-wise-text)] font-semibold">{dt.full}</strong>
+            <strong className="text-[var(--color-wise-text)] font-semibold">{dt.date}</strong>
           </span>
           <span className="text-[13px] text-[var(--color-wise-text-muted)] flex items-center gap-1.5">
             <Clock className="h-4 w-4" aria-hidden="true" />
-            <strong className="text-[var(--color-wise-text)] font-semibold">{dt.time}</strong>
+            <strong className="text-[var(--color-wise-text)] font-semibold">
+              {dt.time}
+              <span className="font-normal text-[var(--color-wise-text-muted)]"> {dt.zone}</span>
+            </strong>
             <span>· {session.durationMinutes} min</span>
           </span>
         </div>
@@ -270,6 +390,7 @@ function UpcomingCard({ session, onToast, canJoin = true }: UpcomingCardProps) {
         <div className="flex gap-2.5 items-center flex-wrap">
           {canJoin ? (
             <Button
+              data-testid="join-zoom-button"
               variant="primary"
               size="md"
               disabled
@@ -277,7 +398,9 @@ function UpcomingCard({ session, onToast, canJoin = true }: UpcomingCardProps) {
             >
               Join on Zoom
             </Button>
-          ) : null}
+          ) : (
+            <LockedJoinButton />
+          )}
 
           <Button
             variant="outline"
@@ -316,7 +439,7 @@ function UpcomingCard({ session, onToast, canJoin = true }: UpcomingCardProps) {
 // ---------------------------------------------------------------------------
 
 function PastCard({ session }: { session: LiveSession }) {
-  const dt = formatScheduledAt(session.scheduledAt)
+  const dt = formatSessionDateTime(session.scheduledAt)
 
   return (
     <div
@@ -339,11 +462,14 @@ function PastCard({ session }: { session: LiveSession }) {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[15px] font-bold text-[var(--color-wise-text)] mb-1 truncate">
-          {session.title}
-        </p>
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-[15px] font-bold text-[var(--color-wise-text)] truncate">
+            {session.title}
+          </p>
+          <PhaseBadge phase="PAST" />
+        </div>
         <p className="text-[13px] text-[var(--color-wise-text-muted)]">
-          {dt.full} · {session.durationMinutes} min
+          {dt.date} · {dt.time} {dt.zone} · {session.durationMinutes} min
         </p>
       </div>
       {session.recordingUrl ? (
@@ -379,16 +505,37 @@ export default function LiveSessionsPage() {
   const { toast, showToast } = useToast()
 
   const [sessions, setSessions] = useState<LiveSession[]>([])
+  const [enrollmentStatus, setEnrollmentStatus] = useState<StudentEnrollmentStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!slug) return
     try {
-      const data = await fetchLiveSessions(slug)
-      setSessions(data.sessions)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load sessions')
+      // Kick both requests in parallel. If either fails we still want to
+      // surface something useful; session listing is more critical than the
+      // payment gate, so we swallow the status error and default to "not
+      // paid" to be safe (failing closed keeps Zoom links hidden).
+      const [sessionsResult, statusResult] = await Promise.allSettled([
+        fetchLiveSessions(slug),
+        fetchStudentEnrollmentStatus(slug),
+      ])
+
+      if (sessionsResult.status === 'fulfilled') {
+        setSessions(sessionsResult.value.sessions)
+      } else {
+        const msg = sessionsResult.reason instanceof Error
+          ? sessionsResult.reason.message
+          : 'Failed to load sessions'
+        setError(msg)
+      }
+
+      if (statusResult.status === 'fulfilled') {
+        setEnrollmentStatus(statusResult.value)
+      } else {
+        // Fail closed: no status = treat as not PAID.
+        setEnrollmentStatus(null)
+      }
     } finally {
       setIsLoading(false)
     }
@@ -396,12 +543,24 @@ export default function LiveSessionsPage() {
 
   useEffect(() => { void load() }, [load])
 
-  const liveSessions = sessions.filter((s) => s.status === 'LIVE')
-  const upcomingSessions = sessions
-    .filter((s) => s.status === 'UPCOMING')
+  const canJoin = enrollmentStatus?.paymentStatus === 'PAID'
+
+  // Re-partition sessions client-side using computeSessionPhase so the live
+  // indicator flips on time without a refetch. The backend's `status` field
+  // is used as a fallback when scheduledAt / duration are missing.
+  const partitioned = sessions.map((s) => ({
+    session: s,
+    phase: computeSessionPhase(s.scheduledAt, s.durationMinutes),
+  }))
+
+  const liveSessions    = partitioned.filter((p) => p.phase === 'LIVE').map((p) => p.session)
+  const upcomingSessions = partitioned
+    .filter((p) => p.phase === 'UPCOMING')
+    .map((p) => p.session)
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
-  const pastSessions = sessions
-    .filter((s) => s.status === 'PAST')
+  const pastSessions = partitioned
+    .filter((p) => p.phase === 'PAST')
+    .map((p) => p.session)
     .sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime())
 
   return (
@@ -428,6 +587,11 @@ export default function LiveSessionsPage() {
         Upcoming and past live sessions for this course.
       </p>
 
+      {/* PAID gate: show the alert once we've loaded status (or we know we
+          failed to load it). Hiding it during the initial skeleton prevents
+          a flash when the student is actually paid. */}
+      {!isLoading && !canJoin && <PaymentGateAlert slug={slug} />}
+
       {error && (
         <div className="bg-[var(--color-wise-danger-soft)] rounded-[var(--radius-sm)] p-4 mb-6 text-[var(--color-wise-danger)] text-[14px] font-semibold">
           {error}
@@ -452,7 +616,7 @@ export default function LiveSessionsPage() {
               <p className="text-[13px] font-bold text-[var(--color-wise-text-muted)] uppercase tracking-[0.8px] mb-4">
                 Live Now
               </p>
-              {liveSessions.map((s) => <LiveCard key={s.id} session={s} />)}
+              {liveSessions.map((s) => <LiveCard key={s.id} session={s} canJoin={canJoin} />)}
             </>
           )}
 
@@ -469,7 +633,7 @@ export default function LiveSessionsPage() {
             </div>
           ) : (
             upcomingSessions.map((s) => (
-              <UpcomingCard key={s.id} session={s} onToast={showToast} />
+              <UpcomingCard key={s.id} session={s} onToast={showToast} canJoin={canJoin} />
             ))
           )}
 
