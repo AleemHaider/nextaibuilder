@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Search, ChevronLeft, ChevronRight, X, MoreVertical } from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
 import { authFetch } from '../../lib/api'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -142,31 +143,31 @@ const MOCK_COHORTS: Cohort[] = [
 // ---------------------------------------------------------------------------
 
 const AVATAR_GRADIENTS = [
-  'linear-gradient(135deg,#4a9ad4,#1a3a6a)',
-  'linear-gradient(135deg,#f59e0b,#b45309)',
-  'linear-gradient(135deg,#059669,#064e3b)',
-  'linear-gradient(135deg,#7c3aed,#4c1d95)',
-  'linear-gradient(135deg,#ef4444,#991b1b)',
+  'linear-gradient(135deg,var(--color-wise-primary-text),var(--color-wise-primary-text))',
+  'linear-gradient(135deg,var(--color-wise-warning),var(--color-wise-warning))',
+  'linear-gradient(135deg,var(--color-wise-success),var(--color-wise-success))',
+  'linear-gradient(135deg,var(--color-wise-primary-text),var(--color-wise-primary-text))',
+  'linear-gradient(135deg,var(--color-wise-danger),var(--color-wise-danger))',
 ]
 
 const STATUS_CFG: Record<
   EnrollmentStatus,
   { bg: string; color: string; dot: string; label: string }
 > = {
-  ACTIVE:    { bg: 'rgba(5,150,105,0.1)',  color: '#065f46', dot: '#059669', label: 'Active'    },
-  PENDING:   { bg: 'rgba(245,158,11,0.1)', color: '#92400e', dot: '#f59e0b', label: 'Pending'   },
-  COMPLETED: { bg: 'rgba(59,130,246,0.1)', color: '#1e40af', dot: '#3b82f6', label: 'Completed' },
-  REVOKED:   { bg: 'rgba(239,68,68,0.1)',  color: '#991b1b', dot: '#ef4444', label: 'Revoked'   },
+  ACTIVE:    { bg: 'rgba(5,150,105,0.1)',  color: 'var(--color-wise-success)', dot: 'var(--color-wise-success)', label: 'Active'    },
+  PENDING:   { bg: 'rgba(245,158,11,0.1)', color: 'var(--color-wise-text-warm)', dot: 'var(--color-wise-warning)', label: 'Pending'   },
+  COMPLETED: { bg: 'rgba(59,130,246,0.1)', color: 'var(--color-wise-primary-text)', dot: 'var(--color-wise-primary-text)', label: 'Completed' },
+  REVOKED:   { bg: 'rgba(239,68,68,0.1)',  color: 'var(--color-wise-danger)', dot: 'var(--color-wise-danger)', label: 'Revoked'   },
 }
 
 const PAYMENT_CFG: Record<
   Enrollment['paymentStatus'],
   { bg: string; color: string }
 > = {
-  PAID:    { bg: 'rgba(5,150,105,0.1)',   color: '#065f46' },
-  PENDING: { bg: 'rgba(245,158,11,0.1)',  color: '#92400e' },
-  FAILED:  { bg: 'rgba(239,68,68,0.1)',   color: '#991b1b' },
-  FREE:    { bg: 'rgba(100,116,139,0.1)', color: '#717182' },
+  PAID:    { bg: 'rgba(5,150,105,0.1)',   color: 'var(--color-wise-success)' },
+  PENDING: { bg: 'rgba(245,158,11,0.1)',  color: 'var(--color-wise-text-warm)' },
+  FAILED:  { bg: 'rgba(239,68,68,0.1)',   color: 'var(--color-wise-danger)' },
+  FREE:    { bg: 'rgba(100,116,139,0.1)', color: 'var(--color-wise-text-muted)' },
 }
 
 const PAGE_SIZE = 10
@@ -220,17 +221,17 @@ function StatusPill({
 function ProgressBar({ value }: { value: number }) {
   const bg =
     value === 100
-      ? 'linear-gradient(90deg,#22c55e,#16a34a)'
+      ? 'linear-gradient(90deg,var(--color-wise-success),var(--color-wise-success))'
       : value === 0
-      ? 'rgba(26,39,68,0.08)'
-      : 'linear-gradient(90deg,#4a9ad4,#7c3aed)'
+      ? 'var(--color-wise-ring)'
+      : 'linear-gradient(90deg,var(--color-wise-primary-text),var(--color-wise-primary-text))'
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <div
         style={{
           width: 72,
           height: 5,
-          background: '#f8f9fb',
+          background: 'var(--color-wise-canvas)',
           borderRadius: 99,
           overflow: 'hidden',
           flexShrink: 0,
@@ -240,7 +241,7 @@ function ProgressBar({ value }: { value: number }) {
           style={{ height: '100%', borderRadius: 99, width: `${value}%`, background: bg }}
         />
       </div>
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#717182', flexShrink: 0 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-wise-text-muted)', flexShrink: 0 }}>
         {value}%
       </span>
     </div>
@@ -255,13 +256,13 @@ function Th({ children }: { children?: React.ReactNode }) {
         textAlign: 'left',
         fontSize: 10,
         fontWeight: 700,
-        color: '#a3a3b8',
+        color: 'var(--color-wise-text-muted)',
         padding: '10px 16px',
         textTransform: 'uppercase',
         letterSpacing: '0.8px',
-        borderBottom: '1px solid rgba(26,39,68,0.05)',
+        borderBottom: '1px solid var(--color-wise-ring)',
         whiteSpace: 'nowrap',
-        background: '#f8f9fb',
+        background: 'var(--color-wise-canvas)',
       }}
     >
       {children}
@@ -312,8 +313,8 @@ function ActionsMenu({
           height: 28,
           borderRadius: 7,
           border: '1px solid rgba(26,39,68,0.09)',
-          background: open ? '#f0f4f8' : '#fff',
-          color: '#717182',
+          background: open ? 'var(--color-wise-surface-soft)' : 'var(--color-wise-surface)',
+          color: 'var(--color-wise-text-muted)',
           cursor: 'pointer',
           flexShrink: 0,
         }}
@@ -329,10 +330,10 @@ function ActionsMenu({
             top: '100%',
             right: 0,
             marginTop: 4,
-            background: '#fff',
+            background: 'var(--color-wise-surface)',
             borderRadius: 10,
             border: '1px solid rgba(26,39,68,0.09)',
-            boxShadow: '0 8px 24px rgba(26,39,68,0.12)',
+            boxShadow: '0 8px 24px var(--color-wise-ring)',
             minWidth: 156,
             zIndex: 50,
             overflow: 'hidden',
@@ -352,18 +353,18 @@ function ActionsMenu({
               padding: '9px 14px',
               fontSize: 12,
               fontWeight: 600,
-              color: '#1a2744',
+              color: 'var(--color-wise-text)',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = '#f8f9fb')}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-wise-canvas)')}
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
             Transfer Cohort
           </button>
           <div
-            style={{ height: 1, background: 'rgba(26,39,68,0.06)', margin: '0 8px' }}
+            style={{ height: 1, background: 'var(--color-wise-ring)', margin: '0 8px' }}
           />
           <button
             type="button"
@@ -379,12 +380,12 @@ function ActionsMenu({
               padding: '9px 14px',
               fontSize: 12,
               fontWeight: 600,
-              color: '#ef4444',
+              color: 'var(--color-wise-danger)',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = '#fff5f5')}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-wise-danger-soft)')}
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
             Cancel Enrollment
@@ -436,7 +437,7 @@ function TransferModal({
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(13,26,58,0.5)',
+          background: 'rgba(14,15,12,0.45)',
           backdropFilter: 'blur(3px)',
         }}
       />
@@ -445,7 +446,7 @@ function TransferModal({
       <div
         style={{
           position: 'relative',
-          background: '#fff',
+          background: 'var(--color-wise-surface)',
           borderRadius: 18,
           boxShadow: '0 24px 60px rgba(13,26,58,0.25)',
           padding: '28px 28px 24px',
@@ -465,7 +466,7 @@ function TransferModal({
             style={{
               fontSize: 16,
               fontWeight: 800,
-              color: '#1a2744',
+              color: 'var(--color-wise-text)',
               margin: 0,
               letterSpacing: '-0.3px',
             }}
@@ -484,8 +485,8 @@ function TransferModal({
               height: 28,
               borderRadius: 7,
               border: '1px solid rgba(26,39,68,0.09)',
-              background: '#f8f9fb',
-              color: '#717182',
+              background: 'var(--color-wise-canvas)',
+              color: 'var(--color-wise-text-muted)',
               cursor: 'pointer',
             }}
           >
@@ -493,9 +494,9 @@ function TransferModal({
           </button>
         </div>
 
-        <p style={{ fontSize: 13, color: '#717182', marginBottom: 20, lineHeight: 1.6 }}>
-          Transfer <strong style={{ color: '#1a2744' }}>{enrollment.studentName}</strong> from{' '}
-          <strong style={{ color: '#1a2744' }}>{enrollment.cohortTitle}</strong> to a new cohort.
+        <p style={{ fontSize: 13, color: 'var(--color-wise-text-muted)', marginBottom: 20, lineHeight: 1.6 }}>
+          Transfer <strong style={{ color: 'var(--color-wise-text)' }}>{enrollment.studentName}</strong> from{' '}
+          <strong style={{ color: 'var(--color-wise-text)' }}>{enrollment.cohortTitle}</strong> to a new cohort.
         </p>
 
         <label
@@ -503,7 +504,7 @@ function TransferModal({
             display: 'block',
             fontSize: 12,
             fontWeight: 700,
-            color: '#1a2744',
+            color: 'var(--color-wise-text)',
             marginBottom: 6,
           }}
           htmlFor="cohort-select"
@@ -518,10 +519,10 @@ function TransferModal({
             width: '100%',
             padding: '9px 12px',
             borderRadius: 9,
-            border: '1px solid rgba(26,39,68,0.12)',
+            border: '1px solid var(--color-wise-ring)',
             fontSize: 13,
-            color: '#1a2744',
-            background: '#f8f9fb',
+            color: 'var(--color-wise-text)',
+            background: 'var(--color-wise-canvas)',
             outline: 'none',
             marginBottom: 20,
             cursor: 'pointer',
@@ -542,11 +543,11 @@ function TransferModal({
             style={{
               padding: '8px 18px',
               borderRadius: 9,
-              border: '1px solid rgba(26,39,68,0.12)',
-              background: '#fff',
+              border: '1px solid var(--color-wise-ring)',
+              background: 'var(--color-wise-surface)',
               fontSize: 13,
               fontWeight: 600,
-              color: '#717182',
+              color: 'var(--color-wise-text-muted)',
               cursor: 'pointer',
             }}
           >
@@ -560,10 +561,10 @@ function TransferModal({
               padding: '8px 18px',
               borderRadius: 9,
               border: 'none',
-              background: !selectedCohort || loading ? '#a3a3b8' : '#1a2744',
+              background: !selectedCohort || loading ? 'var(--color-wise-text-muted)' : 'var(--color-wise-text)',
               fontSize: 13,
               fontWeight: 700,
-              color: '#fff',
+              color: 'var(--color-wise-surface)',
               cursor: !selectedCohort || loading ? 'not-allowed' : 'pointer',
               opacity: loading ? 0.7 : 1,
             }}
@@ -593,11 +594,11 @@ function MiniStat({
     <div
       style={{
         flex: 1,
-        background: '#fff',
+        background: 'var(--color-wise-surface)',
         borderRadius: 14,
         padding: '14px 18px',
-        border: '1px solid rgba(26,39,68,0.07)',
-        boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.03)',
+        border: '1px solid var(--color-wise-ring)',
+        boxShadow: '0 1px 3px var(--color-wise-ring), 0 4px 16px var(--color-wise-ring)',
       }}
     >
       <div
@@ -612,7 +613,7 @@ function MiniStat({
       >
         {value}
       </div>
-      <div style={{ fontSize: 11, color: '#a3a3b8', fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 11, color: 'var(--color-wise-text-muted)', fontWeight: 600 }}>{label}</div>
     </div>
   )
 }
@@ -635,7 +636,7 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
         fontSize: 13,
         fontWeight: 600,
         background: type === 'success' ? 'rgba(5,150,105,0.1)' : 'rgba(239,68,68,0.1)',
-        color: type === 'success' ? '#065f46' : '#991b1b',
+        color: type === 'success' ? 'var(--color-wise-success)' : 'var(--color-wise-danger)',
         border: `1px solid ${type === 'success' ? 'rgba(5,150,105,0.2)' : 'rgba(239,68,68,0.2)'}`,
         marginBottom: 4,
       }}
@@ -645,7 +646,7 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
           width: 7,
           height: 7,
           borderRadius: '50%',
-          background: type === 'success' ? '#059669' : '#ef4444',
+          background: type === 'success' ? 'var(--color-wise-success)' : 'var(--color-wise-danger)',
           flexShrink: 0,
         }}
       />
@@ -688,6 +689,9 @@ export default function EnrollmentManagementPage() {
 
   // ---- Action loading ----
   const [cancellingId, setCancellingId] = useState<string | null>(null)
+
+  // ---- Confirm cancel dialog ----
+  const [cancelTarget, setCancelTarget] = useState<Enrollment | null>(null)
 
   // ---------------------------------------------------------------------------
   // Fetch enrollments
@@ -774,15 +778,18 @@ export default function EnrollmentManagementPage() {
   }
 
   // ---------------------------------------------------------------------------
-  // Cancel enrollment
+  // Cancel enrollment — opens ConfirmDialog instead of window.confirm()
   // ---------------------------------------------------------------------------
-  async function handleCancel(id: string) {
+  function handleCancel(id: string) {
     const target = enrollments.find((e) => e.id === id)
     if (!target) return
-    const confirmed = window.confirm(
-      `Cancel enrollment for ${target.studentName} in ${target.course}? This cannot be undone.`,
-    )
-    if (!confirmed) return
+    setCancelTarget(target)
+  }
+
+  async function handleCancelConfirmed() {
+    const target = cancelTarget
+    if (!target) return
+    const id = target.id
 
     setCancellingId(id)
     try {
@@ -803,6 +810,7 @@ export default function EnrollmentManagementPage() {
       setToast({ message: 'Enrollment cancelled.', type: 'success' })
     } finally {
       setCancellingId(null)
+      setCancelTarget(null)
     }
   }
 
@@ -869,7 +877,7 @@ export default function EnrollmentManagementPage() {
         @keyframes em-spin {
           to { transform: rotate(360deg); }
         }
-        .em-tr:hover td { background: #f8f9fb !important; }
+        .em-tr:hover td { background: var(--color-wise-canvas) !important; }
       `}</style>
 
       <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -880,14 +888,14 @@ export default function EnrollmentManagementPage() {
             style={{
               fontSize: 22,
               fontWeight: 900,
-              color: '#1a2744',
+              color: 'var(--color-wise-text)',
               margin: 0,
               letterSpacing: '-0.4px',
             }}
           >
             Enrollments
           </h1>
-          <p style={{ fontSize: 13, color: '#a3a3b8', marginTop: 4, fontWeight: 500 }}>
+          <p style={{ fontSize: 13, color: 'var(--color-wise-text-muted)', marginTop: 4, fontWeight: 500 }}>
             Manage all student course enrollments
           </p>
         </div>
@@ -898,10 +906,10 @@ export default function EnrollmentManagementPage() {
         {/* ── Filter bar ── */}
         <div
           style={{
-            background: '#fff',
+            background: 'var(--color-wise-surface)',
             borderRadius: 14,
-            border: '1px solid rgba(26,39,68,0.07)',
-            boxShadow: '0 1px 3px rgba(26,39,68,0.06)',
+            border: '1px solid var(--color-wise-ring)',
+            boxShadow: '0 1px 3px var(--color-wise-ring)',
             padding: '14px 18px',
             display: 'flex',
             alignItems: 'center',
@@ -917,11 +925,11 @@ export default function EnrollmentManagementPage() {
             style={{
               padding: '7px 12px',
               borderRadius: 8,
-              border: '1px solid rgba(26,39,68,0.12)',
+              border: '1px solid var(--color-wise-ring)',
               fontSize: 12,
               fontWeight: 600,
-              color: '#1a2744',
-              background: '#f8f9fb',
+              color: 'var(--color-wise-text)',
+              background: 'var(--color-wise-canvas)',
               cursor: 'pointer',
               outline: 'none',
             }}
@@ -942,7 +950,7 @@ export default function EnrollmentManagementPage() {
                 left: 10,
                 top: '50%',
                 transform: 'translateY(-50%)',
-                color: '#a3a3b8',
+                color: 'var(--color-wise-text-muted)',
                 pointerEvents: 'none',
               }}
             />
@@ -956,10 +964,10 @@ export default function EnrollmentManagementPage() {
                 width: '100%',
                 padding: '7px 10px 7px 30px',
                 borderRadius: 8,
-                border: '1px solid rgba(26,39,68,0.12)',
+                border: '1px solid var(--color-wise-ring)',
                 fontSize: 12,
-                color: '#1a2744',
-                background: '#f8f9fb',
+                color: 'var(--color-wise-text)',
+                background: 'var(--color-wise-canvas)',
                 outline: 'none',
                 boxSizing: 'border-box',
               }}
@@ -975,10 +983,10 @@ export default function EnrollmentManagementPage() {
             style={{
               padding: '7px 10px',
               borderRadius: 8,
-              border: '1px solid rgba(26,39,68,0.12)',
+              border: '1px solid var(--color-wise-ring)',
               fontSize: 12,
-              color: '#1a2744',
-              background: '#f8f9fb',
+              color: 'var(--color-wise-text)',
+              background: 'var(--color-wise-canvas)',
               outline: 'none',
             }}
           />
@@ -992,10 +1000,10 @@ export default function EnrollmentManagementPage() {
             style={{
               padding: '7px 10px',
               borderRadius: 8,
-              border: '1px solid rgba(26,39,68,0.12)',
+              border: '1px solid var(--color-wise-ring)',
               fontSize: 12,
-              color: '#1a2744',
-              background: '#f8f9fb',
+              color: 'var(--color-wise-text)',
+              background: 'var(--color-wise-canvas)',
               outline: 'none',
             }}
           />
@@ -1008,8 +1016,8 @@ export default function EnrollmentManagementPage() {
               padding: '7px 18px',
               borderRadius: 8,
               border: 'none',
-              background: '#1a2744',
-              color: '#fff',
+              background: 'var(--color-wise-text)',
+              color: 'var(--color-wise-surface)',
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
@@ -1027,9 +1035,9 @@ export default function EnrollmentManagementPage() {
               style={{
                 padding: '7px 12px',
                 borderRadius: 8,
-                border: '1px solid rgba(26,39,68,0.12)',
-                background: '#fff',
-                color: '#717182',
+                border: '1px solid var(--color-wise-ring)',
+                background: 'var(--color-wise-surface)',
+                color: 'var(--color-wise-text-muted)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -1046,19 +1054,19 @@ export default function EnrollmentManagementPage() {
 
         {/* ── Stats row ── */}
         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-          <MiniStat label="Total Enrollments" value={statsTotal}     accent="#4a9ad4" />
-          <MiniStat label="Active"            value={statsActive}    accent="#059669" />
-          <MiniStat label="Pending"           value={statsPending}   accent="#f59e0b" />
-          <MiniStat label="Completed"         value={statsCompleted} accent="#3b82f6" />
+          <MiniStat label="Total Enrollments" value={statsTotal}     accent="var(--color-wise-primary-text)" />
+          <MiniStat label="Active"            value={statsActive}    accent="var(--color-wise-success)" />
+          <MiniStat label="Pending"           value={statsPending}   accent="var(--color-wise-warning)" />
+          <MiniStat label="Completed"         value={statsCompleted} accent="var(--color-wise-primary-text)" />
         </div>
 
         {/* ── Enrollments table ── */}
         <div
           style={{
-            background: '#fff',
+            background: 'var(--color-wise-surface)',
             borderRadius: 18,
-            border: '1px solid rgba(26,39,68,0.07)',
-            boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.03)',
+            border: '1px solid var(--color-wise-ring)',
+            boxShadow: '0 1px 3px var(--color-wise-ring), 0 4px 16px var(--color-wise-ring)',
             overflow: 'hidden',
           }}
         >
@@ -1069,14 +1077,14 @@ export default function EnrollmentManagementPage() {
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '16px 24px',
-              borderBottom: '1px solid rgba(26,39,68,0.06)',
+              borderBottom: '1px solid var(--color-wise-ring)',
             }}
           >
             <div>
-              <h2 style={{ fontSize: 14, fontWeight: 800, color: '#1a2744', margin: 0 }}>
+              <h2 style={{ fontSize: 14, fontWeight: 800, color: 'var(--color-wise-text)', margin: 0 }}>
                 All Enrollments
               </h2>
-              <p style={{ fontSize: 11, color: '#a3a3b8', marginTop: 2, marginBottom: 0 }}>
+              <p style={{ fontSize: 11, color: 'var(--color-wise-text-muted)', marginTop: 2, marginBottom: 0 }}>
                 {hasActiveFilters ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''} found` : `${enrollments.length} total`}
               </p>
             </div>
@@ -1087,8 +1095,8 @@ export default function EnrollmentManagementPage() {
                   width: 18,
                   height: 18,
                   borderRadius: '50%',
-                  border: '2px solid rgba(26,39,68,0.1)',
-                  borderTopColor: '#4a9ad4',
+                  border: '2px solid var(--color-wise-ring)',
+                  borderTopColor: 'var(--color-wise-primary-text)',
                   animation: 'em-spin 0.7s linear infinite',
                 }}
               />
@@ -1101,7 +1109,7 @@ export default function EnrollmentManagementPage() {
               style={{
                 padding: '48px 24px',
                 textAlign: 'center',
-                color: '#a3a3b8',
+                color: 'var(--color-wise-text-muted)',
                 fontSize: 13,
               }}
             >
@@ -1141,7 +1149,7 @@ export default function EnrollmentManagementPage() {
                         style={{
                           borderBottom:
                             i < pageRows.length - 1
-                              ? '1px solid rgba(26,39,68,0.04)'
+                              ? '1px solid var(--color-wise-ring)'
                               : 'none',
                           opacity: isCancelling ? 0.5 : 1,
                           transition: 'opacity 0.2s',
@@ -1161,10 +1169,10 @@ export default function EnrollmentManagementPage() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                color: '#fff',
+                                color: 'var(--color-wise-surface)',
                                 fontSize: 12,
                                 fontWeight: 800,
-                                boxShadow: '0 2px 6px rgba(26,39,68,0.15)',
+                                boxShadow: '0 2px 6px var(--color-wise-ring-strong)',
                               }}
                             >
                               {row.studentName.charAt(0).toUpperCase()}
@@ -1174,7 +1182,7 @@ export default function EnrollmentManagementPage() {
                                 style={{
                                   fontSize: 13,
                                   fontWeight: 700,
-                                  color: '#1a2744',
+                                  color: 'var(--color-wise-text)',
                                   whiteSpace: 'nowrap',
                                 }}
                               >
@@ -1183,7 +1191,7 @@ export default function EnrollmentManagementPage() {
                               <div
                                 style={{
                                   fontSize: 11,
-                                  color: '#a3a3b8',
+                                  color: 'var(--color-wise-text-muted)',
                                   marginTop: 1,
                                 }}
                               >
@@ -1199,7 +1207,7 @@ export default function EnrollmentManagementPage() {
                             style={{
                               fontSize: 12,
                               fontWeight: 700,
-                              color: '#1a2744',
+                              color: 'var(--color-wise-text)',
                               whiteSpace: 'nowrap',
                             }}
                           >
@@ -1208,7 +1216,7 @@ export default function EnrollmentManagementPage() {
                           <div
                             style={{
                               fontSize: 11,
-                              color: '#a3a3b8',
+                              color: 'var(--color-wise-text-muted)',
                               marginTop: 2,
                             }}
                           >
@@ -1251,7 +1259,7 @@ export default function EnrollmentManagementPage() {
                                     ? 'rgba(99,91,255,0.1)'
                                     : 'rgba(245,158,11,0.1)',
                                 color:
-                                  row.paymentMethod === 'STRIPE' ? '#4338ca' : '#92400e',
+                                  row.paymentMethod === 'STRIPE' ? 'var(--color-wise-primary-text)' : 'var(--color-wise-text-warm)',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.4px',
                                 alignSelf: 'flex-start',
@@ -1272,7 +1280,7 @@ export default function EnrollmentManagementPage() {
                           <span
                             style={{
                               fontSize: 11,
-                              color: '#a3a3b8',
+                              color: 'var(--color-wise-text-muted)',
                               fontWeight: 500,
                               whiteSpace: 'nowrap',
                             }}
@@ -1308,22 +1316,22 @@ export default function EnrollmentManagementPage() {
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '11px 24px',
-              borderTop: '1px solid rgba(26,39,68,0.05)',
-              background: '#fafbfc',
+              borderTop: '1px solid var(--color-wise-ring)',
+              background: 'var(--color-wise-canvas)',
               flexWrap: 'wrap',
               gap: 8,
             }}
           >
-            <span style={{ fontSize: 11, color: '#a3a3b8' }}>
+            <span style={{ fontSize: 11, color: 'var(--color-wise-text-muted)' }}>
               Showing{' '}
-              <strong style={{ color: '#1a2744' }}>
+              <strong style={{ color: 'var(--color-wise-text)' }}>
                 {filtered.length === 0
                   ? 0
                   : (safePage - 1) * PAGE_SIZE + 1}
                 –
                 {Math.min(safePage * PAGE_SIZE, filtered.length)}
               </strong>{' '}
-              of <strong style={{ color: '#1a2744' }}>{filtered.length}</strong>
+              of <strong style={{ color: 'var(--color-wise-text)' }}>{filtered.length}</strong>
             </span>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1339,9 +1347,9 @@ export default function EnrollmentManagementPage() {
                   width: 30,
                   height: 30,
                   borderRadius: 8,
-                  border: '1px solid rgba(26,39,68,0.1)',
-                  background: safePage <= 1 ? '#f8f9fb' : '#fff',
-                  color: safePage <= 1 ? 'rgba(26,39,68,0.15)' : '#717182',
+                  border: '1px solid var(--color-wise-ring)',
+                  background: safePage <= 1 ? 'var(--color-wise-canvas)' : 'var(--color-wise-surface)',
+                  color: safePage <= 1 ? 'var(--color-wise-ring-strong)' : 'var(--color-wise-text-muted)',
                   cursor: safePage <= 1 ? 'not-allowed' : 'pointer',
                   flexShrink: 0,
                 }}
@@ -1366,9 +1374,9 @@ export default function EnrollmentManagementPage() {
                       width: 30,
                       height: 30,
                       borderRadius: 8,
-                      border: p === safePage ? 'none' : '1px solid rgba(26,39,68,0.1)',
-                      background: p === safePage ? '#1a2744' : '#fff',
-                      color: p === safePage ? '#fff' : '#717182',
+                      border: p === safePage ? 'none' : '1px solid var(--color-wise-ring)',
+                      background: p === safePage ? 'var(--color-wise-text)' : 'var(--color-wise-surface)',
+                      color: p === safePage ? 'var(--color-wise-surface)' : 'var(--color-wise-text-muted)',
                       fontSize: 12,
                       fontWeight: p === safePage ? 700 : 500,
                       cursor: 'pointer',
@@ -1392,9 +1400,9 @@ export default function EnrollmentManagementPage() {
                   width: 30,
                   height: 30,
                   borderRadius: 8,
-                  border: '1px solid rgba(26,39,68,0.1)',
-                  background: safePage >= totalPages ? '#f8f9fb' : '#fff',
-                  color: safePage >= totalPages ? 'rgba(26,39,68,0.15)' : '#717182',
+                  border: '1px solid var(--color-wise-ring)',
+                  background: safePage >= totalPages ? 'var(--color-wise-canvas)' : 'var(--color-wise-surface)',
+                  color: safePage >= totalPages ? 'var(--color-wise-ring-strong)' : 'var(--color-wise-text-muted)',
                   cursor: safePage >= totalPages ? 'not-allowed' : 'pointer',
                   flexShrink: 0,
                 }}
@@ -1416,6 +1424,25 @@ export default function EnrollmentManagementPage() {
           loading={transferLoading}
         />
       )}
+
+      {/* Confirm cancel dialog — replaces window.confirm() */}
+      <ConfirmDialog
+        open={cancelTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setCancelTarget(null)
+        }}
+        title="Cancel enrollment?"
+        description={
+          cancelTarget
+            ? `This will cancel enrollment for ${cancelTarget.studentName} in ${cancelTarget.course}. This cannot be undone.`
+            : 'Please confirm the cancellation.'
+        }
+        confirmLabel="Cancel enrollment"
+        cancelLabel="Keep enrollment"
+        variant="danger"
+        isLoading={cancellingId === cancelTarget?.id}
+        onConfirm={handleCancelConfirmed}
+      />
     </AdminShell>
   )
 }

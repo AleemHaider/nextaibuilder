@@ -2,12 +2,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
+  FileText,
+  Check,
+  X,
+  Search as SearchIcon,
+  CircleCheck,
+  AlertTriangle,
+  Inbox,
+  PartyPopper,
+} from 'lucide-react'
+import {
   fetchManualPayments,
   approveManualPayment,
   rejectManualPayment,
   type ManualPaymentRequest,
 } from '../../lib/api'
 import { cn } from '../../lib/utils'
+import { EmptyState } from '../../components/ui/EmptyState'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -44,11 +55,11 @@ function getAvatarInitial(name: string): string {
 }
 
 const AVATAR_GRADIENTS = [
-  'linear-gradient(135deg, #4a9ad4, #1a2744)',
-  'linear-gradient(135deg, #cc4a00, #ff8c5a)',
-  'linear-gradient(135deg, #054d28, #16a34a)',
-  'linear-gradient(135deg, #7c3aed, #4a9ad4)',
-  'linear-gradient(135deg, #d97706, #f59e0b)',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-text))',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-primary))',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-success))',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-primary-text))',
+  'linear-gradient(135deg, var(--color-wise-warning), var(--color-wise-warning))',
 ]
 
 function getAvatarGradient(name: string): string {
@@ -88,14 +99,16 @@ function Toast({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: stri
       aria-live="polite"
       className={cn(
         'flex items-center gap-3 px-5 py-3.5 rounded-[14px]',
-        'shadow-[rgba(26,39,68,0.2)_0_4px_20px] text-[14px] font-semibold',
+        'shadow-[var(--color-wise-ring-strong)_0_4px_20px] text-[14px] font-semibold',
         'animate-[slideUp_0.2s_ease-out]',
         toast.variant === 'success'
-          ? 'bg-[#e6f4ec] text-[#054d28] border border-[rgba(5,77,40,0.15)]'
-          : 'bg-[#fdeaeb] text-[#d03238] border border-[rgba(208,50,56,0.15)]',
+          ? 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)] border border-[rgba(5,77,40,0.15)]'
+          : 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] border border-[rgba(208,50,56,0.15)]',
       )}
     >
-      <span aria-hidden="true">{toast.variant === 'success' ? '✓' : '✗'}</span>
+      <span aria-hidden="true" className="inline-flex items-center">
+        {toast.variant === 'success' ? <Check size={16} /> : <X size={16} />}
+      </span>
       {toast.message}
     </div>
   )
@@ -107,22 +120,22 @@ function Toast({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: stri
 function SkeletonCard() {
   return (
     <div
-      className="bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden"
+      className="bg-white rounded-[16px] shadow-[var(--color-wise-ring)_0_0_0_1px] overflow-hidden"
       aria-hidden="true"
     >
       <div className="flex items-start gap-4 p-5">
-        <div className="w-20 h-20 rounded-[12px] bg-[#e8ecf4] animate-pulse flex-shrink-0" />
+        <div className="w-20 h-20 rounded-[12px] bg-[var(--color-wise-surface-soft)] animate-pulse flex-shrink-0" />
         <div className="flex-1 space-y-2.5 pt-1">
-          <div className="h-4 bg-[#e8ecf4] rounded animate-pulse w-1/3" />
-          <div className="h-3 bg-[#e8ecf4] rounded animate-pulse w-1/4" />
-          <div className="h-3 bg-[#e8ecf4] rounded animate-pulse w-2/5" />
-          <div className="h-3 bg-[#e8ecf4] rounded animate-pulse w-1/5" />
+          <div className="h-4 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-1/3" />
+          <div className="h-3 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-1/4" />
+          <div className="h-3 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-2/5" />
+          <div className="h-3 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-1/5" />
         </div>
       </div>
-      <div className="border-t border-[rgba(26,39,68,0.06)] px-5 py-3.5 flex gap-3">
-        <div className="h-9 w-28 bg-[#e8ecf4] rounded-full animate-pulse" />
-        <div className="h-9 w-24 bg-[#e8ecf4] rounded-full animate-pulse" />
-        <div className="h-9 w-32 bg-[#e8ecf4] rounded-full animate-pulse ml-auto" />
+      <div className="border-t border-[var(--color-wise-ring)] px-5 py-3.5 flex gap-3">
+        <div className="h-9 w-28 bg-[var(--color-wise-surface-soft)] rounded-full animate-pulse" />
+        <div className="h-9 w-24 bg-[var(--color-wise-surface-soft)] rounded-full animate-pulse" />
+        <div className="h-9 w-32 bg-[var(--color-wise-surface-soft)] rounded-full animate-pulse ml-auto" />
       </div>
     </div>
   )
@@ -145,7 +158,7 @@ function QueueCard({ request, onApprove, onReject, onViewReceipt, isRemoving }: 
   return (
     <div
       className={cn(
-        'bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden',
+        'bg-white rounded-[16px] shadow-[var(--color-wise-ring)_0_0_0_1px] overflow-hidden',
         'transition-all duration-300',
         isRemoving && 'opacity-0 scale-95 pointer-events-none',
       )}
@@ -157,13 +170,13 @@ function QueueCard({ request, onApprove, onReject, onViewReceipt, isRemoving }: 
           onClick={() => onViewReceipt(request)}
           aria-label={`View receipt from ${student.name}`}
           className={cn(
-            'w-20 h-20 rounded-[12px] bg-[#e8ecf4] flex-shrink-0',
-            'flex items-center justify-center text-[28px] cursor-pointer',
+            'w-20 h-20 rounded-[12px] bg-[var(--color-wise-surface-soft)] flex-shrink-0',
+            'flex items-center justify-center cursor-pointer text-[var(--color-wise-text-warm)]',
             'hover:opacity-80 transition-opacity border-none',
-            'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#4a9ad4]/40',
+            'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-wise-primary-text)]/40',
           )}
         >
-          📄
+          <FileText size={28} aria-hidden="true" />
         </button>
 
         <div className="flex-1 min-w-0">
@@ -184,24 +197,24 @@ function QueueCard({ request, onApprove, onReject, onViewReceipt, isRemoving }: 
                 {getAvatarInitial(student.name)}
               </div>
             )}
-            <span className="text-[16px] font-bold text-[#1a2744]">{student.name}</span>
+            <span className="text-[16px] font-bold text-[var(--color-wise-text)]">{student.name}</span>
           </div>
-          <div className="text-[13px] text-[#717182] mb-1">{student.email}</div>
+          <div className="text-[13px] text-[var(--color-wise-text-muted)] mb-1">{student.email}</div>
 
           {/* Cohort + amount */}
-          <div className="text-[13px] font-semibold text-[#4a9ad4] mb-1">
+          <div className="text-[13px] font-semibold text-[var(--color-wise-primary-text)] mb-1">
             {cohort.name}
             {amount != null && ` · ${formatMoney(amount)}`}
           </div>
 
-          <div className="text-[12px] text-[#a3a3a3]">{formatRelativeTime(createdAt)}</div>
+          <div className="text-[12px] text-[var(--color-wise-text-muted)]">{formatRelativeTime(createdAt)}</div>
 
           {/* Note */}
           {note && (
             <div
               className={cn(
-                'mt-2 text-[13px] italic text-[#717182]',
-                'bg-[#f8f9fb] rounded-[8px] px-2.5 py-2',
+                'mt-2 text-[13px] italic text-[var(--color-wise-text-muted)]',
+                'bg-[var(--color-wise-canvas)] rounded-[8px] px-2.5 py-2',
               )}
             >
               "{note}"
@@ -215,8 +228,8 @@ function QueueCard({ request, onApprove, onReject, onViewReceipt, isRemoving }: 
             className={cn(
               'flex-shrink-0 text-[11px] font-bold px-3 py-1 rounded-full',
               status === 'APPROVED'
-                ? 'bg-[#e6f4ec] text-[#054d28]'
-                : 'bg-[#fdeaeb] text-[#d03238]',
+                ? 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]'
+                : 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)]',
             )}
           >
             {status}
@@ -227,7 +240,7 @@ function QueueCard({ request, onApprove, onReject, onViewReceipt, isRemoving }: 
       {/* Footer actions */}
       <div
         className={cn(
-          'border-t border-[rgba(26,39,68,0.06)] px-5 py-3.5',
+          'border-t border-[var(--color-wise-ring)] px-5 py-3.5',
           'flex items-center gap-3',
         )}
       >
@@ -237,26 +250,26 @@ function QueueCard({ request, onApprove, onReject, onViewReceipt, isRemoving }: 
               type="button"
               onClick={() => onApprove(request)}
               className={cn(
-                'flex items-center gap-1.5 px-5 py-2.5 rounded-full',
-                'bg-[#4a9ad4] text-[#0d1a3a] text-[14px] font-bold border-none cursor-pointer',
-                'hover:opacity-90 transition-opacity',
-                'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#4a9ad4]/40',
+                'inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full',
+                'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)] text-[14px] font-bold border-none cursor-pointer',
+                'hover:bg-[var(--color-wise-primary-hover)] transition-colors',
+                'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-wise-primary-text)]/40',
               )}
             >
-              ✓ Approve
+              <Check size={14} aria-hidden="true" /> Approve
             </button>
             <button
               type="button"
               onClick={() => onReject(request)}
               className={cn(
-                'px-5 py-2.5 rounded-full',
+                'inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full',
                 'bg-transparent border-2 border-[rgba(208,50,56,0.3)]',
-                'text-[#d03238] text-[14px] font-bold cursor-pointer',
-                'hover:bg-[#fdeaeb] transition-colors',
+                'text-[var(--color-wise-danger)] text-[14px] font-bold cursor-pointer',
+                'hover:bg-[var(--color-wise-danger-soft)] transition-colors',
                 'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-300/40',
               )}
             >
-              ✗ Reject
+              <X size={14} aria-hidden="true" /> Reject
             </button>
           </>
         )}
@@ -265,12 +278,15 @@ function QueueCard({ request, onApprove, onReject, onViewReceipt, isRemoving }: 
           onClick={() => onViewReceipt(request)}
           className={cn(
             'px-4.5 py-2.5 rounded-full',
-            'bg-[#f0f0f0] text-[#717182] text-[13px] font-semibold border-none cursor-pointer',
-            'hover:bg-[#e8ecf4] transition-colors ml-auto',
-            'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(26,39,68,0.2)]',
+            'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)] text-[13px] font-semibold border-none cursor-pointer',
+            'hover:bg-[var(--color-wise-surface-soft)] transition-colors ml-auto',
+            'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-wise-ring-strong)]',
           )}
         >
-          View Receipt 🔍
+          <span className="inline-flex items-center gap-1.5">
+            View Receipt
+            <SearchIcon size={13} aria-hidden="true" />
+          </span>
         </button>
       </div>
     </div>
@@ -305,26 +321,26 @@ function ApproveModal({ request, onConfirm, onCancel, isLoading }: ApproveModalP
         role="dialog"
         aria-modal="true"
         aria-labelledby="approve-modal-title"
-        className="bg-white rounded-[20px] w-full max-w-[440px] overflow-hidden shadow-[rgba(26,39,68,0.2)_0_8px_30px]"
+        className="bg-white rounded-[20px] w-full max-w-[440px] overflow-hidden shadow-[var(--color-wise-ring-strong)_0_8px_30px]"
       >
         {/* Header */}
-        <div className="bg-[#e6f4ec] px-7 py-5 flex items-center gap-3">
-          <span className="text-[24px]" aria-hidden="true">✅</span>
-          <h2 id="approve-modal-title" className="text-[17px] font-extrabold text-[#054d28]">
+        <div className="bg-[var(--color-wise-mint)] px-7 py-5 flex items-center gap-3">
+          <CircleCheck size={24} className="text-[var(--color-wise-primary-text)]" aria-hidden="true" />
+          <h2 id="approve-modal-title" className="text-[17px] font-extrabold text-[var(--color-wise-primary-text)]">
             Approve Payment
           </h2>
         </div>
 
         {/* Body */}
         <div className="px-7 py-5">
-          <p className="text-[14px] text-[#717182] leading-relaxed mb-4">
-            Confirm approval for <strong className="text-[#1a2744]">{request.student.name}</strong>?
+          <p className="text-[14px] text-[var(--color-wise-text-muted)] leading-relaxed mb-4">
+            Confirm approval for <strong className="text-[var(--color-wise-text)]">{request.student.name}</strong>?
             <br />
-            Course: <strong className="text-[#1a2744]">{request.cohort.name}</strong>
+            Course: <strong className="text-[var(--color-wise-text)]">{request.cohort.name}</strong>
             {request.amount != null && (
               <>
                 <br />
-                Amount: <strong className="text-[#1a2744]">{formatMoney(request.amount)}</strong>
+                Amount: <strong className="text-[var(--color-wise-text)]">{formatMoney(request.amount)}</strong>
               </>
             )}
             <br />
@@ -339,9 +355,9 @@ function ApproveModal({ request, onConfirm, onCancel, isLoading }: ApproveModalP
             rows={3}
             aria-label="Optional approval note"
             className={cn(
-              'w-full rounded-[10px] border-[1.5px] border-[rgba(26,39,68,0.15)]',
-              'px-3 py-2.5 text-[13px] text-[#1a2744] resize-none outline-none',
-              'focus:border-[#4a9ad4] transition-colors',
+              'w-full rounded-[10px] border-[1.5px] border-[var(--color-wise-ring-strong)]',
+              'px-3 py-2.5 text-[13px] text-[var(--color-wise-text)] resize-none outline-none',
+              'focus:border-[var(--color-wise-primary-text)] transition-colors',
             )}
           />
         </div>
@@ -353,8 +369,8 @@ function ApproveModal({ request, onConfirm, onCancel, isLoading }: ApproveModalP
             onClick={onCancel}
             disabled={isLoading}
             className={cn(
-              'px-4.5 py-2.5 rounded-full bg-[#f0f0f0] text-[#717182]',
-              'text-[13px] font-bold border-none cursor-pointer hover:bg-[#e8ecf4] transition-colors',
+              'px-4.5 py-2.5 rounded-full bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)]',
+              'text-[13px] font-bold border-none cursor-pointer hover:bg-[var(--color-wise-surface-soft)] transition-colors',
             )}
           >
             Cancel
@@ -364,14 +380,14 @@ function ApproveModal({ request, onConfirm, onCancel, isLoading }: ApproveModalP
             onClick={() => onConfirm(approveNote)}
             disabled={isLoading}
             className={cn(
-              'px-4.5 py-2.5 rounded-full bg-[#4a9ad4] text-[#0d1a3a]',
+              'px-4.5 py-2.5 rounded-full bg-[var(--color-wise-primary-text)] text-[var(--color-wise-dark)]',
               'text-[13px] font-bold border-none cursor-pointer hover:opacity-90 transition-opacity',
               'flex items-center gap-2',
               isLoading && 'opacity-60 cursor-not-allowed',
             )}
           >
             {isLoading && (
-              <div className="w-3.5 h-3.5 rounded-full border-2 border-[rgba(13,26,58,0.3)] border-t-[#0d1a3a] animate-spin" />
+              <div className="w-3.5 h-3.5 rounded-full border-2 border-[rgba(13,26,58,0.3)] border-t-[var(--color-wise-dark)] animate-spin" />
             )}
             Confirm Approval
           </button>
@@ -409,21 +425,21 @@ function RejectModal({ request, onConfirm, onCancel, isLoading }: RejectModalPro
         role="dialog"
         aria-modal="true"
         aria-labelledby="reject-modal-title"
-        className="bg-white rounded-[20px] w-full max-w-[440px] overflow-hidden shadow-[rgba(26,39,68,0.2)_0_8px_30px]"
+        className="bg-white rounded-[20px] w-full max-w-[440px] overflow-hidden shadow-[var(--color-wise-ring-strong)_0_8px_30px]"
       >
         {/* Header */}
-        <div className="bg-[#fdeaeb] px-7 py-5 flex items-center gap-3">
-          <span className="text-[24px]" aria-hidden="true">⚠️</span>
-          <h2 id="reject-modal-title" className="text-[17px] font-extrabold text-[#d03238]">
+        <div className="bg-[var(--color-wise-danger-soft)] px-7 py-5 flex items-center gap-3">
+          <AlertTriangle size={24} className="text-[var(--color-wise-danger)]" aria-hidden="true" />
+          <h2 id="reject-modal-title" className="text-[17px] font-extrabold text-[var(--color-wise-danger)]">
             Reject Receipt
           </h2>
         </div>
 
         {/* Body */}
         <div className="px-7 py-5">
-          <p className="text-[14px] text-[#717182] leading-relaxed mb-3">
+          <p className="text-[14px] text-[var(--color-wise-text-muted)] leading-relaxed mb-3">
             Provide a reason for rejecting{' '}
-            <strong className="text-[#1a2744]">{request.student.name}</strong>'s receipt. This
+            <strong className="text-[var(--color-wise-text)]">{request.student.name}</strong>'s receipt. This
             will be sent to them via email.
           </p>
           <textarea
@@ -434,14 +450,14 @@ function RejectModal({ request, onConfirm, onCancel, isLoading }: RejectModalPro
             aria-label="Rejection reason (required)"
             aria-required="true"
             className={cn(
-              'w-full rounded-[10px] border-[1.5px] border-[rgba(26,39,68,0.15)]',
-              'px-3 py-2.5 text-[13px] text-[#1a2744] resize-none outline-none mb-2',
-              'focus:border-[#4a9ad4] transition-colors',
-              !isValid && reason.length > 0 && 'border-[#d03238]',
+              'w-full rounded-[10px] border-[1.5px] border-[var(--color-wise-ring-strong)]',
+              'px-3 py-2.5 text-[13px] text-[var(--color-wise-text)] resize-none outline-none mb-2',
+              'focus:border-[var(--color-wise-primary-text)] transition-colors',
+              !isValid && reason.length > 0 && 'border-[var(--color-wise-danger)]',
             )}
           />
           {!isValid && reason.length > 0 && (
-            <p className="text-[12px] text-[#d03238] mb-3" role="alert">
+            <p className="text-[12px] text-[var(--color-wise-danger)] mb-3" role="alert">
               Reason must be at least {MIN_REJECTION_REASON_LEN} characters.
             </p>
           )}
@@ -454,8 +470,8 @@ function RejectModal({ request, onConfirm, onCancel, isLoading }: RejectModalPro
             onClick={onCancel}
             disabled={isLoading}
             className={cn(
-              'px-4.5 py-2.5 rounded-full bg-[#f0f0f0] text-[#717182]',
-              'text-[13px] font-bold border-none cursor-pointer hover:bg-[#e8ecf4] transition-colors',
+              'px-4.5 py-2.5 rounded-full bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)]',
+              'text-[13px] font-bold border-none cursor-pointer hover:bg-[var(--color-wise-surface-soft)] transition-colors',
             )}
           >
             Cancel
@@ -466,7 +482,7 @@ function RejectModal({ request, onConfirm, onCancel, isLoading }: RejectModalPro
             disabled={!isValid || isLoading}
             aria-disabled={!isValid || isLoading}
             className={cn(
-              'px-4.5 py-2.5 rounded-full bg-[#d03238] text-white',
+              'px-4.5 py-2.5 rounded-full bg-[var(--color-wise-danger)] text-white',
               'text-[13px] font-bold border-none cursor-pointer hover:opacity-90 transition-opacity',
               'flex items-center gap-2',
               (!isValid || isLoading) && 'opacity-50 cursor-not-allowed',
@@ -511,10 +527,10 @@ function LightboxModal({ request, onClose, onApprove, onReject }: LightboxModalP
         role="dialog"
         aria-modal="true"
         aria-label={`Receipt from ${student.name}`}
-        className="bg-white rounded-[20px] w-full max-w-[640px] overflow-hidden shadow-[rgba(26,39,68,0.2)_0_8px_30px]"
+        className="bg-white rounded-[20px] w-full max-w-[640px] overflow-hidden shadow-[var(--color-wise-ring-strong)_0_8px_30px]"
       >
         {/* Student header */}
-        <div className="px-6 py-4 border-b border-[rgba(26,39,68,0.08)] flex items-center gap-3">
+        <div className="px-6 py-4 border-b border-[var(--color-wise-ring)] flex items-center gap-3">
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[14px] font-bold flex-shrink-0"
             style={{ background: getAvatarGradient(student.name) }}
@@ -523,8 +539,8 @@ function LightboxModal({ request, onClose, onApprove, onReject }: LightboxModalP
             {getAvatarInitial(student.name)}
           </div>
           <div>
-            <div className="text-[15px] font-bold text-[#1a2744]">{student.name}</div>
-            <div className="text-[12px] text-[#717182]">
+            <div className="text-[15px] font-bold text-[var(--color-wise-text)]">{student.name}</div>
+            <div className="text-[12px] text-[var(--color-wise-text-muted)]">
               {cohort.name}{amount != null ? ` · ${formatMoney(amount)}` : ''}
             </div>
           </div>
@@ -533,17 +549,17 @@ function LightboxModal({ request, onClose, onApprove, onReject }: LightboxModalP
             onClick={onClose}
             aria-label="Close receipt lightbox"
             className={cn(
-              'ml-auto w-9 h-9 rounded-full bg-[#f0f0f0] flex items-center justify-center',
-              'text-[#717182] text-[16px] border-none cursor-pointer hover:bg-[#e8ecf4] transition-colors',
-              'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(26,39,68,0.2)]',
+              'ml-auto w-9 h-9 rounded-full bg-[var(--color-wise-surface-soft)] flex items-center justify-center',
+              'text-[var(--color-wise-text-muted)] border-none cursor-pointer hover:bg-[var(--color-wise-surface-soft)] transition-colors',
+              'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-wise-ring-strong)]',
             )}
           >
-            ✕
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
 
         {/* Receipt display */}
-        <div className="bg-[#1a2744] flex items-center justify-center min-h-[320px] relative">
+        <div className="bg-[var(--color-wise-text)] flex items-center justify-center min-h-[320px] relative">
           {receiptUrl ? (
             isPdf ? (
               <iframe
@@ -560,7 +576,7 @@ function LightboxModal({ request, onClose, onApprove, onReject }: LightboxModalP
             )
           ) : (
             <div className="flex flex-col items-center gap-3 text-white opacity-50">
-              <span className="text-[56px]" aria-hidden="true">📄</span>
+              <FileText size={56} aria-hidden="true" />
               <span className="text-[14px]">Receipt preview not available</span>
             </div>
           )}
@@ -568,28 +584,28 @@ function LightboxModal({ request, onClose, onApprove, onReject }: LightboxModalP
 
         {/* Actions — shortcut approve/reject from lightbox */}
         {request.status === 'PENDING' && (
-          <div className="px-6 py-4 border-t border-[rgba(26,39,68,0.08)] flex items-center gap-3">
+          <div className="px-6 py-4 border-t border-[var(--color-wise-ring)] flex items-center gap-3">
             <button
               type="button"
               onClick={() => { onClose(); onApprove(request) }}
               className={cn(
-                'flex items-center gap-1.5 px-5 py-2.5 rounded-full',
-                'bg-[#4a9ad4] text-[#0d1a3a] text-[14px] font-bold border-none cursor-pointer',
-                'hover:opacity-90 transition-opacity',
+                'inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full',
+                'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)] text-[14px] font-bold border-none cursor-pointer',
+                'hover:bg-[var(--color-wise-primary-hover)] transition-colors',
               )}
             >
-              ✓ Approve
+              <Check size={14} aria-hidden="true" /> Approve
             </button>
             <button
               type="button"
               onClick={() => { onClose(); onReject(request) }}
               className={cn(
-                'px-5 py-2.5 rounded-full bg-transparent border-2',
-                'border-[rgba(208,50,56,0.3)] text-[#d03238]',
-                'text-[14px] font-bold cursor-pointer hover:bg-[#fdeaeb] transition-colors',
+                'inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-transparent border-2',
+                'border-[rgba(208,50,56,0.3)] text-[var(--color-wise-danger)]',
+                'text-[14px] font-bold cursor-pointer hover:bg-[var(--color-wise-danger-soft)] transition-colors',
               )}
             >
-              ✗ Reject
+              <X size={14} aria-hidden="true" /> Reject
             </button>
           </div>
         )}
@@ -646,13 +662,13 @@ function Pagination({ page, total, limit, onPageChange }: PaginationProps) {
         disabled={page <= 1}
         className={cn(
           'px-4 py-2 rounded-full text-[13px] font-semibold border-none cursor-pointer',
-          'bg-white shadow-[rgba(26,39,68,0.12)_0_0_0_1px] text-[#1a2744]',
-          'hover:bg-[#eef6fd] transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
+          'bg-white shadow-[var(--color-wise-ring)_0_0_0_1px] text-[var(--color-wise-text)]',
+          'hover:bg-[var(--color-wise-mint)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
         )}
       >
         ← Previous
       </button>
-      <span className="text-[13px] text-[#717182] px-2">
+      <span className="text-[13px] text-[var(--color-wise-text-muted)] px-2">
         Page {page} of {totalPages}
       </span>
       <button
@@ -661,8 +677,8 @@ function Pagination({ page, total, limit, onPageChange }: PaginationProps) {
         disabled={page >= totalPages}
         className={cn(
           'px-4 py-2 rounded-full text-[13px] font-semibold border-none cursor-pointer',
-          'bg-white shadow-[rgba(26,39,68,0.12)_0_0_0_1px] text-[#1a2744]',
-          'hover:bg-[#eef6fd] transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
+          'bg-white shadow-[var(--color-wise-ring)_0_0_0_1px] text-[var(--color-wise-text)]',
+          'hover:bg-[var(--color-wise-mint)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
         )}
       >
         Next →
@@ -794,19 +810,19 @@ export default function ManualPaymentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9fb]">
+    <div className="min-h-screen bg-[var(--color-wise-canvas)]">
       {/* Page header */}
       <div
         className={cn(
           'flex items-center justify-between px-8 py-6',
-          'bg-white border-b border-[rgba(26,39,68,0.08)]',
+          'bg-white border-b border-[var(--color-wise-ring)]',
         )}
       >
-        <h1 className="text-[24px] font-extrabold text-[#1a2744]">Manual Payments</h1>
+        <h1 className="text-[24px] font-extrabold text-[var(--color-wise-text)]">Manual Payments</h1>
         {pendingCount !== null && pendingCount > 0 && (
           <span
             className={cn(
-              'bg-[#fff8e6] text-[#8a5a00] text-[13px] font-bold',
+              'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text-warm)] text-[13px] font-bold',
               'px-3.5 py-1.5 rounded-full',
             )}
           >
@@ -817,7 +833,7 @@ export default function ManualPaymentsPage() {
 
       {/* Tab bar */}
       <div className="px-8 pt-5">
-        <div className="flex gap-1 bg-[#e8ecf4] rounded-[14px] p-1 w-fit">
+        <div className="flex gap-1 bg-[var(--color-wise-surface-soft)] rounded-[14px] p-1 w-fit">
           {tabs.map((tab) => (
             <button
               key={tab.value}
@@ -828,8 +844,8 @@ export default function ManualPaymentsPage() {
                 'px-5 py-2 rounded-[11px] text-[14px] font-semibold border-none cursor-pointer',
                 'transition-all duration-150',
                 activeTab === tab.value
-                  ? 'bg-white text-[#1a2744] shadow-[rgba(26,39,68,0.1)_0_1px_4px]'
-                  : 'bg-transparent text-[#717182] hover:text-[#1a2744]',
+                  ? 'bg-white text-[var(--color-wise-text)] shadow-[var(--color-wise-ring)_0_1px_4px]'
+                  : 'bg-transparent text-[var(--color-wise-text-muted)] hover:text-[var(--color-wise-text)]',
               )}
             >
               {tab.label}
@@ -851,36 +867,26 @@ export default function ManualPaymentsPage() {
 
         {/* Error state */}
         {isError && (
-          <div
-            className={cn(
-              'bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px]',
-              'px-8 py-14 text-center',
-            )}
-          >
-            <div className="text-[48px] mb-4" aria-hidden="true">⚠️</div>
-            <div className="text-[18px] font-bold text-[#1a2744] mb-2">Failed to load</div>
-            <div className="text-[14px] text-[#717182]">
-              {error instanceof Error ? error.message : 'Something went wrong. Please refresh.'}
-            </div>
-          </div>
+          <EmptyState
+            icon={AlertTriangle}
+            title="Failed to load"
+            description={error instanceof Error ? error.message : 'Something went wrong. Please refresh.'}
+          />
         )}
 
         {/* Empty state */}
         {!isLoading && !isError && data?.requests.length === 0 && (
-          <div
-            className={cn(
-              'bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px]',
-              'px-8 py-16 text-center',
-            )}
-          >
-            <div className="text-[56px] mb-4" aria-hidden="true">
-              {activeTab === 'PENDING' ? '✅' : activeTab === 'APPROVED' ? '🎉' : '📋'}
-            </div>
-            <div className="text-[22px] font-bold text-[#1a2744] mb-1.5">
-              {activeTab === 'PENDING' ? 'All caught up!' : 'Nothing here yet'}
-            </div>
-            <div className="text-[15px] text-[#717182]">{emptyMessages[activeTab]}</div>
-          </div>
+          <EmptyState
+            icon={
+              activeTab === 'PENDING'
+                ? CircleCheck
+                : activeTab === 'APPROVED'
+                  ? PartyPopper
+                  : Inbox
+            }
+            title={activeTab === 'PENDING' ? 'All caught up' : 'Nothing here yet'}
+            description={emptyMessages[activeTab]}
+          />
         )}
 
         {/* Queue cards */}

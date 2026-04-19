@@ -64,13 +64,13 @@ interface StatCardProps {
 function StatCard({ label, value, highlight }: StatCardProps) {
   return (
     <div className={cn(
-      'bg-white rounded-[16px] p-5 shadow-[rgba(26,39,68,0.12)_0_0_0_1px]',
-      highlight && 'ring-2 ring-[#4a9ad4]/30',
+      'bg-white rounded-[16px] p-5 shadow-[var(--color-wise-ring)_0_0_0_1px]',
+      highlight && 'ring-2 ring-[var(--color-wise-primary-text)]/30',
     )}>
-      <div className="text-[32px] font-[800] text-[#1a2744] tracking-[-0.5px] leading-none mb-1">
+      <div className="text-[32px] font-[800] text-[var(--color-wise-text)] tracking-[-0.5px] leading-none mb-1">
         {value}
       </div>
-      <div className="text-[13px] text-[#717182]">{label}</div>
+      <div className="text-[13px] text-[var(--color-wise-text-muted)]">{label}</div>
     </div>
   )
 }
@@ -89,22 +89,22 @@ interface DateRangeFilterProps {
 function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <label className="flex items-center gap-2 text-[13px] font-[600] text-[#717182]">
+      <label className="flex items-center gap-2 text-[13px] font-[600] text-[var(--color-wise-text-muted)]">
         From
         <input
           type="date"
           value={value.from}
           onChange={(e) => onChange({ ...value, from: e.target.value })}
-          className="px-3 py-1.5 rounded-[8px] border border-[rgba(26,39,68,0.15)] bg-[#f8f9fb] text-[#1a2744] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#4a9ad4]"
+          className="px-3 py-1.5 rounded-[8px] border border-[var(--color-wise-ring-strong)] bg-[var(--color-wise-canvas)] text-[var(--color-wise-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--color-wise-primary-text)]"
         />
       </label>
-      <label className="flex items-center gap-2 text-[13px] font-[600] text-[#717182]">
+      <label className="flex items-center gap-2 text-[13px] font-[600] text-[var(--color-wise-text-muted)]">
         To
         <input
           type="date"
           value={value.to}
           onChange={(e) => onChange({ ...value, to: e.target.value })}
-          className="px-3 py-1.5 rounded-[8px] border border-[rgba(26,39,68,0.15)] bg-[#f8f9fb] text-[#1a2744] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#4a9ad4]"
+          className="px-3 py-1.5 rounded-[8px] border border-[var(--color-wise-ring-strong)] bg-[var(--color-wise-canvas)] text-[var(--color-wise-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--color-wise-primary-text)]"
         />
       </label>
     </div>
@@ -126,17 +126,17 @@ function SimpleBarChart({ data, valueFormatter = (v) => String(v) }: BarChartPro
     <div className="space-y-2 mt-4" role="img" aria-label="Revenue by cohort">
       {data.map((item) => (
         <div key={item.label} className="flex items-center gap-3">
-          <div className="w-32 sm:w-40 flex-shrink-0 text-[13px] text-[#717182] truncate text-right">
+          <div className="w-32 sm:w-40 flex-shrink-0 text-[13px] text-[var(--color-wise-text-muted)] truncate text-right">
             {item.label}
           </div>
           <div className="flex-1 flex items-center gap-2">
-            <div className="flex-1 h-7 bg-[#e8ecf4] rounded-[6px] overflow-hidden">
+            <div className="flex-1 h-7 bg-[var(--color-wise-surface-soft)] rounded-[6px] overflow-hidden">
               <div
-                className="h-full bg-[#4a9ad4] rounded-[6px] transition-all"
+                className="h-full bg-[var(--color-wise-primary-text)] rounded-[6px] transition-all"
                 style={{ width: `${Math.max((item.value / max) * 100, 2)}%` }}
               />
             </div>
-            <span className="text-[13px] font-[700] text-[#1a2744] w-16 text-right flex-shrink-0">
+            <span className="text-[13px] font-[700] text-[var(--color-wise-text)] w-16 text-right flex-shrink-0">
               {valueFormatter(item.value)}
             </span>
           </div>
@@ -170,7 +170,7 @@ function RevenueTab() {
           onClick={() => downloadCsv('revenue')}
           className={cn(
             'flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] font-[700]',
-            'border border-[rgba(26,39,68,0.15)] text-[#1a2744] hover:bg-[#f0f0f0]',
+            'border border-[var(--color-wise-ring-strong)] text-[var(--color-wise-text)] hover:bg-[var(--color-wise-surface-soft)]',
             'bg-transparent cursor-pointer transition-colors',
           )}
         >
@@ -181,10 +181,10 @@ function RevenueTab() {
 
       {isLoading ? (
         <div className="animate-pulse grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          {[1,2,3].map(i => <div key={i} className="h-24 bg-[#e8ecf4] rounded-[16px]" />)}
+          {[1,2,3].map(i => <div key={i} className="h-24 bg-[var(--color-wise-surface-soft)] rounded-[16px]" />)}
         </div>
       ) : error ? (
-        <div className="bg-[#fdeaeb] text-[#d03238] rounded-[12px] p-4 text-[14px] font-[600]">
+        <div className="bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] rounded-[12px] p-4 text-[14px] font-[600]">
           Failed to load revenue data.
         </div>
       ) : data ? (
@@ -196,8 +196,8 @@ function RevenueTab() {
           </div>
 
           {data.byCohort && data.byCohort.length > 0 && (
-            <div className="bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] p-6">
-              <h3 className="text-[15px] font-[700] text-[#1a2744] mb-2">Revenue by Cohort</h3>
+            <div className="bg-white rounded-[16px] shadow-[var(--color-wise-ring)_0_0_0_1px] p-6">
+              <h3 className="text-[15px] font-[700] text-[var(--color-wise-text)] mb-2">Revenue by Cohort</h3>
               <SimpleBarChart
                 data={data.byCohort.map((c) => ({ label: c.cohortTitle, value: c.revenue }))}
                 valueFormatter={fmt}
@@ -232,12 +232,12 @@ function EnrollmentsTab() {
   return (
     <div>
       <div className="mb-6">
-        <label className="flex items-center gap-2 text-[13px] font-[600] text-[#717182]">
+        <label className="flex items-center gap-2 text-[13px] font-[600] text-[var(--color-wise-text-muted)]">
           Filter by cohort
           <select
             value={selectedCohort}
             onChange={(e) => setSelectedCohort(e.target.value)}
-            className="px-3 py-1.5 rounded-[8px] border border-[rgba(26,39,68,0.15)] bg-[#f8f9fb] text-[#1a2744] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#4a9ad4]"
+            className="px-3 py-1.5 rounded-[8px] border border-[var(--color-wise-ring-strong)] bg-[var(--color-wise-canvas)] text-[var(--color-wise-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--color-wise-primary-text)]"
           >
             <option value="">All cohorts</option>
             {cohorts.map((c) => (
@@ -249,10 +249,10 @@ function EnrollmentsTab() {
 
       {isLoading ? (
         <div className="animate-pulse grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          {[1,2,3,4].map(i => <div key={i} className="h-24 bg-[#e8ecf4] rounded-[16px]" />)}
+          {[1,2,3,4].map(i => <div key={i} className="h-24 bg-[var(--color-wise-surface-soft)] rounded-[16px]" />)}
         </div>
       ) : error ? (
-        <div className="bg-[#fdeaeb] text-[#d03238] rounded-[12px] p-4 text-[14px] font-[600]">
+        <div className="bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] rounded-[12px] p-4 text-[14px] font-[600]">
           Failed to load enrollment data.
         </div>
       ) : data ? (
@@ -265,16 +265,16 @@ function EnrollmentsTab() {
           </div>
 
           {data.byCohort && data.byCohort.length > 0 && (
-            <div className="bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden">
-              <div className="px-6 py-4 border-b border-[rgba(26,39,68,0.08)]">
-                <h3 className="text-[15px] font-[700] text-[#1a2744]">By Cohort</h3>
+            <div className="bg-white rounded-[16px] shadow-[var(--color-wise-ring)_0_0_0_1px] overflow-hidden">
+              <div className="px-6 py-4 border-b border-[var(--color-wise-ring)]">
+                <h3 className="text-[15px] font-[700] text-[var(--color-wise-text)]">By Cohort</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse" aria-label="Enrollments by cohort">
                   <thead>
                     <tr>
                       {['Cohort', 'Active', 'Pending'].map((col) => (
-                        <th key={col} scope="col" className="text-left text-[12px] font-[700] text-[#717182] uppercase tracking-[0.5px] px-5 py-2.5 border-b border-[rgba(26,39,68,0.08)]">
+                        <th key={col} scope="col" className="text-left text-[12px] font-[700] text-[var(--color-wise-text-muted)] uppercase tracking-[0.5px] px-5 py-2.5 border-b border-[var(--color-wise-ring)]">
                           {col}
                         </th>
                       ))}
@@ -282,10 +282,10 @@ function EnrollmentsTab() {
                   </thead>
                   <tbody>
                     {data.byCohort.map((row) => (
-                      <tr key={row.cohortTitle} className="hover:[&>td]:bg-[#f8f9fb]">
-                        <td className="px-5 py-3 border-b border-[rgba(26,39,68,0.04)] text-[14px] font-[600] text-[#1a2744]">{row.cohortTitle}</td>
-                        <td className="px-5 py-3 border-b border-[rgba(26,39,68,0.04)] text-[14px] text-[#1a2744]">{fmtNum(row.active)}</td>
-                        <td className="px-5 py-3 border-b border-[rgba(26,39,68,0.04)] text-[14px] text-[#1a2744]">{fmtNum(row.pending)}</td>
+                      <tr key={row.cohortTitle} className="hover:[&>td]:bg-[var(--color-wise-canvas)]">
+                        <td className="px-5 py-3 border-b border-[var(--color-wise-ring)] text-[14px] font-[600] text-[var(--color-wise-text)]">{row.cohortTitle}</td>
+                        <td className="px-5 py-3 border-b border-[var(--color-wise-ring)] text-[14px] text-[var(--color-wise-text)]">{fmtNum(row.active)}</td>
+                        <td className="px-5 py-3 border-b border-[var(--color-wise-ring)] text-[14px] text-[var(--color-wise-text)]">{fmtNum(row.pending)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -319,7 +319,7 @@ function PaymentMethodBadge({ method }: { method: PaymentRecord['method'] }) {
   return (
     <span className={cn(
       'text-[11px] font-[700] px-[9px] py-[3px] rounded-full',
-      method === 'stripe' ? 'bg-[#eef6fd] text-[#4a9ad4]' : 'bg-[#fff8e6] text-[#8a5a00]',
+      method === 'stripe' ? 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]' : 'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text-warm)]',
     )}>
       {method === 'stripe' ? 'Stripe' : 'Manual'}
     </span>
@@ -328,10 +328,10 @@ function PaymentMethodBadge({ method }: { method: PaymentRecord['method'] }) {
 
 function PaymentStatusBadge({ status }: { status: PaymentRecord['status'] }) {
   const styles: Record<PaymentRecord['status'], string> = {
-    PAID: 'bg-[#e6f4ec] text-[#054d28]',
-    PENDING: 'bg-[#fff8e6] text-[#8a5a00]',
-    FAILED: 'bg-[#fdeaeb] text-[#d03238]',
-    REJECTED: 'bg-[#fdeaeb] text-[#d03238]',
+    PAID: 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+    PENDING: 'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text-warm)]',
+    FAILED: 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)]',
+    REJECTED: 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)]',
   }
   return (
     <span className={cn('text-[11px] font-[700] px-[9px] py-[3px] rounded-full', styles[status])}>
@@ -381,7 +381,7 @@ function PaymentsTab() {
         <select
           value={filters.cohortId}
           onChange={(e) => setFilters((p) => ({ ...p, cohortId: e.target.value, page: 1 }))}
-          className="px-3 py-1.5 rounded-[8px] border border-[rgba(26,39,68,0.15)] bg-[#f8f9fb] text-[#1a2744] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#4a9ad4]"
+          className="px-3 py-1.5 rounded-[8px] border border-[var(--color-wise-ring-strong)] bg-[var(--color-wise-canvas)] text-[var(--color-wise-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--color-wise-primary-text)]"
           aria-label="Filter by cohort"
         >
           <option value="">All cohorts</option>
@@ -393,7 +393,7 @@ function PaymentsTab() {
         <select
           value={filters.method}
           onChange={(e) => setFilters((p) => ({ ...p, method: e.target.value as PaymentMethod, page: 1 }))}
-          className="px-3 py-1.5 rounded-[8px] border border-[rgba(26,39,68,0.15)] bg-[#f8f9fb] text-[#1a2744] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#4a9ad4]"
+          className="px-3 py-1.5 rounded-[8px] border border-[var(--color-wise-ring-strong)] bg-[var(--color-wise-canvas)] text-[var(--color-wise-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--color-wise-primary-text)]"
           aria-label="Filter by method"
         >
           <option value="all">All methods</option>
@@ -406,7 +406,7 @@ function PaymentsTab() {
           onClick={() => downloadCsv('payments')}
           className={cn(
             'flex items-center gap-2 px-4 py-1.5 rounded-[8px] text-[13px] font-[700]',
-            'border border-[rgba(26,39,68,0.15)] text-[#1a2744] hover:bg-[#f0f0f0]',
+            'border border-[var(--color-wise-ring-strong)] text-[var(--color-wise-text)] hover:bg-[var(--color-wise-surface-soft)]',
             'bg-transparent cursor-pointer transition-colors',
           )}
         >
@@ -416,19 +416,19 @@ function PaymentsTab() {
       </div>
 
       {isLoading ? (
-        <div className="animate-pulse bg-[#e8ecf4] rounded-[16px] h-64" />
+        <div className="animate-pulse bg-[var(--color-wise-surface-soft)] rounded-[16px] h-64" />
       ) : error ? (
-        <div className="bg-[#fdeaeb] text-[#d03238] rounded-[12px] p-4 text-[14px] font-[600]">
+        <div className="bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] rounded-[12px] p-4 text-[14px] font-[600]">
           Failed to load payments data.
         </div>
       ) : (
-        <div className="bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden">
+        <div className="bg-white rounded-[16px] shadow-[var(--color-wise-ring)_0_0_0_1px] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse" aria-label="Payments">
               <thead>
                 <tr>
                   {['Student', 'Cohort', 'Amount', 'Method', 'Status', 'Date'].map((col) => (
-                    <th key={col} scope="col" className="text-left text-[12px] font-[700] text-[#717182] uppercase tracking-[0.5px] px-5 py-2.5 border-b border-[rgba(26,39,68,0.08)]">
+                    <th key={col} scope="col" className="text-left text-[12px] font-[700] text-[var(--color-wise-text-muted)] uppercase tracking-[0.5px] px-5 py-2.5 border-b border-[var(--color-wise-ring)]">
                       {col}
                     </th>
                   ))}
@@ -437,22 +437,22 @@ function PaymentsTab() {
               <tbody>
                 {payments.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-10 text-center text-[14px] text-[#717182]">
+                    <td colSpan={6} className="py-10 text-center text-[14px] text-[var(--color-wise-text-muted)]">
                       No payments found.
                     </td>
                   </tr>
                 ) : (
                   payments.map((p) => (
-                    <tr key={p.id} className="hover:[&>td]:bg-[#f8f9fb]">
-                      <td className="px-5 py-3 border-b border-[rgba(26,39,68,0.04)]">
-                        <div className="text-[14px] font-[600] text-[#1a2744]">{p.studentName}</div>
-                        <div className="text-[12px] text-[#a3a3a3]">{p.studentEmail}</div>
+                    <tr key={p.id} className="hover:[&>td]:bg-[var(--color-wise-canvas)]">
+                      <td className="px-5 py-3 border-b border-[var(--color-wise-ring)]">
+                        <div className="text-[14px] font-[600] text-[var(--color-wise-text)]">{p.studentName}</div>
+                        <div className="text-[12px] text-[var(--color-wise-text-muted)]">{p.studentEmail}</div>
                       </td>
-                      <td className="px-5 py-3 border-b border-[rgba(26,39,68,0.04)] text-[14px] text-[#1a2744]">{p.cohortTitle}</td>
-                      <td className="px-5 py-3 border-b border-[rgba(26,39,68,0.04)] text-[14px] font-[700] text-[#1a2744]">{fmt(p.amount)}</td>
-                      <td className="px-5 py-3 border-b border-[rgba(26,39,68,0.04)]"><PaymentMethodBadge method={p.method} /></td>
-                      <td className="px-5 py-3 border-b border-[rgba(26,39,68,0.04)]"><PaymentStatusBadge status={p.status} /></td>
-                      <td className="px-5 py-3 border-b border-[rgba(26,39,68,0.04)] text-[13px] text-[#717182]">{fmtDate(p.date)}</td>
+                      <td className="px-5 py-3 border-b border-[var(--color-wise-ring)] text-[14px] text-[var(--color-wise-text)]">{p.cohortTitle}</td>
+                      <td className="px-5 py-3 border-b border-[var(--color-wise-ring)] text-[14px] font-[700] text-[var(--color-wise-text)]">{fmt(p.amount)}</td>
+                      <td className="px-5 py-3 border-b border-[var(--color-wise-ring)]"><PaymentMethodBadge method={p.method} /></td>
+                      <td className="px-5 py-3 border-b border-[var(--color-wise-ring)]"><PaymentStatusBadge status={p.status} /></td>
+                      <td className="px-5 py-3 border-b border-[var(--color-wise-ring)] text-[13px] text-[var(--color-wise-text-muted)]">{fmtDate(p.date)}</td>
                     </tr>
                   ))
                 )}
@@ -462,8 +462,8 @@ function PaymentsTab() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-5 py-4 border-t border-[rgba(26,39,68,0.08)]">
-              <p className="text-[13px] text-[#717182]">
+            <div className="flex items-center justify-between px-5 py-4 border-t border-[var(--color-wise-ring)]">
+              <p className="text-[13px] text-[var(--color-wise-text-muted)]">
                 Page {filters.page} of {totalPages} · {fmtNum(total)} total
               </p>
               <div className="flex gap-2">
@@ -471,7 +471,7 @@ function PaymentsTab() {
                   type="button"
                   onClick={() => setPage(filters.page - 1)}
                   disabled={filters.page <= 1}
-                  className="px-3 py-1.5 rounded-[8px] text-[13px] font-[600] border border-[rgba(26,39,68,0.15)] disabled:opacity-40 hover:bg-[#f0f0f0] bg-transparent cursor-pointer disabled:cursor-not-allowed transition-colors"
+                  className="px-3 py-1.5 rounded-[8px] text-[13px] font-[600] border border-[var(--color-wise-ring-strong)] disabled:opacity-40 hover:bg-[var(--color-wise-surface-soft)] bg-transparent cursor-pointer disabled:cursor-not-allowed transition-colors"
                 >
                   ← Prev
                 </button>
@@ -479,7 +479,7 @@ function PaymentsTab() {
                   type="button"
                   onClick={() => setPage(filters.page + 1)}
                   disabled={filters.page >= totalPages}
-                  className="px-3 py-1.5 rounded-[8px] text-[13px] font-[600] border border-[rgba(26,39,68,0.15)] disabled:opacity-40 hover:bg-[#f0f0f0] bg-transparent cursor-pointer disabled:cursor-not-allowed transition-colors"
+                  className="px-3 py-1.5 rounded-[8px] text-[13px] font-[600] border border-[var(--color-wise-ring-strong)] disabled:opacity-40 hover:bg-[var(--color-wise-surface-soft)] bg-transparent cursor-pointer disabled:cursor-not-allowed transition-colors"
                 >
                   Next →
                 </button>
@@ -500,12 +500,12 @@ function ProgressBar({ value }: { value: number }) {
   const pct = Math.min(100, Math.max(0, value))
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 bg-[#e8ecf4] rounded-full overflow-hidden min-w-[80px]">
+      <div className="flex-1 h-2 bg-[var(--color-wise-surface-soft)] rounded-full overflow-hidden min-w-[80px]">
         <div
           className="h-full rounded-full transition-all"
           style={{
             width: `${pct}%`,
-            background: pct >= 80 ? '#054d28' : pct >= 40 ? '#4a9ad4' : '#ff8c5a',
+            background: pct >= 80 ? 'var(--color-wise-primary-text)' : pct >= 40 ? 'var(--color-wise-primary-text)' : 'var(--color-wise-primary)',
           }}
           role="progressbar"
           aria-valuenow={pct}
@@ -513,7 +513,7 @@ function ProgressBar({ value }: { value: number }) {
           aria-valuemax={100}
         />
       </div>
-      <span className="text-[13px] font-[700] text-[#1a2744] w-10 text-right flex-shrink-0">
+      <span className="text-[13px] font-[700] text-[var(--color-wise-text)] w-10 text-right flex-shrink-0">
         {pct.toFixed(0)}%
       </span>
     </div>
@@ -531,19 +531,19 @@ function CohortPerformanceTab() {
   return (
     <div>
       {isLoading ? (
-        <div className="animate-pulse bg-[#e8ecf4] rounded-[16px] h-64" />
+        <div className="animate-pulse bg-[var(--color-wise-surface-soft)] rounded-[16px] h-64" />
       ) : error ? (
-        <div className="bg-[#fdeaeb] text-[#d03238] rounded-[12px] p-4 text-[14px] font-[600]">
+        <div className="bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] rounded-[12px] p-4 text-[14px] font-[600]">
           Failed to load cohort performance.
         </div>
       ) : (
-        <div className="bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden">
+        <div className="bg-white rounded-[16px] shadow-[var(--color-wise-ring)_0_0_0_1px] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse" aria-label="Cohort performance">
               <thead>
                 <tr>
                   {['Cohort', 'Total Enrolled', 'Avg Completion', 'Completed'].map((col) => (
-                    <th key={col} scope="col" className="text-left text-[12px] font-[700] text-[#717182] uppercase tracking-[0.5px] px-5 py-2.5 border-b border-[rgba(26,39,68,0.08)]">
+                    <th key={col} scope="col" className="text-left text-[12px] font-[700] text-[var(--color-wise-text-muted)] uppercase tracking-[0.5px] px-5 py-2.5 border-b border-[var(--color-wise-ring)]">
                       {col}
                     </th>
                   ))}
@@ -552,23 +552,23 @@ function CohortPerformanceTab() {
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-10 text-center text-[14px] text-[#717182]">
+                    <td colSpan={4} className="py-10 text-center text-[14px] text-[var(--color-wise-text-muted)]">
                       No cohort data yet.
                     </td>
                   </tr>
                 ) : (
                   rows.map((row) => (
-                    <tr key={row.cohortTitle} className="hover:[&>td]:bg-[#f8f9fb]">
-                      <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[14px] font-[700] text-[#1a2744]">
+                    <tr key={row.cohortTitle} className="hover:[&>td]:bg-[var(--color-wise-canvas)]">
+                      <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)] text-[14px] font-[700] text-[var(--color-wise-text)]">
                         {row.cohortTitle}
                       </td>
-                      <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[14px] text-[#1a2744]">
+                      <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)] text-[14px] text-[var(--color-wise-text)]">
                         {fmtNum(row.totalEnrolled)}
                       </td>
-                      <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] min-w-[200px]">
+                      <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)] min-w-[200px]">
                         <ProgressBar value={row.avgCompletionPct} />
                       </td>
-                      <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[14px] font-[600] text-[#054d28]">
+                      <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)] text-[14px] font-[600] text-[var(--color-wise-primary-text)]">
                         {fmtNum(row.completedCount)}
                       </td>
                     </tr>
@@ -594,7 +594,7 @@ export default function ReportingPage() {
     <AdminShell
       title="Reporting"
       actions={
-        <div className="flex items-center gap-1.5 text-[#717182]">
+        <div className="flex items-center gap-1.5 text-[var(--color-wise-text-muted)]">
           <BarChart2 size={16} aria-hidden="true" />
           <span className="text-[13px] font-[500]">Analytics</span>
         </div>
@@ -603,7 +603,7 @@ export default function ReportingPage() {
       <div className="p-6 lg:p-8">
         {/* Tab bar */}
         <div
-          className="flex gap-1 bg-[#e8ecf4] rounded-[12px] p-1 mb-7 w-fit overflow-x-auto"
+          className="flex gap-1 bg-[var(--color-wise-surface-soft)] rounded-[12px] p-1 mb-7 w-fit overflow-x-auto"
           role="tablist"
           aria-label="Reporting sections"
         >
@@ -617,8 +617,8 @@ export default function ReportingPage() {
               className={cn(
                 'px-4 py-2 rounded-[9px] text-[13px] font-[600] transition-all border-none cursor-pointer whitespace-nowrap',
                 activeTab === key
-                  ? 'bg-white text-[#1a2744] shadow-[0_1px_4px_rgba(26,39,68,0.12)]'
-                  : 'bg-transparent text-[#717182] hover:text-[#1a2744]',
+                  ? 'bg-white text-[var(--color-wise-text)] shadow-[0_1px_4px_var(--color-wise-ring)]'
+                  : 'bg-transparent text-[var(--color-wise-text-muted)] hover:text-[var(--color-wise-text)]',
               )}
             >
               {label}

@@ -2,8 +2,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
-import { Search, X, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { Search, X, ChevronLeft, ChevronRight, Download, Check, AlertTriangle, Users } from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
+import { EmptyState } from '../../components/ui/EmptyState'
 import {
   fetchAdminStudents,
   updateEnrollmentStatus,
@@ -35,11 +36,11 @@ const PAYMENT_STATUS_FILTERS = [
 ]
 
 const AVATAR_GRADIENTS = [
-  'linear-gradient(135deg, #4a9ad4, #1a2744)',
-  'linear-gradient(135deg, #cc4a00, #ff8c5a)',
-  'linear-gradient(135deg, #054d28, #16a34a)',
-  'linear-gradient(135deg, #4a105a, #6b37d1)',
-  'linear-gradient(135deg, #0d1a3a, #2d4a8a)',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-text))',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-primary))',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-success))',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-primary-text))',
+  'linear-gradient(135deg, var(--color-wise-dark), var(--color-wise-primary-text))',
 ]
 
 function getAvatarGradient(name: string): string {
@@ -84,14 +85,16 @@ function Toast({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: stri
       role="status"
       aria-live="polite"
       className={cn(
-        'flex items-center gap-3 px-5 py-3.5 rounded-[14px] shadow-[rgba(26,39,68,0.2)_0_4px_20px]',
+        'flex items-center gap-3 px-5 py-3.5 rounded-[14px] shadow-[var(--color-wise-ring-strong)_0_4px_20px]',
         'text-[14px] font-semibold',
         toast.variant === 'success'
-          ? 'bg-[#e6f4ec] text-[#054d28] border border-[rgba(5,77,40,0.15)]'
-          : 'bg-[#fdeaeb] text-[#d03238] border border-[rgba(208,50,56,0.15)]',
+          ? 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)] border border-[rgba(5,77,40,0.15)]'
+          : 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] border border-[rgba(208,50,56,0.15)]',
       )}
     >
-      <span aria-hidden="true">{toast.variant === 'success' ? '✓' : '✗'}</span>
+      <span aria-hidden="true" className="inline-flex">
+        {toast.variant === 'success' ? <Check size={16} /> : <X size={16} />}
+      </span>
       {toast.message}
     </div>
   )
@@ -115,10 +118,10 @@ function useToast() {
 
 function EnrollmentStatusBadge({ status }: { status: AdminEnrollment['status'] }) {
   const styles: Record<AdminEnrollment['status'], string> = {
-    ACTIVE: 'bg-[#e6f4ec] text-[#054d28]',
-    COMPLETED: 'bg-[#e8ecf4] text-[#1a2744]',
-    SUSPENDED: 'bg-[#fff8e6] text-[#8a5a00]',
-    REVOKED: 'bg-[#fdeaeb] text-[#d03238]',
+    ACTIVE: 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+    COMPLETED: 'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text)]',
+    SUSPENDED: 'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text-warm)]',
+    REVOKED: 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)]',
   }
   const labels: Record<AdminEnrollment['status'], string> = {
     ACTIVE: 'Active',
@@ -135,10 +138,10 @@ function EnrollmentStatusBadge({ status }: { status: AdminEnrollment['status'] }
 
 function PaymentStatusBadge({ status }: { status: AdminEnrollment['paymentStatus'] }) {
   const styles: Record<AdminEnrollment['paymentStatus'], string> = {
-    PAID: 'bg-[#e6f4ec] text-[#054d28]',
-    PARTIAL: 'bg-[#fff8e6] text-[#8a5a00]',
-    PENDING: 'bg-[#fff8e6] text-[#8a5a00]',
-    FAILED: 'bg-[#fdeaeb] text-[#d03238]',
+    PAID: 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+    PARTIAL: 'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text-warm)]',
+    PENDING: 'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text-warm)]',
+    FAILED: 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)]',
   }
   const labels: Record<AdminEnrollment['paymentStatus'], string> = {
     PAID: 'Paid',
@@ -191,20 +194,20 @@ function ConfirmActionModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] bg-[rgba(13,26,58,0.5)] flex items-center justify-center p-6"
+      className="fixed inset-0 z-[60] bg-[rgba(14,15,12,0.45)] flex items-center justify-center p-6"
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-white rounded-[20px] p-8 w-full max-w-[460px] shadow-[rgba(26,39,68,0.2)_0_20px_60px]">
-        <h2 className="text-[20px] font-[800] text-[#1a2744] mb-1">{actionLabel} Access</h2>
-        <p className="text-[14px] text-[#717182] mb-6">
+      <div className="bg-white rounded-[20px] p-8 w-full max-w-[460px] shadow-[var(--color-wise-ring-strong)_0_20px_60px]">
+        <h2 className="text-[20px] font-[800] text-[var(--color-wise-text)] mb-1">{actionLabel} Access</h2>
+        <p className="text-[14px] text-[var(--color-wise-text-muted)] mb-6">
           This will{' '}
-          <span className="font-semibold text-[#1a2744]">{actionLabel.toLowerCase()}</span>{' '}
-          <span className="font-semibold text-[#1a2744]">{enrollment.student.name}</span>'s access
-          to <span className="font-semibold text-[#1a2744]">{enrollment.cohort.title}</span>.
+          <span className="font-semibold text-[var(--color-wise-text)]">{actionLabel.toLowerCase()}</span>{' '}
+          <span className="font-semibold text-[var(--color-wise-text)]">{enrollment.student.name}</span>'s access
+          to <span className="font-semibold text-[var(--color-wise-text)]">{enrollment.cohort.title}</span>.
         </p>
 
-        <label htmlFor="action-reason" className="block text-[13px] font-[600] text-[#1a2744] mb-2">
+        <label htmlFor="action-reason" className="block text-[13px] font-[600] text-[var(--color-wise-text)] mb-2">
           Reason (required)
         </label>
         <textarea
@@ -216,8 +219,8 @@ function ConfirmActionModal({
           rows={3}
           className={cn(
             'w-full rounded-[12px] border-[1.5px] p-4 text-[14px] font-[inherit]',
-            'bg-[#f8f9fb] resize-none outline-none transition-colors',
-            'focus:border-[#4a9ad4] focus:bg-white border-[rgba(26,39,68,0.15)]',
+            'bg-[var(--color-wise-canvas)] resize-none outline-none transition-colors',
+            'focus:border-[var(--color-wise-primary-text)] focus:bg-white border-[var(--color-wise-ring-strong)]',
           )}
         />
 
@@ -226,7 +229,7 @@ function ConfirmActionModal({
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="px-5 py-2.5 rounded-full bg-[#f0f0f0] text-[#717182] text-[14px] font-[700] hover:bg-[#e8ecf4] transition-colors disabled:opacity-50"
+            className="px-5 py-2.5 rounded-full bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)] text-[14px] font-[700] hover:bg-[var(--color-wise-surface-soft)] transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
@@ -237,8 +240,8 @@ function ConfirmActionModal({
             className={cn(
               'px-5 py-2.5 rounded-full text-[14px] font-[700] transition-colors',
               isDanger
-                ? 'bg-[#fdeaeb] text-[#d03238] hover:bg-[#fad0d2]'
-                : 'bg-[#fff8e6] text-[#8a5a00] hover:bg-[#fff0cc]',
+                ? 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] hover:bg-[var(--color-wise-danger-soft)]'
+                : 'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text-warm)] hover:bg-[var(--color-wise-warning-soft)]',
               'disabled:opacity-50 disabled:cursor-not-allowed',
             )}
           >
@@ -288,21 +291,21 @@ function StudentDetailDrawer({
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-[rgba(13,26,58,0.4)]"
+        className="fixed inset-0 bg-[rgba(14,15,12,0.4)]"
         aria-hidden="true"
         onClick={onClose}
       />
 
       {/* Panel */}
-      <aside className="relative z-50 w-full max-w-[520px] h-full bg-white shadow-[-8px_0_40px_rgba(26,39,68,0.15)] overflow-y-auto">
+      <aside className="relative z-50 w-full max-w-[520px] h-full bg-white shadow-[-8px_0_40px_var(--color-wise-ring-strong)] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-6 border-b border-[rgba(26,39,68,0.08)]">
-          <h2 className="text-[18px] font-[800] text-[#1a2744]">Student Details</h2>
+        <div className="flex items-center justify-between px-6 py-6 border-b border-[var(--color-wise-ring)]">
+          <h2 className="text-[18px] font-[800] text-[var(--color-wise-text)]">Student Details</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close details panel"
-            className="w-9 h-9 rounded-full bg-[#f0f0f0] flex items-center justify-center hover:bg-[#e8ecf4] transition-colors"
+            className="w-9 h-9 rounded-full bg-[var(--color-wise-surface-soft)] flex items-center justify-center hover:bg-[var(--color-wise-surface-soft)] transition-colors"
           >
             <X size={18} />
           </button>
@@ -323,9 +326,9 @@ function StudentDetailDrawer({
               </div>
             )}
             <div>
-              <div className="text-[20px] font-[800] text-[#1a2744]">{student.name}</div>
-              <div className="text-[14px] text-[#717182] mt-0.5">{student.email}</div>
-              <div className="text-[13px] text-[#a3a3a3] mt-0.5">
+              <div className="text-[20px] font-[800] text-[var(--color-wise-text)]">{student.name}</div>
+              <div className="text-[14px] text-[var(--color-wise-text-muted)] mt-0.5">{student.email}</div>
+              <div className="text-[13px] text-[var(--color-wise-text-muted)] mt-0.5">
                 Joined {formatDate(student.joinedAt)}
               </div>
             </div>
@@ -333,16 +336,16 @@ function StudentDetailDrawer({
 
           {/* Enrollment section */}
           <div className="mb-6">
-            <h3 className="text-[12px] font-[700] text-[#717182] uppercase tracking-[0.8px] mb-3">
+            <h3 className="text-[12px] font-[700] text-[var(--color-wise-text-muted)] uppercase tracking-[0.8px] mb-3">
               Enrollment
             </h3>
-            <div className="bg-[#f8f9fb] rounded-[12px] p-4">
-              <div className="text-[14px] font-[700] text-[#1a2744] mb-3">{cohort.title}</div>
+            <div className="bg-[var(--color-wise-canvas)] rounded-[12px] p-4">
+              <div className="text-[14px] font-[700] text-[var(--color-wise-text)] mb-3">{cohort.title}</div>
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2 flex-1">
-                  <div className="flex-1 h-[5px] bg-[#e8ecf4] rounded-full overflow-hidden">
+                  <div className="flex-1 h-[5px] bg-[var(--color-wise-surface-soft)] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[#4a9ad4] rounded-full"
+                      className="h-full bg-[var(--color-wise-primary-text)] rounded-full"
                       style={{ width: `${progress}%` }}
                       role="progressbar"
                       aria-valuenow={progress}
@@ -350,14 +353,14 @@ function StudentDetailDrawer({
                       aria-valuemax={100}
                     />
                   </div>
-                  <span className="text-[12px] font-[600] text-[#717182] whitespace-nowrap">
+                  <span className="text-[12px] font-[600] text-[var(--color-wise-text-muted)] whitespace-nowrap">
                     {progress}%
                   </span>
                 </div>
                 <PaymentStatusBadge status={paymentStatus} />
                 <EnrollmentStatusBadge status={status} />
               </div>
-              <div className="text-[12px] text-[#a3a3a3] mt-2">
+              <div className="text-[12px] text-[var(--color-wise-text-muted)] mt-2">
                 Enrolled {formatDate(enrolledAt)}
               </div>
             </div>
@@ -365,7 +368,7 @@ function StudentDetailDrawer({
 
           {/* Details table */}
           <div className="mb-6">
-            <h3 className="text-[12px] font-[700] text-[#717182] uppercase tracking-[0.8px] mb-3">
+            <h3 className="text-[12px] font-[700] text-[var(--color-wise-text-muted)] uppercase tracking-[0.8px] mb-3">
               Details
             </h3>
             {[
@@ -383,10 +386,10 @@ function StudentDetailDrawer({
             ].map(({ label, value }) => (
               <div
                 key={label}
-                className="flex justify-between items-center py-2.5 border-b border-[rgba(26,39,68,0.04)] last:border-b-0"
+                className="flex justify-between items-center py-2.5 border-b border-[var(--color-wise-ring)] last:border-b-0"
               >
-                <span className="text-[14px] text-[#717182]">{label}</span>
-                <span className="text-[14px] font-[600] text-[#1a2744]">{value}</span>
+                <span className="text-[14px] text-[var(--color-wise-text-muted)]">{label}</span>
+                <span className="text-[14px] font-[600] text-[var(--color-wise-text)]">{value}</span>
               </div>
             ))}
           </div>
@@ -394,27 +397,27 @@ function StudentDetailDrawer({
           {/* Installment timeline */}
           {installments && installments.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-[12px] font-[700] text-[#717182] uppercase tracking-[0.8px] mb-3">
+              <h3 className="text-[12px] font-[700] text-[var(--color-wise-text-muted)] uppercase tracking-[0.8px] mb-3">
                 Payment Timeline
               </h3>
               <div className="flex flex-col gap-2">
                 {installments.map((inst, idx) => {
                   const statusColor =
                     inst.status === 'PAID'
-                      ? 'bg-[#e6f4ec] text-[#054d28]'
+                      ? 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]'
                       : inst.status === 'OVERDUE'
-                        ? 'bg-[#fdeaeb] text-[#d03238]'
-                        : 'bg-[#fff8e6] text-[#8a5a00]'
+                        ? 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)]'
+                        : 'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text-warm)]'
                   return (
                     <div
                       key={inst.id}
-                      className="flex items-center justify-between py-2.5 border-b border-[rgba(26,39,68,0.04)] last:border-b-0"
+                      className="flex items-center justify-between py-2.5 border-b border-[var(--color-wise-ring)] last:border-b-0"
                     >
                       <div>
-                        <div className="text-[13px] font-[600] text-[#1a2744]">
+                        <div className="text-[13px] font-[600] text-[var(--color-wise-text)]">
                           Payment {idx + 1} — {formatMoney(inst.amount)}
                         </div>
-                        <div className="text-[12px] text-[#717182]">
+                        <div className="text-[12px] text-[var(--color-wise-text-muted)]">
                           Due {formatDate(inst.dueDate)}
                           {inst.paidAt && ` · Paid ${formatDate(inst.paidAt)}`}
                         </div>
@@ -438,8 +441,8 @@ function StudentDetailDrawer({
                   onClick={() => onSuspend(enrollment)}
                   className={cn(
                     'flex-1 px-4 py-3 rounded-full text-[14px] font-[700] transition-colors',
-                    'bg-[#fff8e6] text-[#8a5a00] hover:bg-[#fff0cc]',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f59e0b]',
+                    'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text-warm)] hover:bg-[var(--color-wise-warning-soft)]',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-wise-warning)]',
                   )}
                 >
                   Suspend Access
@@ -449,8 +452,8 @@ function StudentDetailDrawer({
                   onClick={() => onRevoke(enrollment)}
                   className={cn(
                     'flex-1 px-4 py-3 rounded-full text-[14px] font-[700] transition-colors',
-                    'bg-[#fdeaeb] text-[#d03238] hover:bg-[#fad0d2]',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d03238]',
+                    'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] hover:bg-[var(--color-wise-danger-soft)]',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-wise-danger)]',
                   )}
                 >
                   Revoke Access
@@ -463,8 +466,8 @@ function StudentDetailDrawer({
                 onClick={() => onReinstate(enrollment)}
                 className={cn(
                   'flex-1 px-4 py-3 rounded-full text-[14px] font-[700] transition-colors',
-                  'bg-[#e6f4ec] text-[#054d28] hover:bg-[#c8ecda]',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#16a34a]',
+                  'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)] hover:bg-[var(--color-wise-mint)]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-wise-success)]',
                 )}
               >
                 Reinstate Access
@@ -475,8 +478,8 @@ function StudentDetailDrawer({
               onClick={() => window.open(`mailto:${student.email}`)}
               className={cn(
                 'flex-1 px-4 py-3 rounded-full text-[14px] font-[700] transition-colors',
-                'bg-[#f0f0f0] text-[#1a2744] hover:bg-[#e8ecf4]',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4a9ad4]',
+                'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text)] hover:bg-[var(--color-wise-surface-soft)]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-wise-primary-text)]',
               )}
             >
               Send Email
@@ -590,7 +593,7 @@ export default function StudentListPage() {
         <button
           type="button"
           onClick={handleExportCSV}
-          className="px-5 py-2 rounded-full border-[1.5px] border-[rgba(26,39,68,0.15)] text-[#717182] text-[14px] font-[600] hover:bg-[#f0f0f0] transition-colors inline-flex items-center gap-2"
+          className="px-5 py-2 rounded-full border-[1.5px] border-[var(--color-wise-ring-strong)] text-[var(--color-wise-text-muted)] text-[14px] font-[600] hover:bg-[var(--color-wise-surface-soft)] transition-colors inline-flex items-center gap-2"
         >
           <Download size={14} />
           Export CSV
@@ -639,7 +642,7 @@ export default function StudentListPage() {
       )}
 
       {/* Stats row */}
-      <div className="flex border-b border-[rgba(26,39,68,0.08)] bg-white">
+      <div className="flex border-b border-[var(--color-wise-ring)] bg-white">
         {[
           { label: 'Total Students', value: String(total) },
           { label: 'Active Enrollments', value: '—' },
@@ -648,23 +651,23 @@ export default function StudentListPage() {
         ].map((stat) => (
           <div
             key={stat.label}
-            className="flex-1 px-7 py-5 border-r border-[rgba(26,39,68,0.06)] last:border-r-0"
+            className="flex-1 px-7 py-5 border-r border-[var(--color-wise-ring)] last:border-r-0"
           >
-            <div className="text-[28px] font-[900] text-[#1a2744] tracking-[-0.5px]">
+            <div className="text-[28px] font-[900] text-[var(--color-wise-text)] tracking-[-0.5px]">
               {stat.value}
             </div>
-            <div className="text-[13px] text-[#717182] mt-0.5">{stat.label}</div>
+            <div className="text-[13px] text-[var(--color-wise-text-muted)] mt-0.5">{stat.label}</div>
           </div>
         ))}
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-3 px-8 py-5 border-b border-[rgba(26,39,68,0.06)] bg-white flex-wrap">
+      <div className="flex items-center gap-3 px-8 py-5 border-b border-[var(--color-wise-ring)] bg-white flex-wrap">
         {/* Search */}
         <div className="flex-1 min-w-[200px] relative">
           <Search
             size={16}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-wise-text-muted)]"
             aria-hidden="true"
           />
           <input
@@ -674,9 +677,9 @@ export default function StudentListPage() {
             placeholder="Search by name or email…"
             aria-label="Search students"
             className={cn(
-              'w-full pl-9 pr-4 py-2.5 rounded-full text-[14px] text-[#1a2744] font-[inherit]',
-              'border-[1.5px] border-[rgba(26,39,68,0.12)] bg-[#f8f9fb] outline-none transition-colors',
-              'focus:border-[#4a9ad4] focus:bg-white',
+              'w-full pl-9 pr-4 py-2.5 rounded-full text-[14px] text-[var(--color-wise-text)] font-[inherit]',
+              'border-[1.5px] border-[var(--color-wise-ring)] bg-[var(--color-wise-canvas)] outline-none transition-colors',
+              'focus:border-[var(--color-wise-primary-text)] focus:bg-white',
             )}
           />
         </div>
@@ -690,9 +693,9 @@ export default function StudentListPage() {
           }}
           aria-label="Filter by status"
           className={cn(
-            'px-4 py-2.5 rounded-full border-[1.5px] border-[rgba(26,39,68,0.12)]',
-            'text-[14px] text-[#717182] bg-white outline-none cursor-pointer font-[inherit]',
-            'focus:border-[#4a9ad4]',
+            'px-4 py-2.5 rounded-full border-[1.5px] border-[var(--color-wise-ring)]',
+            'text-[14px] text-[var(--color-wise-text-muted)] bg-white outline-none cursor-pointer font-[inherit]',
+            'focus:border-[var(--color-wise-primary-text)]',
           )}
         >
           {STATUS_FILTERS.map((f) => (
@@ -711,9 +714,9 @@ export default function StudentListPage() {
           }}
           aria-label="Filter by payment"
           className={cn(
-            'px-4 py-2.5 rounded-full border-[1.5px] border-[rgba(26,39,68,0.12)]',
-            'text-[14px] text-[#717182] bg-white outline-none cursor-pointer font-[inherit]',
-            'focus:border-[#4a9ad4]',
+            'px-4 py-2.5 rounded-full border-[1.5px] border-[var(--color-wise-ring)]',
+            'text-[14px] text-[var(--color-wise-text-muted)] bg-white outline-none cursor-pointer font-[inherit]',
+            'focus:border-[var(--color-wise-primary-text)]',
           )}
         >
           {PAYMENT_STATUS_FILTERS.map((f) => (
@@ -730,46 +733,49 @@ export default function StudentListPage() {
           <div
             aria-busy="true"
             aria-label="Loading students"
-            className="bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden"
+            className="bg-white rounded-[16px] shadow-[var(--color-wise-ring)_0_0_0_1px] overflow-hidden"
           >
             {[1, 2, 3, 4, 5].map((n) => (
               <div
                 key={n}
-                className="flex items-center gap-4 px-5 py-4 border-b border-[rgba(26,39,68,0.04)] last:border-b-0"
+                className="flex items-center gap-4 px-5 py-4 border-b border-[var(--color-wise-ring)] last:border-b-0"
                 aria-hidden="true"
               >
-                <div className="w-9 h-9 rounded-full bg-[#e8ecf4] animate-pulse flex-shrink-0" />
+                <div className="w-9 h-9 rounded-full bg-[var(--color-wise-surface-soft)] animate-pulse flex-shrink-0" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3.5 bg-[#e8ecf4] rounded animate-pulse w-1/4" />
-                  <div className="h-3 bg-[#e8ecf4] rounded animate-pulse w-1/5" />
+                  <div className="h-3.5 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-1/4" />
+                  <div className="h-3 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-1/5" />
                 </div>
-                <div className="h-3 bg-[#e8ecf4] rounded animate-pulse w-24" />
-                <div className="h-3 bg-[#e8ecf4] rounded animate-pulse w-16" />
-                <div className="h-3 bg-[#e8ecf4] rounded animate-pulse w-16" />
+                <div className="h-3 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-24" />
+                <div className="h-3 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-16" />
+                <div className="h-3 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-16" />
               </div>
             ))}
           </div>
         )}
 
         {isError && !isLoading && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="text-[40px] mb-4" aria-hidden="true">⚠️</div>
-            <p className="text-[16px] font-[600] text-[#1a2744]">Failed to load students</p>
-          </div>
+          <EmptyState
+            icon={AlertTriangle}
+            title="Failed to load students"
+            description="There was a problem loading the student list. Please try again."
+          />
         )}
 
         {!isLoading && !isError && enrollments.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="text-[48px] mb-4" aria-hidden="true">👥</div>
-            <p className="text-[16px] font-[600] text-[#1a2744]">No students found</p>
-            <p className="text-[14px] text-[#717182] mt-1">
-              {debouncedQuery || statusFilter ? 'Try adjusting your filters.' : 'No enrollments yet.'}
-            </p>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="No students found"
+            description={
+              debouncedQuery || statusFilter
+                ? 'Try adjusting your filters.'
+                : 'No enrollments yet.'
+            }
+          />
         )}
 
         {!isLoading && !isError && enrollments.length > 0 && (
-          <div className="bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden">
+          <div className="bg-white rounded-[16px] shadow-[var(--color-wise-ring)_0_0_0_1px] overflow-hidden">
             <table className="w-full border-collapse" aria-label="Student enrollments">
               <thead>
                 <tr>
@@ -778,7 +784,7 @@ export default function StudentListPage() {
                       <th
                         key={col}
                         scope="col"
-                        className="text-left text-[12px] font-[600] text-[#717182] px-5 py-3 border-b border-[rgba(26,39,68,0.08)] uppercase tracking-[0.5px] bg-[#f8f9fb]"
+                        className="text-left text-[12px] font-[600] text-[var(--color-wise-text-muted)] px-5 py-3 border-b border-[var(--color-wise-ring)] uppercase tracking-[0.5px] bg-[var(--color-wise-canvas)]"
                       >
                         {col}
                       </th>
@@ -790,7 +796,7 @@ export default function StudentListPage() {
                 {enrollments.map((enrollment) => (
                   <tr
                     key={enrollment.id}
-                    className="cursor-pointer hover:[&>td]:bg-[#f8f9fb] transition-colors"
+                    className="cursor-pointer hover:[&>td]:bg-[var(--color-wise-canvas)] transition-colors"
                     onClick={() => navigate(`/admin/students/${enrollment.student.id}`)}
                     tabIndex={0}
                     onKeyDown={(e) => {
@@ -801,7 +807,7 @@ export default function StudentListPage() {
                     }}
                     aria-label={`View profile for ${enrollment.student.name}`}
                   >
-                    <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
+                    <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)]">
                       <div className="flex items-center gap-3">
                         {enrollment.student.avatarUrl ? (
                           <img
@@ -819,23 +825,23 @@ export default function StudentListPage() {
                           </div>
                         )}
                         <div>
-                          <div className="text-[14px] font-[600] text-[#1a2744]">
+                          <div className="text-[14px] font-[600] text-[var(--color-wise-text)]">
                             {enrollment.student.name}
                           </div>
-                          <div className="text-[12px] text-[#717182]">
+                          <div className="text-[12px] text-[var(--color-wise-text-muted)]">
                             {enrollment.student.email}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[14px] text-[#1a2744]">
+                    <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)] text-[14px] text-[var(--color-wise-text)]">
                       {enrollment.cohort.title}
                     </td>
-                    <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
+                    <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)]">
                       <div className="flex items-center gap-2">
-                        <div className="w-20 h-1 bg-[#e8ecf4] rounded-full overflow-hidden">
+                        <div className="w-20 h-1 bg-[var(--color-wise-surface-soft)] rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-[#4a9ad4] rounded-full"
+                            className="h-full bg-[var(--color-wise-primary-text)] rounded-full"
                             style={{ width: `${enrollment.progress}%` }}
                             role="progressbar"
                             aria-valuenow={enrollment.progress}
@@ -843,21 +849,21 @@ export default function StudentListPage() {
                             aria-valuemax={100}
                           />
                         </div>
-                        <span className="text-[12px] font-[600] text-[#717182]">
+                        <span className="text-[12px] font-[600] text-[var(--color-wise-text-muted)]">
                           {enrollment.progress}%
                         </span>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
+                    <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)]">
                       <EnrollmentStatusBadge status={enrollment.status} />
                     </td>
-                    <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
+                    <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)]">
                       <PaymentStatusBadge status={enrollment.paymentStatus} />
                     </td>
-                    <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[13px] text-[#717182]">
+                    <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)] text-[13px] text-[var(--color-wise-text-muted)]">
                       {formatDate(enrollment.enrolledAt)}
                     </td>
-                    <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
+                    <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)]">
                       <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
@@ -865,7 +871,7 @@ export default function StudentListPage() {
                             e.stopPropagation()
                             navigate(`/admin/students/${enrollment.student.id}`)
                           }}
-                          className="text-[13px] font-[600] text-[#4a9ad4] hover:underline"
+                          className="text-[13px] font-[600] text-[var(--color-wise-primary-text)] hover:underline"
                         >
                           View Profile
                         </button>
@@ -875,7 +881,7 @@ export default function StudentListPage() {
                             e.stopPropagation()
                             window.open(`mailto:${enrollment.student.email}`)
                           }}
-                          className="text-[13px] font-[600] text-[#717182] hover:underline"
+                          className="text-[13px] font-[600] text-[var(--color-wise-text-muted)] hover:underline"
                         >
                           Email
                         </button>
@@ -891,8 +897,8 @@ export default function StudentListPage() {
 
       {/* Pagination */}
       {!isLoading && totalPages > 1 && (
-        <div className="flex items-center justify-between px-8 py-4 border-t border-[rgba(26,39,68,0.06)] bg-white">
-          <p className="text-[13px] text-[#717182]">
+        <div className="flex items-center justify-between px-8 py-4 border-t border-[var(--color-wise-ring)] bg-white">
+          <p className="text-[13px] text-[var(--color-wise-text-muted)]">
             Showing {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, total)} of{' '}
             {total}
           </p>
@@ -902,7 +908,7 @@ export default function StudentListPage() {
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
               aria-label="Previous page"
-              className="w-[34px] h-[34px] rounded-full border-[1.5px] border-[rgba(26,39,68,0.12)] bg-white text-[#717182] flex items-center justify-center hover:bg-[#f0f0f0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="w-[34px] h-[34px] rounded-full border-[1.5px] border-[var(--color-wise-ring)] bg-white text-[var(--color-wise-text-muted)] flex items-center justify-center hover:bg-[var(--color-wise-surface-soft)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft size={14} />
             </button>
@@ -918,8 +924,8 @@ export default function StudentListPage() {
                   className={cn(
                     'w-[34px] h-[34px] rounded-full border-[1.5px] text-[13px] font-[600] flex items-center justify-center transition-colors',
                     page === pageNum
-                      ? 'bg-[#4a9ad4] text-white border-[#4a9ad4]'
-                      : 'border-[rgba(26,39,68,0.12)] bg-white text-[#717182] hover:bg-[#f0f0f0]',
+                      ? 'bg-[var(--color-wise-primary-text)] text-white border-[var(--color-wise-primary-text)]'
+                      : 'border-[var(--color-wise-ring)] bg-white text-[var(--color-wise-text-muted)] hover:bg-[var(--color-wise-surface-soft)]',
                   )}
                 >
                   {pageNum}
@@ -931,7 +937,7 @@ export default function StudentListPage() {
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
               aria-label="Next page"
-              className="w-[34px] h-[34px] rounded-full border-[1.5px] border-[rgba(26,39,68,0.12)] bg-white text-[#717182] flex items-center justify-center hover:bg-[#f0f0f0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="w-[34px] h-[34px] rounded-full border-[1.5px] border-[var(--color-wise-ring)] bg-white text-[var(--color-wise-text-muted)] flex items-center justify-center hover:bg-[var(--color-wise-surface-soft)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight size={14} />
             </button>

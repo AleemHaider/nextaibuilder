@@ -1,8 +1,25 @@
 // FIR-173 — Admin sub-admin management: invite, view permissions, edit, deactivate
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, ChevronDown, ChevronUp } from 'lucide-react'
+import {
+  X,
+  ChevronDown,
+  ChevronUp,
+  Check,
+  BookOpen,
+  Users,
+  CreditCard,
+  GraduationCap,
+  Camera,
+  MessageSquare,
+  BarChart2,
+  Settings,
+  AlertTriangle,
+  UserPlus,
+  type LucideIcon,
+} from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
+import { EmptyState } from '../../components/ui/EmptyState'
 import {
   fetchSubAdmins,
   inviteSubAdmin,
@@ -24,14 +41,14 @@ interface PermissionDef {
 
 interface PermissionGroup {
   label: string
-  icon: string
+  icon: LucideIcon
   permissions: PermissionDef[]
 }
 
 const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     label: 'Courses',
-    icon: '📚',
+    icon: BookOpen,
     permissions: [
       { key: 'courses:read', label: 'View courses' },
       { key: 'courses:write', label: 'Create & edit courses' },
@@ -39,7 +56,7 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     label: 'Enrollments',
-    icon: '👥',
+    icon: Users,
     permissions: [
       { key: 'enrollments:read', label: 'View enrollments' },
       { key: 'enrollments:write', label: 'Manage enrollments' },
@@ -47,7 +64,7 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     label: 'Payments',
-    icon: '💳',
+    icon: CreditCard,
     permissions: [
       { key: 'payments:read', label: 'View payments' },
       { key: 'payments:write', label: 'Process payments' },
@@ -55,7 +72,7 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     label: 'Students',
-    icon: '🎓',
+    icon: GraduationCap,
     permissions: [
       { key: 'students:read', label: 'View students' },
       { key: 'students:write', label: 'Manage students' },
@@ -63,7 +80,7 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     label: 'Submissions',
-    icon: '📸',
+    icon: Camera,
     permissions: [
       { key: 'submissions:read', label: 'View submissions' },
       { key: 'submissions:write', label: 'Review submissions' },
@@ -71,7 +88,7 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     label: 'Messages',
-    icon: '💬',
+    icon: MessageSquare,
     permissions: [
       { key: 'messages:read', label: 'View messages' },
       { key: 'messages:write', label: 'Send messages' },
@@ -79,12 +96,12 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     label: 'Reports',
-    icon: '📊',
+    icon: BarChart2,
     permissions: [{ key: 'reports:read', label: 'View reports & revenue' }],
   },
   {
     label: 'Settings',
-    icon: '⚙️',
+    icon: Settings,
     permissions: [
       { key: 'settings:read', label: 'View settings' },
       { key: 'settings:write', label: 'Change settings' },
@@ -125,11 +142,11 @@ const PRESETS: Record<string, SubAdminPermission[]> = {
 // ---------------------------------------------------------------------------
 
 const AVATAR_GRADIENTS = [
-  'linear-gradient(135deg, #4a9ad4, #1a2744)',
-  'linear-gradient(135deg, #cc4a00, #ff8c5a)',
-  'linear-gradient(135deg, #054d28, #16a34a)',
-  'linear-gradient(135deg, #7c3aed, #4a9ad4)',
-  'linear-gradient(135deg, #8a3a00, #cc6600)',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-text))',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-primary))',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-success))',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-primary-text))',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-primary-text))',
 ]
 
 function getAvatarGradient(name: string): string {
@@ -170,14 +187,16 @@ function Toast({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: stri
       role="status"
       aria-live="polite"
       className={cn(
-        'flex items-center gap-3 px-5 py-3.5 rounded-[14px] shadow-[rgba(26,39,68,0.2)_0_4px_20px]',
+        'flex items-center gap-3 px-5 py-3.5 rounded-[14px] shadow-[var(--color-wise-ring-strong)_0_4px_20px]',
         'text-[14px] font-semibold',
         toast.variant === 'success'
-          ? 'bg-[#e6f4ec] text-[#054d28] border border-[rgba(5,77,40,0.15)]'
-          : 'bg-[#fdeaeb] text-[#d03238] border border-[rgba(208,50,56,0.15)]',
+          ? 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)] border border-[rgba(5,77,40,0.15)]'
+          : 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] border border-[rgba(208,50,56,0.15)]',
       )}
     >
-      <span aria-hidden="true">{toast.variant === 'success' ? '✓' : '✗'}</span>
+      <span aria-hidden="true" className="inline-flex items-center">
+        {toast.variant === 'success' ? <Check size={16} /> : <X size={16} />}
+      </span>
       {toast.message}
     </div>
   )
@@ -246,8 +265,8 @@ function PermissionSelector({ selected, onChange }: PermissionSelectorProps) {
               className={cn(
                 'px-4 py-2 rounded-full border-[1.5px] text-[13px] font-[600] transition-colors',
                 isActive
-                  ? 'border-[#4a9ad4] bg-[#eef6fd] text-[#4a9ad4]'
-                  : 'border-[rgba(26,39,68,0.15)] text-[#717182] hover:border-[#4a9ad4] hover:text-[#4a9ad4]',
+                  ? 'border-[var(--color-wise-primary-text)] bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]'
+                  : 'border-[var(--color-wise-ring-strong)] text-[var(--color-wise-text-muted)] hover:border-[var(--color-wise-primary-text)] hover:text-[var(--color-wise-primary-text)]',
               )}
             >
               {preset}
@@ -263,21 +282,22 @@ function PermissionSelector({ selected, onChange }: PermissionSelectorProps) {
           return (
             <div
               key={group.label}
-              className="border border-[rgba(26,39,68,0.1)] rounded-[14px] overflow-hidden"
+              className="border border-[var(--color-wise-ring)] rounded-[14px] overflow-hidden"
             >
               <button
                 type="button"
                 onClick={() => toggleGroup(group.label)}
                 aria-expanded={isExpanded}
-                className="flex items-center justify-between w-full px-4 py-3 bg-[#f8f9fb] hover:bg-[#f0f4f8] transition-colors text-left"
+                className="flex items-center justify-between w-full px-4 py-3 bg-[var(--color-wise-canvas)] hover:bg-[var(--color-wise-surface-soft)] transition-colors text-left"
               >
-                <span className="text-[14px] font-[700] text-[#1a2744]">
-                  {group.icon} {group.label}
+                <span className="flex items-center gap-2 text-[14px] font-[700] text-[var(--color-wise-text)]">
+                  <group.icon size={14} aria-hidden="true" className="text-[var(--color-wise-primary-text)]" />
+                  {group.label}
                 </span>
                 {isExpanded ? (
-                  <ChevronUp size={14} className="text-[#a3a3a3]" />
+                  <ChevronUp size={14} className="text-[var(--color-wise-text-muted)]" />
                 ) : (
-                  <ChevronDown size={14} className="text-[#a3a3a3]" />
+                  <ChevronDown size={14} className="text-[var(--color-wise-text-muted)]" />
                 )}
               </button>
 
@@ -286,15 +306,15 @@ function PermissionSelector({ selected, onChange }: PermissionSelectorProps) {
                   {group.permissions.map((perm) => (
                     <label
                       key={perm.key}
-                      className="flex items-center gap-2.5 py-2.5 border-b border-[rgba(26,39,68,0.04)] last:border-b-0 cursor-pointer"
+                      className="flex items-center gap-2.5 py-2.5 border-b border-[var(--color-wise-ring)] last:border-b-0 cursor-pointer"
                     >
                       <input
                         type="checkbox"
                         checked={selectedSet.has(perm.key)}
                         onChange={() => togglePermission(perm.key)}
-                        className="w-[18px] h-[18px] rounded-[5px] accent-[#4a9ad4]"
+                        className="w-[18px] h-[18px] rounded-[5px] accent-[var(--color-wise-primary-text)]"
                       />
-                      <span className="text-[13px] font-[500] text-[#717182]">{perm.label}</span>
+                      <span className="text-[13px] font-[500] text-[var(--color-wise-text-muted)]">{perm.label}</span>
                     </label>
                   ))}
                 </div>
@@ -351,11 +371,11 @@ function InvitePanel({ onClose, onSuccess }: InvitePanelProps) {
       aria-label="Invite team member"
     >
       <div
-        className="fixed inset-0 bg-[rgba(13,26,58,0.4)]"
+        className="fixed inset-0 bg-[rgba(14,15,12,0.4)]"
         aria-hidden="true"
         onClick={onClose}
       />
-      <aside className="relative z-50 w-full max-w-[560px] h-full bg-white shadow-[-8px_0_40px_rgba(26,39,68,0.15)] overflow-y-auto">
+      <aside className="relative z-50 w-full max-w-[560px] h-full bg-white shadow-[-8px_0_40px_var(--color-wise-ring-strong)] overflow-y-auto">
         {/* Toast inside drawer */}
         <div className="fixed bottom-6 right-6 z-[60] flex flex-col gap-2 pointer-events-none w-[420px]">
           {toasts.map((t) => (
@@ -365,10 +385,10 @@ function InvitePanel({ onClose, onSuccess }: InvitePanelProps) {
           ))}
         </div>
 
-        <div className="flex items-center justify-between px-7 py-6 border-b border-[rgba(26,39,68,0.08)]">
+        <div className="flex items-center justify-between px-7 py-6 border-b border-[var(--color-wise-ring)]">
           <div>
-            <h2 className="text-[20px] font-[800] text-[#1a2744]">Invite Team Member</h2>
-            <p className="text-[14px] text-[#717182] mt-0.5">
+            <h2 className="text-[20px] font-[800] text-[var(--color-wise-text)]">Invite Team Member</h2>
+            <p className="text-[14px] text-[var(--color-wise-text-muted)] mt-0.5">
               They'll receive an email to set up their account.
             </p>
           </div>
@@ -376,7 +396,7 @@ function InvitePanel({ onClose, onSuccess }: InvitePanelProps) {
             type="button"
             onClick={onClose}
             aria-label="Close panel"
-            className="w-9 h-9 rounded-full bg-[#f0f0f0] flex items-center justify-center hover:bg-[#e8ecf4] transition-colors"
+            className="w-9 h-9 rounded-full bg-[var(--color-wise-surface-soft)] flex items-center justify-center hover:bg-[var(--color-wise-surface-soft)] transition-colors"
           >
             <X size={18} />
           </button>
@@ -391,7 +411,7 @@ function InvitePanel({ onClose, onSuccess }: InvitePanelProps) {
         >
           {/* Name */}
           <div className="mb-5">
-            <label htmlFor="invite-name" className="block text-[13px] font-[600] text-[#1a2744] mb-1.5">
+            <label htmlFor="invite-name" className="block text-[13px] font-[600] text-[var(--color-wise-text)] mb-1.5">
               Full name
             </label>
             <input
@@ -402,16 +422,16 @@ function InvitePanel({ onClose, onSuccess }: InvitePanelProps) {
               placeholder="Jane Smith"
               required
               className={cn(
-                'w-full h-12 rounded-[12px] border-[1.5px] border-[rgba(26,39,68,0.15)] bg-[#f8f9fb]',
-                'px-4 text-[15px] text-[#1a2744] font-[inherit] outline-none transition-colors',
-                'focus:border-[#4a9ad4] focus:bg-white',
+                'w-full h-12 rounded-[12px] border-[1.5px] border-[var(--color-wise-ring-strong)] bg-[var(--color-wise-canvas)]',
+                'px-4 text-[15px] text-[var(--color-wise-text)] font-[inherit] outline-none transition-colors',
+                'focus:border-[var(--color-wise-primary-text)] focus:bg-white',
               )}
             />
           </div>
 
           {/* Email */}
           <div className="mb-6">
-            <label htmlFor="invite-email" className="block text-[13px] font-[600] text-[#1a2744] mb-1.5">
+            <label htmlFor="invite-email" className="block text-[13px] font-[600] text-[var(--color-wise-text)] mb-1.5">
               Email address
             </label>
             <input
@@ -422,27 +442,27 @@ function InvitePanel({ onClose, onSuccess }: InvitePanelProps) {
               placeholder="team@nextaibuilder.com"
               required
               className={cn(
-                'w-full h-12 rounded-[12px] border-[1.5px] border-[rgba(26,39,68,0.15)] bg-[#f8f9fb]',
-                'px-4 text-[15px] text-[#1a2744] font-[inherit] outline-none transition-colors',
-                'focus:border-[#4a9ad4] focus:bg-white',
+                'w-full h-12 rounded-[12px] border-[1.5px] border-[var(--color-wise-ring-strong)] bg-[var(--color-wise-canvas)]',
+                'px-4 text-[15px] text-[var(--color-wise-text)] font-[inherit] outline-none transition-colors',
+                'focus:border-[var(--color-wise-primary-text)] focus:bg-white',
               )}
             />
           </div>
 
           {/* Permissions */}
           <div className="mb-6">
-            <label className="block text-[13px] font-[600] text-[#1a2744] mb-3">
+            <label className="block text-[13px] font-[600] text-[var(--color-wise-text)] mb-3">
               Permissions
             </label>
             <PermissionSelector selected={permissions} onChange={setPermissions} />
           </div>
 
           {/* Footer */}
-          <div className="flex gap-3 justify-end pt-2 border-t border-[rgba(26,39,68,0.08)]">
+          <div className="flex gap-3 justify-end pt-2 border-t border-[var(--color-wise-ring)]">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-3 rounded-full bg-[#f0f0f0] text-[#717182] text-[14px] font-[700] hover:bg-[#e8ecf4] transition-colors"
+              className="px-5 py-3 rounded-full bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)] text-[14px] font-[700] hover:bg-[var(--color-wise-surface-soft)] transition-colors"
             >
               Cancel
             </button>
@@ -450,7 +470,7 @@ function InvitePanel({ onClose, onSuccess }: InvitePanelProps) {
               type="submit"
               disabled={!isValid || inviteMutation.isPending}
               className={cn(
-                'px-5 py-3 rounded-full bg-[#4a9ad4] text-[#0d1a3a] text-[14px] font-[700] transition-colors',
+                'px-5 py-3 rounded-full bg-[var(--color-wise-primary-text)] text-[var(--color-wise-dark)] text-[14px] font-[700] transition-colors',
                 'hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed',
               )}
             >
@@ -488,15 +508,15 @@ function DeactivateModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[rgba(13,26,58,0.5)] flex items-center justify-center p-6"
+      className="fixed inset-0 z-50 bg-[rgba(14,15,12,0.45)] flex items-center justify-center p-6"
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-white rounded-[20px] p-8 w-full max-w-[440px] shadow-[rgba(26,39,68,0.2)_0_20px_60px]">
-        <h2 className="text-[20px] font-[800] text-[#1a2744] mb-2">Deactivate Member</h2>
-        <p className="text-[14px] text-[#717182] mb-6">
+      <div className="bg-white rounded-[20px] p-8 w-full max-w-[440px] shadow-[var(--color-wise-ring-strong)_0_20px_60px]">
+        <h2 className="text-[20px] font-[800] text-[var(--color-wise-text)] mb-2">Deactivate Member</h2>
+        <p className="text-[14px] text-[var(--color-wise-text-muted)] mb-6">
           Are you sure you want to deactivate{' '}
-          <span className="font-semibold text-[#1a2744]">{member.name}</span>? They will lose
+          <span className="font-semibold text-[var(--color-wise-text)]">{member.name}</span>? They will lose
           all admin access immediately.
         </p>
         <div className="flex gap-3 justify-end">
@@ -504,7 +524,7 @@ function DeactivateModal({
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="px-5 py-2.5 rounded-full bg-[#f0f0f0] text-[#717182] text-[14px] font-[700] hover:bg-[#e8ecf4] transition-colors disabled:opacity-50"
+            className="px-5 py-2.5 rounded-full bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)] text-[14px] font-[700] hover:bg-[var(--color-wise-surface-soft)] transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
@@ -512,7 +532,7 @@ function DeactivateModal({
             type="button"
             onClick={onConfirm}
             disabled={isPending}
-            className="px-5 py-2.5 rounded-full bg-[#fdeaeb] text-[#d03238] text-[14px] font-[700] hover:bg-[#fad0d2] transition-colors disabled:opacity-50"
+            className="px-5 py-2.5 rounded-full bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] text-[14px] font-[700] hover:bg-[var(--color-wise-danger-soft)] transition-colors disabled:opacity-50"
           >
             {isPending ? 'Deactivating…' : 'Deactivate'}
           </button>
@@ -548,9 +568,9 @@ function SubAdminRow({ member, onDeactivate, onPermissionsUpdated, isOwner }: Su
   })
 
   const statusStyles: Record<SubAdmin['status'], string> = {
-    ACTIVE: 'bg-[#e6f4ec] text-[#054d28]',
-    INVITED: 'bg-[#fff8e6] text-[#8a5a00]',
-    INACTIVE: 'bg-[#f0f0f0] text-[#717182]',
+    ACTIVE: 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+    INVITED: 'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text-warm)]',
+    INACTIVE: 'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)]',
   }
 
   // Derive a label to summarise permissions briefly
@@ -563,8 +583,8 @@ function SubAdminRow({ member, onDeactivate, onPermissionsUpdated, isOwner }: Su
 
   return (
     <>
-      <tr className="hover:[&>td]:bg-[#f8fbff] transition-colors">
-        <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
+      <tr className="hover:[&>td]:bg-[var(--color-wise-surface-soft)] transition-colors">
+        <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)]">
           <div className="flex items-center gap-2.5">
             {member.avatarUrl ? (
               <img src={member.avatarUrl} alt="" className="w-9 h-9 rounded-full flex-shrink-0" />
@@ -579,35 +599,35 @@ function SubAdminRow({ member, onDeactivate, onPermissionsUpdated, isOwner }: Su
             )}
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[14px] font-[700] text-[#1a2744]">{member.name}</span>
+                <span className="text-[14px] font-[700] text-[var(--color-wise-text)]">{member.name}</span>
                 {isOwner && (
-                  <span className="text-[11px] font-[600] bg-[#1a2744] text-white px-[9px] py-[3px] rounded-full">
+                  <span className="text-[11px] font-[600] bg-[var(--color-wise-text)] text-white px-[9px] py-[3px] rounded-full">
                     Owner
                   </span>
                 )}
               </div>
-              <div className="text-[12px] text-[#a3a3a3]">{member.email}</div>
+              <div className="text-[12px] text-[var(--color-wise-text-muted)]">{member.email}</div>
             </div>
           </div>
         </td>
-        <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
-          <span className="text-[11px] font-[600] bg-[#e8f4fd] text-[#1a2744] px-[9px] py-[3px] rounded-full">
+        <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)]">
+          <span className="text-[11px] font-[600] bg-[var(--color-wise-mint)] text-[var(--color-wise-text)] px-[9px] py-[3px] rounded-full">
             {permLabel}
           </span>
         </td>
-        <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
+        <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)]">
           <span className={cn('text-[11px] font-[600] px-[9px] py-[3px] rounded-full', statusStyles[member.status])}>
             {member.status === 'INVITED' ? 'Invited' : member.status === 'ACTIVE' ? 'Active' : 'Inactive'}
           </span>
         </td>
-        <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)] text-[12px] text-[#717182]">
+        <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)] text-[12px] text-[var(--color-wise-text-muted)]">
           {formatRelativeTime(member.lastActiveAt)}
         </td>
-        <td className="px-5 py-3.5 border-b border-[rgba(26,39,68,0.04)]">
+        <td className="px-5 py-3.5 border-b border-[var(--color-wise-ring)]">
           {isOwner ? (
             <div className="flex gap-3">
-              <span className="text-[13px] text-[#d4d4d4] cursor-not-allowed">Edit</span>
-              <span className="text-[13px] text-[#d4d4d4] cursor-not-allowed">Deactivate</span>
+              <span className="text-[13px] text-[var(--color-wise-text-muted)] cursor-not-allowed">Edit</span>
+              <span className="text-[13px] text-[var(--color-wise-text-muted)] cursor-not-allowed">Deactivate</span>
             </div>
           ) : (
             <div className="flex gap-3">
@@ -617,7 +637,7 @@ function SubAdminRow({ member, onDeactivate, onPermissionsUpdated, isOwner }: Su
                   setEditPermissions(member.permissions)
                   setEditExpanded((v) => !v)
                 }}
-                className="text-[13px] font-[600] text-[#4a9ad4] hover:underline"
+                className="text-[13px] font-[600] text-[var(--color-wise-primary-text)] hover:underline"
               >
                 {editExpanded ? 'Cancel' : 'Edit'}
               </button>
@@ -625,7 +645,7 @@ function SubAdminRow({ member, onDeactivate, onPermissionsUpdated, isOwner }: Su
                 <button
                   type="button"
                   onClick={() => onDeactivate(member)}
-                  className="text-[13px] font-[600] text-[#d03238] hover:underline"
+                  className="text-[13px] font-[600] text-[var(--color-wise-danger)] hover:underline"
                 >
                   Deactivate
                 </button>
@@ -638,7 +658,7 @@ function SubAdminRow({ member, onDeactivate, onPermissionsUpdated, isOwner }: Su
       {/* Inline permission editor */}
       {editExpanded && (
         <tr>
-          <td colSpan={5} className="border-b border-[rgba(26,39,68,0.04)] bg-[#f8fbff]">
+          <td colSpan={5} className="border-b border-[var(--color-wise-ring)] bg-[var(--color-wise-surface-soft)]">
             <div className="px-5 py-5">
               <PermissionSelector
                 selected={editPermissions}
@@ -648,7 +668,7 @@ function SubAdminRow({ member, onDeactivate, onPermissionsUpdated, isOwner }: Su
                 <button
                   type="button"
                   onClick={() => setEditExpanded(false)}
-                  className="px-4 py-2 rounded-full bg-[#f0f0f0] text-[#717182] text-[13px] font-[700] hover:bg-[#e8ecf4] transition-colors"
+                  className="px-4 py-2 rounded-full bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)] text-[13px] font-[700] hover:bg-[var(--color-wise-surface-soft)] transition-colors"
                 >
                   Cancel
                 </button>
@@ -656,7 +676,7 @@ function SubAdminRow({ member, onDeactivate, onPermissionsUpdated, isOwner }: Su
                   type="button"
                   onClick={() => updateMutation.mutate()}
                   disabled={updateMutation.isPending}
-                  className="px-4 py-2 rounded-full bg-[#4a9ad4] text-[#0d1a3a] text-[13px] font-[700] hover:opacity-90 transition-opacity disabled:opacity-50"
+                  className="px-4 py-2 rounded-full bg-[var(--color-wise-primary-text)] text-[var(--color-wise-dark)] text-[13px] font-[700] hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   {updateMutation.isPending ? 'Saving…' : 'Save Permissions'}
                 </button>
@@ -725,9 +745,9 @@ export default function SubAdminPage() {
           type="button"
           onClick={() => setShowInvite(true)}
           className={cn(
-            'px-5 py-2.5 rounded-full bg-[#4a9ad4] text-[#0d1a3a]',
+            'px-5 py-2.5 rounded-full bg-[var(--color-wise-primary-text)] text-[var(--color-wise-dark)]',
             'text-[14px] font-[700] hover:opacity-90 transition-opacity',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4a9ad4]',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-wise-primary-text)]',
           )}
         >
           + Invite Member
@@ -764,45 +784,46 @@ export default function SubAdminPage() {
       <div className="px-8 py-6">
         {isLoading && (
           <div
-            className="bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden"
+            className="bg-white rounded-[16px] shadow-[var(--color-wise-ring)_0_0_0_1px] overflow-hidden"
             aria-busy="true"
             aria-label="Loading team members"
           >
             {[1, 2, 3].map((n) => (
               <div
                 key={n}
-                className="flex items-center gap-4 px-5 py-4 border-b border-[rgba(26,39,68,0.04)] last:border-b-0"
+                className="flex items-center gap-4 px-5 py-4 border-b border-[var(--color-wise-ring)] last:border-b-0"
                 aria-hidden="true"
               >
-                <div className="w-9 h-9 rounded-full bg-[#e8ecf4] animate-pulse flex-shrink-0" />
+                <div className="w-9 h-9 rounded-full bg-[var(--color-wise-surface-soft)] animate-pulse flex-shrink-0" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3.5 bg-[#e8ecf4] rounded animate-pulse w-1/4" />
-                  <div className="h-3 bg-[#e8ecf4] rounded animate-pulse w-1/5" />
+                  <div className="h-3.5 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-1/4" />
+                  <div className="h-3 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-1/5" />
                 </div>
-                <div className="h-3 bg-[#e8ecf4] rounded animate-pulse w-20" />
-                <div className="h-3 bg-[#e8ecf4] rounded animate-pulse w-16" />
+                <div className="h-3 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-20" />
+                <div className="h-3 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-16" />
               </div>
             ))}
           </div>
         )}
 
         {isError && !isLoading && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="text-[40px] mb-4" aria-hidden="true">⚠️</div>
-            <p className="text-[16px] font-[600] text-[#1a2744]">Failed to load team</p>
-          </div>
+          <EmptyState
+            icon={AlertTriangle}
+            title="Failed to load team"
+            description="There was a problem loading the team members. Please try again."
+          />
         )}
 
         {!isLoading && !isError && members.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="text-[48px] mb-4" aria-hidden="true">👤</div>
-            <p className="text-[16px] font-[600] text-[#1a2744]">No team members yet</p>
-            <p className="text-[14px] text-[#717182] mt-1">Invite your first team member above.</p>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="No team members yet"
+            description="Invite your first team member above."
+          />
         )}
 
         {!isLoading && !isError && members.length > 0 && (
-          <div className="bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden">
+          <div className="bg-white rounded-[16px] shadow-[var(--color-wise-ring)_0_0_0_1px] overflow-hidden">
             <table className="w-full border-collapse" aria-label="Team members">
               <thead>
                 <tr>
@@ -810,7 +831,7 @@ export default function SubAdminPage() {
                     <th
                       key={col}
                       scope="col"
-                      className="text-left text-[11px] font-[600] text-[#717182] px-5 py-3 border-b border-[rgba(26,39,68,0.08)] uppercase tracking-[0.5px] bg-[#f8f9fb]"
+                      className="text-left text-[11px] font-[600] text-[var(--color-wise-text-muted)] px-5 py-3 border-b border-[var(--color-wise-ring)] uppercase tracking-[0.5px] bg-[var(--color-wise-canvas)]"
                     >
                       {col}
                     </th>

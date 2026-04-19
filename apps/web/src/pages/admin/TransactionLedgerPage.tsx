@@ -1,6 +1,6 @@
 // FIR-216/217/218 — Unified payment ledger with refund and CSV export
 import { useState, useEffect, useRef } from 'react'
-import { Download, Search, X } from 'lucide-react'
+import { Download, Search, X, Check, Receipt } from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
 import { authFetch } from '../../lib/api'
 
@@ -73,10 +73,10 @@ function formatDate(iso: string): string {
 // ---------------------------------------------------------------------------
 
 const CARD_CONFIGS = [
-  { key: 'totalRevenue' as const,   label: 'Total Revenue',   accent: '#4a9ad4', softBg: 'rgba(74,154,212,0.09)'   },
-  { key: 'stripeRevenue' as const,  label: 'Stripe Revenue',  accent: '#7c3aed', softBg: 'rgba(124,58,237,0.09)'   },
-  { key: 'manualRevenue' as const,  label: 'Manual Revenue',  accent: '#059669', softBg: 'rgba(5,150,105,0.09)'    },
-  { key: 'pendingAmount' as const,  label: 'Pending Amount',  accent: '#f59e0b', softBg: 'rgba(245,158,11,0.09)'   },
+  { key: 'totalRevenue' as const,   label: 'Total Revenue',   accent: 'var(--color-wise-primary-text)', softBg: 'rgba(74,154,212,0.09)'   },
+  { key: 'stripeRevenue' as const,  label: 'Stripe Revenue',  accent: 'var(--color-wise-primary-text)', softBg: 'rgba(124,58,237,0.09)'   },
+  { key: 'manualRevenue' as const,  label: 'Manual Revenue',  accent: 'var(--color-wise-success)', softBg: 'rgba(5,150,105,0.09)'    },
+  { key: 'pendingAmount' as const,  label: 'Pending Amount',  accent: 'var(--color-wise-warning)', softBg: 'rgba(245,158,11,0.09)'   },
 ]
 
 function SummaryCard({
@@ -93,11 +93,11 @@ function SummaryCard({
   return (
     <div
       style={{
-        background: '#ffffff',
+        background: 'var(--color-wise-surface)',
         borderRadius: 18,
         padding: '22px 22px 18px',
-        border: '1px solid rgba(26,39,68,0.07)',
-        boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.03)',
+        border: '1px solid var(--color-wise-ring)',
+        boxShadow: '0 1px 3px var(--color-wise-ring), 0 4px 16px var(--color-wise-ring)',
         position: 'relative',
         overflow: 'hidden',
         flex: 1,
@@ -111,10 +111,10 @@ function SummaryCard({
       <div style={{ width: 40, height: 40, borderRadius: 12, background: softBg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
         <div style={{ width: 16, height: 16, borderRadius: 4, background: accent, opacity: 0.85 }} />
       </div>
-      <div style={{ fontSize: 28, fontWeight: 900, color: '#1a2744', letterSpacing: '-1px', lineHeight: 1, marginBottom: 4 }}>
+      <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--color-wise-text)', letterSpacing: '-1px', lineHeight: 1, marginBottom: 4 }}>
         {value}
       </div>
-      <div style={{ fontSize: 12, color: '#717182', fontWeight: 500 }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--color-wise-text-muted)', fontWeight: 500 }}>{label}</div>
     </div>
   )
 }
@@ -134,7 +134,7 @@ function TypeBadge({ type }: { type: Payment['type'] }) {
       padding: '3px 10px',
       borderRadius: 20,
       background: isStripe ? 'rgba(74,154,212,0.12)' : 'rgba(245,158,11,0.12)',
-      color: isStripe ? '#1e40af' : '#92400e',
+      color: isStripe ? 'var(--color-wise-primary-text)' : 'var(--color-wise-text-warm)',
     }}>
       {isStripe ? 'Stripe' : 'Manual'}
     </span>
@@ -147,11 +147,11 @@ function TypeBadge({ type }: { type: Payment['type'] }) {
 
 function StatusPill({ status }: { status: Payment['status'] }) {
   const cfg: Record<Payment['status'], { bg: string; color: string; label: string }> = {
-    SUCCEEDED: { bg: 'rgba(5,150,105,0.1)',  color: '#065f46', label: 'Succeeded' },
-    PAID:      { bg: 'rgba(5,150,105,0.1)',  color: '#065f46', label: 'Paid'      },
-    PENDING:   { bg: 'rgba(245,158,11,0.1)', color: '#92400e', label: 'Pending'   },
-    REFUNDED:  { bg: 'rgba(239,68,68,0.1)',  color: '#991b1b', label: 'Refunded'  },
-    FAILED:    { bg: 'rgba(239,68,68,0.1)',  color: '#991b1b', label: 'Failed'    },
+    SUCCEEDED: { bg: 'rgba(5,150,105,0.1)',  color: 'var(--color-wise-success)', label: 'Succeeded' },
+    PAID:      { bg: 'rgba(5,150,105,0.1)',  color: 'var(--color-wise-success)', label: 'Paid'      },
+    PENDING:   { bg: 'rgba(245,158,11,0.1)', color: 'var(--color-wise-text-warm)', label: 'Pending'   },
+    REFUNDED:  { bg: 'rgba(239,68,68,0.1)',  color: 'var(--color-wise-danger)', label: 'Refunded'  },
+    FAILED:    { bg: 'rgba(239,68,68,0.1)',  color: 'var(--color-wise-danger)', label: 'Failed'    },
   }
   const { bg, color, label } = cfg[status]
   return (
@@ -221,29 +221,29 @@ function RefundModal({ payment, onClose, onConfirm }: RefundModalProps) {
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(13,26,58,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+      style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(14,15,12,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
       role="dialog"
       aria-modal="true"
       aria-label="Refund payment"
     >
-      <div style={{ background: '#fff', borderRadius: 20, padding: 32, width: '100%', maxWidth: 460, boxShadow: '0 20px 60px rgba(26,39,68,0.2)' }}>
+      <div style={{ background: 'var(--color-wise-surface)', borderRadius: 20, padding: 32, width: '100%', maxWidth: 460, boxShadow: '0 20px 60px var(--color-wise-ring-strong)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1a2744', margin: 0 }}>Issue Refund</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-wise-text)', margin: 0 }}>Issue Refund</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            style={{ width: 34, height: 34, borderRadius: '50%', background: '#f0f0f0', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#717182' }}
+            style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--color-wise-surface-soft)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-wise-text-muted)' }}
           >
             <X size={16} />
           </button>
         </div>
-        <p style={{ fontSize: 13, color: '#717182', marginBottom: 24 }}>
-          Refunding payment from <strong style={{ color: '#1a2744' }}>{payment.studentName}</strong> for <strong style={{ color: '#1a2744' }}>{payment.course}</strong>.
+        <p style={{ fontSize: 13, color: 'var(--color-wise-text-muted)', marginBottom: 24 }}>
+          Refunding payment from <strong style={{ color: 'var(--color-wise-text)' }}>{payment.studentName}</strong> for <strong style={{ color: 'var(--color-wise-text)' }}>{payment.course}</strong>.
         </p>
 
         <form onSubmit={handleSubmit}>
-          <label htmlFor="refund-amount" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1a2744', marginBottom: 6 }}>
+          <label htmlFor="refund-amount" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-wise-text)', marginBottom: 6 }}>
             Refund Amount (max {formatMoney(payment.amount)})
           </label>
           <input
@@ -259,10 +259,10 @@ function RefundModal({ payment, onClose, onConfirm }: RefundModalProps) {
               width: '100%',
               padding: '10px 14px',
               borderRadius: 12,
-              border: '1.5px solid rgba(26,39,68,0.15)',
+              border: '1.5px solid var(--color-wise-ring-strong)',
               fontSize: 14,
-              background: '#f8f9fb',
-              color: '#1a2744',
+              background: 'var(--color-wise-canvas)',
+              color: 'var(--color-wise-text)',
               outline: 'none',
               marginBottom: 16,
               boxSizing: 'border-box',
@@ -270,7 +270,7 @@ function RefundModal({ payment, onClose, onConfirm }: RefundModalProps) {
             }}
           />
 
-          <label htmlFor="refund-reason" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1a2744', marginBottom: 6 }}>
+          <label htmlFor="refund-reason" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-wise-text)', marginBottom: 6 }}>
             Reason
           </label>
           <textarea
@@ -283,10 +283,10 @@ function RefundModal({ payment, onClose, onConfirm }: RefundModalProps) {
               width: '100%',
               padding: '10px 14px',
               borderRadius: 12,
-              border: '1.5px solid rgba(26,39,68,0.15)',
+              border: '1.5px solid var(--color-wise-ring-strong)',
               fontSize: 14,
-              background: '#f8f9fb',
-              color: '#1a2744',
+              background: 'var(--color-wise-canvas)',
+              color: 'var(--color-wise-text)',
               outline: 'none',
               resize: 'none',
               marginBottom: error ? 8 : 24,
@@ -296,7 +296,7 @@ function RefundModal({ payment, onClose, onConfirm }: RefundModalProps) {
           />
 
           {error && (
-            <p style={{ fontSize: 12, color: '#ef4444', marginBottom: 16, fontWeight: 600 }}>{error}</p>
+            <p style={{ fontSize: 12, color: 'var(--color-wise-danger)', marginBottom: 16, fontWeight: 600 }}>{error}</p>
           )}
 
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
@@ -307,8 +307,8 @@ function RefundModal({ payment, onClose, onConfirm }: RefundModalProps) {
               style={{
                 padding: '10px 20px',
                 borderRadius: 30,
-                background: '#f0f0f0',
-                color: '#717182',
+                background: 'var(--color-wise-surface-soft)',
+                color: 'var(--color-wise-text-muted)',
                 fontSize: 14,
                 fontWeight: 700,
                 border: 'none',
@@ -324,8 +324,8 @@ function RefundModal({ payment, onClose, onConfirm }: RefundModalProps) {
               style={{
                 padding: '10px 20px',
                 borderRadius: 30,
-                background: loading ? '#e8ecf4' : '#ef4444',
-                color: loading ? '#a3a3b8' : '#fff',
+                background: loading ? 'var(--color-wise-surface-soft)' : 'var(--color-wise-danger)',
+                color: loading ? 'var(--color-wise-text-muted)' : 'var(--color-wise-surface)',
                 fontSize: 14,
                 fontWeight: 700,
                 border: 'none',
@@ -352,8 +352,8 @@ function SkeletonRows() {
       {[1, 2, 3, 4, 5].map((n) => (
         <tr key={n} aria-hidden="true">
           {[140, 90, 160, 140, 80, 90, 80].map((w, i) => (
-            <td key={i} style={{ padding: '14px 20px', borderBottom: '1px solid rgba(26,39,68,0.04)' }}>
-              <div style={{ height: 13, borderRadius: 6, background: '#e8ecf4', width: w, animation: 'pulse 1.5s ease-in-out infinite' }} />
+            <td key={i} style={{ padding: '14px 20px', borderBottom: '1px solid var(--color-wise-ring)' }}>
+              <div style={{ height: 13, borderRadius: 6, background: 'var(--color-wise-surface-soft)', width: w, animation: 'pulse 1.5s ease-in-out infinite' }} />
             </td>
           ))}
         </tr>
@@ -386,10 +386,10 @@ const STATUS_OPTIONS = [
 const inputStyle: React.CSSProperties = {
   padding: '9px 14px',
   borderRadius: 30,
-  border: '1.5px solid rgba(26,39,68,0.12)',
+  border: '1.5px solid var(--color-wise-ring)',
   fontSize: 13,
-  color: '#1a2744',
-  background: '#fff',
+  color: 'var(--color-wise-text)',
+  background: 'var(--color-wise-surface)',
   outline: 'none',
   fontFamily: 'inherit',
   cursor: 'pointer',
@@ -557,8 +557,8 @@ export default function TransactionLedgerPage() {
             gap: 7,
             padding: '9px 18px',
             borderRadius: 30,
-            background: '#1a2744',
-            color: '#fff',
+            background: 'var(--color-wise-text)',
+            color: 'var(--color-wise-surface)',
             fontSize: 13,
             fontWeight: 700,
             border: 'none',
@@ -595,20 +595,22 @@ export default function TransactionLedgerPage() {
             gap: 10,
             padding: '12px 20px',
             borderRadius: 14,
-            background: toast.ok ? '#e6f4ec' : '#fdeaeb',
-            color: toast.ok ? '#054d28' : '#d03238',
+            background: toast.ok ? 'var(--color-wise-mint)' : 'var(--color-wise-danger-soft)',
+            color: toast.ok ? 'var(--color-wise-primary-text)' : 'var(--color-wise-danger)',
             border: `1px solid ${toast.ok ? 'rgba(5,77,40,0.15)' : 'rgba(208,50,56,0.15)'}`,
             fontSize: 14,
             fontWeight: 600,
-            boxShadow: '0 4px 20px rgba(26,39,68,0.15)',
+            boxShadow: '0 4px 20px var(--color-wise-ring-strong)',
           }}
         >
-          <span aria-hidden="true">{toast.ok ? '✓' : '✗'}</span>
+          <span aria-hidden="true" className="inline-flex items-center">
+            {toast.ok ? <Check size={16} /> : <X size={16} />}
+          </span>
           {toast.msg}
         </div>
       )}
 
-      <div style={{ padding: '28px 32px', background: '#f8f9fb', minHeight: '100%' }}>
+      <div style={{ padding: '28px 32px', background: 'var(--color-wise-canvas)', minHeight: '100%' }}>
 
         {/* Summary cards */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
@@ -625,10 +627,10 @@ export default function TransactionLedgerPage() {
 
         {/* Filter bar */}
         <div style={{
-          background: '#fff',
+          background: 'var(--color-wise-surface)',
           borderRadius: 16,
-          border: '1px solid rgba(26,39,68,0.07)',
-          boxShadow: '0 1px 3px rgba(26,39,68,0.06)',
+          border: '1px solid var(--color-wise-ring)',
+          boxShadow: '0 1px 3px var(--color-wise-ring)',
           padding: '16px 20px',
           marginBottom: 20,
           display: 'flex',
@@ -658,7 +660,7 @@ export default function TransactionLedgerPage() {
 
           {/* Search */}
           <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 180 }}>
-            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#a3a3a3', pointerEvents: 'none' }} aria-hidden="true" />
+            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-wise-text-muted)', pointerEvents: 'none' }} aria-hidden="true" />
             <input
               type="search"
               value={filters.search}
@@ -694,8 +696,8 @@ export default function TransactionLedgerPage() {
             style={{
               padding: '9px 20px',
               borderRadius: 30,
-              background: '#1a2744',
-              color: '#fff',
+              background: 'var(--color-wise-text)',
+              color: 'var(--color-wise-surface)',
               fontSize: 13,
               fontWeight: 700,
               border: 'none',
@@ -714,10 +716,10 @@ export default function TransactionLedgerPage() {
                 padding: '9px 16px',
                 borderRadius: 30,
                 background: 'transparent',
-                color: '#717182',
+                color: 'var(--color-wise-text-muted)',
                 fontSize: 13,
                 fontWeight: 600,
-                border: '1.5px solid rgba(26,39,68,0.12)',
+                border: '1.5px solid var(--color-wise-ring)',
                 cursor: 'pointer',
               }}
             >
@@ -728,16 +730,16 @@ export default function TransactionLedgerPage() {
 
         {/* Table card */}
         <div style={{
-          background: '#fff',
+          background: 'var(--color-wise-surface)',
           borderRadius: 18,
-          border: '1px solid rgba(26,39,68,0.07)',
-          boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.03)',
+          border: '1px solid var(--color-wise-ring)',
+          boxShadow: '0 1px 3px var(--color-wise-ring), 0 4px 16px var(--color-wise-ring)',
           overflow: 'hidden',
         }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }} aria-label="Payment transactions">
               <thead>
-                <tr style={{ background: '#f8f9fb' }}>
+                <tr style={{ background: 'var(--color-wise-canvas)' }}>
                   {['Date', 'Type', 'Student', 'Course', 'Amount', 'Status', 'Actions'].map((col) => (
                     <th
                       key={col}
@@ -746,11 +748,11 @@ export default function TransactionLedgerPage() {
                         textAlign: 'left',
                         fontSize: 10,
                         fontWeight: 700,
-                        color: '#a3a3b8',
+                        color: 'var(--color-wise-text-muted)',
                         padding: '11px 20px',
                         textTransform: 'uppercase',
                         letterSpacing: '0.8px',
-                        borderBottom: '1px solid rgba(26,39,68,0.06)',
+                        borderBottom: '1px solid var(--color-wise-ring)',
                         whiteSpace: 'nowrap',
                       }}
                     >
@@ -765,9 +767,11 @@ export default function TransactionLedgerPage() {
                 {!loading && payments.length === 0 && (
                   <tr>
                     <td colSpan={7} style={{ padding: '60px 24px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 40, marginBottom: 12 }} aria-hidden="true">💳</div>
-                      <p style={{ fontSize: 15, fontWeight: 600, color: '#1a2744', margin: 0 }}>No transactions found</p>
-                      <p style={{ fontSize: 13, color: '#a3a3b8', marginTop: 4 }}>
+                      <div className="flex justify-center mb-3" aria-hidden="true">
+                        <Receipt size={40} className="text-[var(--color-wise-text-muted)]" />
+                      </div>
+                      <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-wise-text)', margin: 0 }}>No transactions found</p>
+                      <p style={{ fontSize: 13, color: 'var(--color-wise-text-muted)', marginTop: 4 }}>
                         {hasActiveFilters ? 'Try adjusting your filters.' : 'No payment records yet.'}
                       </p>
                     </td>
@@ -779,12 +783,12 @@ export default function TransactionLedgerPage() {
                   return (
                     <tr
                       key={payment.id}
-                      style={{ borderBottom: i < payments.length - 1 ? '1px solid rgba(26,39,68,0.04)' : 'none' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = '#f8f9fb')}
+                      style={{ borderBottom: i < payments.length - 1 ? '1px solid var(--color-wise-ring)' : 'none' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-wise-canvas)')}
                       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                     >
                       {/* Date */}
-                      <td style={{ padding: '14px 20px', fontSize: 12, color: '#717182', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '14px 20px', fontSize: 12, color: 'var(--color-wise-text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>
                         {formatDate(payment.date)}
                       </td>
 
@@ -795,17 +799,17 @@ export default function TransactionLedgerPage() {
 
                       {/* Student */}
                       <td style={{ padding: '14px 20px' }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#1a2744', whiteSpace: 'nowrap' }}>{payment.studentName}</div>
-                        <div style={{ fontSize: 11, color: '#a3a3b8', marginTop: 1 }}>{payment.studentEmail}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-wise-text)', whiteSpace: 'nowrap' }}>{payment.studentName}</div>
+                        <div style={{ fontSize: 11, color: 'var(--color-wise-text-muted)', marginTop: 1 }}>{payment.studentEmail}</div>
                       </td>
 
                       {/* Course */}
-                      <td style={{ padding: '14px 20px', fontSize: 12, fontWeight: 600, color: '#1a2744', maxWidth: 200 }}>
+                      <td style={{ padding: '14px 20px', fontSize: 12, fontWeight: 600, color: 'var(--color-wise-text)', maxWidth: 200 }}>
                         {payment.course}
                       </td>
 
                       {/* Amount */}
-                      <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 800, color: '#1a2744', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 800, color: 'var(--color-wise-text)', whiteSpace: 'nowrap' }}>
                         {formatMoney(payment.amount)}
                       </td>
 
@@ -824,7 +828,7 @@ export default function TransactionLedgerPage() {
                               padding: '6px 14px',
                               borderRadius: 20,
                               background: 'rgba(239,68,68,0.08)',
-                              color: '#991b1b',
+                              color: 'var(--color-wise-danger)',
                               fontSize: 12,
                               fontWeight: 700,
                               border: '1px solid rgba(239,68,68,0.2)',
@@ -838,7 +842,7 @@ export default function TransactionLedgerPage() {
                             Refund
                           </button>
                         ) : (
-                          <span style={{ fontSize: 11, color: 'rgba(26,39,68,0.15)', fontWeight: 500 }}>—</span>
+                          <span style={{ fontSize: 11, color: 'var(--color-wise-ring-strong)', fontWeight: 500 }}>—</span>
                         )}
                       </td>
                     </tr>
@@ -855,10 +859,10 @@ export default function TransactionLedgerPage() {
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '12px 24px',
-              borderTop: '1px solid rgba(26,39,68,0.05)',
-              background: '#fafbfc',
+              borderTop: '1px solid var(--color-wise-ring)',
+              background: 'var(--color-wise-canvas)',
             }}>
-              <span style={{ fontSize: 12, color: '#a3a3b8' }}>
+              <span style={{ fontSize: 12, color: 'var(--color-wise-text-muted)' }}>
                 Showing {Math.min((page - 1) * ITEMS_PER_PAGE + 1, total)}–{Math.min(page * ITEMS_PER_PAGE, total)} of {total} transactions
               </span>
               {totalPages > 1 && (
@@ -870,8 +874,8 @@ export default function TransactionLedgerPage() {
                     aria-label="Previous page"
                     style={{
                       width: 32, height: 32, borderRadius: '50%',
-                      border: '1.5px solid rgba(26,39,68,0.12)',
-                      background: '#fff', color: '#717182', cursor: page === 1 ? 'not-allowed' : 'pointer',
+                      border: '1.5px solid var(--color-wise-ring)',
+                      background: 'var(--color-wise-surface)', color: 'var(--color-wise-text-muted)', cursor: page === 1 ? 'not-allowed' : 'pointer',
                       opacity: page === 1 ? 0.4 : 1,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 14,
@@ -890,9 +894,9 @@ export default function TransactionLedgerPage() {
                         aria-current={page === p ? 'page' : undefined}
                         style={{
                           width: 32, height: 32, borderRadius: '50%',
-                          border: page === p ? '1.5px solid #4a9ad4' : '1.5px solid rgba(26,39,68,0.12)',
-                          background: page === p ? '#4a9ad4' : '#fff',
-                          color: page === p ? '#fff' : '#717182',
+                          border: page === p ? '1.5px solid var(--color-wise-primary-text)' : '1.5px solid var(--color-wise-ring)',
+                          background: page === p ? 'var(--color-wise-primary-text)' : 'var(--color-wise-surface)',
+                          color: page === p ? 'var(--color-wise-surface)' : 'var(--color-wise-text-muted)',
                           cursor: 'pointer',
                           fontSize: 13, fontWeight: 600,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -909,8 +913,8 @@ export default function TransactionLedgerPage() {
                     aria-label="Next page"
                     style={{
                       width: 32, height: 32, borderRadius: '50%',
-                      border: '1.5px solid rgba(26,39,68,0.12)',
-                      background: '#fff', color: '#717182', cursor: page === totalPages ? 'not-allowed' : 'pointer',
+                      border: '1.5px solid var(--color-wise-ring)',
+                      background: 'var(--color-wise-surface)', color: 'var(--color-wise-text-muted)', cursor: page === totalPages ? 'not-allowed' : 'pointer',
                       opacity: page === totalPages ? 0.4 : 1,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 14,

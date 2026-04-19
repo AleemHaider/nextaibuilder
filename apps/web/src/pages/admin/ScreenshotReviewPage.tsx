@@ -1,8 +1,9 @@
 // FIR-165 — Admin screenshot review queue (Claude Vision FIFO submissions)
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, ChevronUp, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, X, Check, AlertTriangle, CircleCheck, Inbox } from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
+import { EmptyState } from '../../components/ui/EmptyState'
 import {
   fetchScreenshotSubmissions,
   approveSubmission,
@@ -27,11 +28,11 @@ const TABS: Array<{ label: string; value: StatusTab }> = [
 const MIN_REJECTION_REASON_LEN = 10
 
 const AVATAR_GRADIENTS = [
-  'linear-gradient(135deg, #4a9ad4, #1a2744)',
-  'linear-gradient(135deg, #cc4a00, #ff8c5a)',
-  'linear-gradient(135deg, #054d28, #16a34a)',
-  'linear-gradient(135deg, #7c3aed, #4a9ad4)',
-  'linear-gradient(135deg, #d97706, #f59e0b)',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-text))',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-primary))',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-success))',
+  'linear-gradient(135deg, var(--color-wise-primary-text), var(--color-wise-primary-text))',
+  'linear-gradient(135deg, var(--color-wise-warning), var(--color-wise-warning))',
 ]
 
 function getAvatarGradient(name: string): string {
@@ -69,14 +70,16 @@ function Toast({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: stri
       role="status"
       aria-live="polite"
       className={cn(
-        'flex items-center gap-3 px-5 py-3.5 rounded-[14px] shadow-[rgba(26,39,68,0.2)_0_4px_20px]',
+        'flex items-center gap-3 px-5 py-3.5 rounded-[14px] shadow-[var(--color-wise-ring-strong)_0_4px_20px]',
         'text-[14px] font-semibold',
         toast.variant === 'success'
-          ? 'bg-[#e6f4ec] text-[#054d28] border border-[rgba(5,77,40,0.15)]'
-          : 'bg-[#fdeaeb] text-[#d03238] border border-[rgba(208,50,56,0.15)]',
+          ? 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)] border border-[rgba(5,77,40,0.15)]'
+          : 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] border border-[rgba(208,50,56,0.15)]',
       )}
     >
-      <span aria-hidden="true">{toast.variant === 'success' ? '✓' : '✗'}</span>
+      <span aria-hidden="true" className="inline-flex items-center">
+        {toast.variant === 'success' ? <Check size={16} /> : <X size={16} />}
+      </span>
       {toast.message}
     </div>
   )
@@ -106,10 +109,10 @@ function ConfidenceBadge({ score }: { score: number }) {
 
   const color =
     pct >= 80
-      ? 'bg-[#e6f4ec] text-[#054d28]'
+      ? 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]'
       : pct >= 60
-        ? 'bg-[#fff8e6] text-[#8a5a00]'
-        : 'bg-[#fdeaeb] text-[#d03238]'
+        ? 'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text-warm)]'
+        : 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)]'
 
   return (
     <span className={cn('text-[11px] font-[700] px-[9px] py-[3px] rounded-full', color)}>
@@ -125,22 +128,22 @@ function ConfidenceBadge({ score }: { score: number }) {
 function SkeletonCard() {
   return (
     <div
-      className="bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden"
+      className="bg-white rounded-[16px] shadow-[var(--color-wise-ring)_0_0_0_1px] overflow-hidden"
       aria-hidden="true"
     >
       <div className="flex items-start gap-4 p-5">
-        <div className="w-24 h-24 rounded-[12px] bg-[#e8ecf4] animate-pulse flex-shrink-0" />
+        <div className="w-24 h-24 rounded-[12px] bg-[var(--color-wise-surface-soft)] animate-pulse flex-shrink-0" />
         <div className="flex-1 space-y-2.5 pt-1">
-          <div className="h-4 bg-[#e8ecf4] rounded animate-pulse w-1/3" />
-          <div className="h-3 bg-[#e8ecf4] rounded animate-pulse w-1/4" />
-          <div className="h-3 bg-[#e8ecf4] rounded animate-pulse w-2/5" />
-          <div className="h-3 bg-[#e8ecf4] rounded animate-pulse w-1/5" />
+          <div className="h-4 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-1/3" />
+          <div className="h-3 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-1/4" />
+          <div className="h-3 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-2/5" />
+          <div className="h-3 bg-[var(--color-wise-surface-soft)] rounded animate-pulse w-1/5" />
         </div>
       </div>
-      <div className="border-t border-[rgba(26,39,68,0.06)] px-5 py-3.5 flex gap-3">
-        <div className="h-9 w-28 bg-[#e8ecf4] rounded-full animate-pulse" />
-        <div className="h-9 w-24 bg-[#e8ecf4] rounded-full animate-pulse" />
-        <div className="h-9 w-32 bg-[#e8ecf4] rounded-full animate-pulse ml-auto" />
+      <div className="border-t border-[var(--color-wise-ring)] px-5 py-3.5 flex gap-3">
+        <div className="h-9 w-28 bg-[var(--color-wise-surface-soft)] rounded-full animate-pulse" />
+        <div className="h-9 w-24 bg-[var(--color-wise-surface-soft)] rounded-full animate-pulse" />
+        <div className="h-9 w-32 bg-[var(--color-wise-surface-soft)] rounded-full animate-pulse ml-auto" />
       </div>
     </div>
   )
@@ -175,7 +178,7 @@ function Lightbox({ src, alt, onClose }: { src: string; alt: string; onClose: ()
           type="button"
           onClick={onClose}
           aria-label="Close preview"
-          className="absolute -top-3 -right-3 z-10 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-lg hover:bg-[#f0f0f0] transition-colors"
+          className="absolute -top-3 -right-3 z-10 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-lg hover:bg-[var(--color-wise-surface-soft)] transition-colors"
         >
           <X size={16} />
         </button>
@@ -220,20 +223,20 @@ function RejectModal({ submission, onConfirm, onClose, isPending }: RejectModalP
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[rgba(13,26,58,0.5)] flex items-center justify-center p-6"
+      className="fixed inset-0 z-50 bg-[rgba(14,15,12,0.45)] flex items-center justify-center p-6"
       role="dialog"
       aria-modal="true"
       aria-label="Reject submission"
     >
-      <div className="bg-white rounded-[20px] p-8 w-full max-w-[500px] shadow-[rgba(26,39,68,0.2)_0_20px_60px]">
-        <h2 className="text-[20px] font-[800] text-[#1a2744] mb-1">Reject Screenshot</h2>
-        <p className="text-[14px] text-[#717182] mb-6">
+      <div className="bg-white rounded-[20px] p-8 w-full max-w-[500px] shadow-[var(--color-wise-ring-strong)_0_20px_60px]">
+        <h2 className="text-[20px] font-[800] text-[var(--color-wise-text)] mb-1">Reject Screenshot</h2>
+        <p className="text-[14px] text-[var(--color-wise-text-muted)] mb-6">
           Provide a reason for{' '}
-          <span className="font-semibold text-[#1a2744]">{submission.student.name}</span>. They will
+          <span className="font-semibold text-[var(--color-wise-text)]">{submission.student.name}</span>. They will
           see this message.
         </p>
 
-        <label htmlFor="rejection-reason" className="block text-[13px] font-[600] text-[#1a2744] mb-2">
+        <label htmlFor="rejection-reason" className="block text-[13px] font-[600] text-[var(--color-wise-text)] mb-2">
           Reason for rejection
         </label>
         <textarea
@@ -244,16 +247,16 @@ function RejectModal({ submission, onConfirm, onClose, isPending }: RejectModalP
           placeholder="e.g. Screenshot does not clearly show the tool setup step. Please re-upload a full-screen capture."
           rows={4}
           className={cn(
-            'w-full rounded-[12px] border-[1.5px] p-4 text-[14px] text-[#1a2744] font-[400]',
-            'bg-[#f8f9fb] resize-none font-[inherit] outline-none transition-colors',
-            'focus:border-[#4a9ad4] focus:bg-white',
+            'w-full rounded-[12px] border-[1.5px] p-4 text-[14px] text-[var(--color-wise-text)] font-[400]',
+            'bg-[var(--color-wise-canvas)] resize-none font-[inherit] outline-none transition-colors',
+            'focus:border-[var(--color-wise-primary-text)] focus:bg-white',
             reason.length > 0 && !isValid
-              ? 'border-[#d03238]'
-              : 'border-[rgba(26,39,68,0.15)]',
+              ? 'border-[var(--color-wise-danger)]'
+              : 'border-[var(--color-wise-ring-strong)]',
           )}
         />
         {reason.length > 0 && !isValid && (
-          <p className="text-[12px] text-[#d03238] mt-1" role="alert">
+          <p className="text-[12px] text-[var(--color-wise-danger)] mt-1" role="alert">
             Please provide at least {MIN_REJECTION_REASON_LEN} characters.
           </p>
         )}
@@ -263,7 +266,7 @@ function RejectModal({ submission, onConfirm, onClose, isPending }: RejectModalP
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="px-5 py-2.5 rounded-full bg-[#f0f0f0] text-[#717182] text-[14px] font-[700] hover:bg-[#e8ecf4] transition-colors disabled:opacity-50"
+            className="px-5 py-2.5 rounded-full bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)] text-[14px] font-[700] hover:bg-[var(--color-wise-surface-soft)] transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
@@ -273,7 +276,7 @@ function RejectModal({ submission, onConfirm, onClose, isPending }: RejectModalP
             disabled={!isValid || isPending}
             className={cn(
               'px-5 py-2.5 rounded-full text-[14px] font-[700] transition-colors',
-              'bg-[#fdeaeb] text-[#d03238] hover:bg-[#fad0d2]',
+              'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] hover:bg-[var(--color-wise-danger-soft)]',
               'disabled:opacity-50 disabled:cursor-not-allowed',
             )}
           >
@@ -312,7 +315,7 @@ function SubmissionCard({
   return (
     <div
       className={cn(
-        'bg-white rounded-[16px] shadow-[rgba(26,39,68,0.12)_0_0_0_1px] overflow-hidden',
+        'bg-white rounded-[16px] shadow-[var(--color-wise-ring)_0_0_0_1px] overflow-hidden',
         'transition-all duration-300',
         isRemoving && 'opacity-0 scale-95 pointer-events-none',
       )}
@@ -324,9 +327,9 @@ function SubmissionCard({
           onClick={() => onViewScreenshot(submission)}
           aria-label={`Preview screenshot from ${submission.student.name}`}
           className={cn(
-            'w-24 h-24 rounded-[12px] bg-[#e8ecf4] flex-shrink-0 overflow-hidden',
+            'w-24 h-24 rounded-[12px] bg-[var(--color-wise-surface-soft)] flex-shrink-0 overflow-hidden',
             'border-none cursor-pointer hover:opacity-85 transition-opacity',
-            'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#4a9ad4]/40',
+            'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-wise-primary-text)]/40',
           )}
         >
           <img
@@ -358,21 +361,21 @@ function SubmissionCard({
                 {submission.student.name.charAt(0).toUpperCase()}
               </div>
             )}
-            <span className="text-[15px] font-[700] text-[#1a2744]">
+            <span className="text-[15px] font-[700] text-[var(--color-wise-text)]">
               {submission.student.name}
             </span>
             <ConfidenceBadge score={submission.claudeConfidence} />
           </div>
 
-          <div className="text-[12px] text-[#717182] mb-1">{submission.student.email}</div>
+          <div className="text-[12px] text-[var(--color-wise-text-muted)] mb-1">{submission.student.email}</div>
 
           <div className="flex items-center gap-2 text-[13px] mb-2">
-            <span className="font-[600] text-[#4a9ad4]">{submission.step}</span>
-            <span className="text-[#a3a3a3]">·</span>
-            <span className="text-[#717182]">{submission.cohort}</span>
+            <span className="font-[600] text-[var(--color-wise-primary-text)]">{submission.step}</span>
+            <span className="text-[var(--color-wise-text-muted)]">·</span>
+            <span className="text-[var(--color-wise-text-muted)]">{submission.cohort}</span>
           </div>
 
-          <div className="text-[12px] text-[#a3a3a3] mb-2">
+          <div className="text-[12px] text-[var(--color-wise-text-muted)] mb-2">
             {formatRelativeTime(submission.createdAt)}
           </div>
 
@@ -381,14 +384,14 @@ function SubmissionCard({
             <button
               type="button"
               onClick={() => setReasonExpanded((v) => !v)}
-              className="flex items-center gap-1 text-[12px] font-[600] text-[#717182] hover:text-[#1a2744] transition-colors"
+              className="flex items-center gap-1 text-[12px] font-[600] text-[var(--color-wise-text-muted)] hover:text-[var(--color-wise-text)] transition-colors"
               aria-expanded={reasonExpanded}
             >
               {reasonExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               {reasonExpanded ? 'Hide' : 'Show'} Claude reasoning
             </button>
             {reasonExpanded && (
-              <pre className="mt-2 p-3 bg-[#f8f9fb] rounded-[10px] text-[12px] text-[#717182] font-mono whitespace-pre-wrap break-words max-h-36 overflow-y-auto">
+              <pre className="mt-2 p-3 bg-[var(--color-wise-canvas)] rounded-[10px] text-[12px] text-[var(--color-wise-text-muted)] font-mono whitespace-pre-wrap break-words max-h-36 overflow-y-auto">
                 {submission.claudeReasoning}
               </pre>
             )}
@@ -398,14 +401,14 @@ function SubmissionCard({
 
       {/* Action bar — shown only for pending submissions */}
       {isPending && (
-        <div className="border-t border-[rgba(26,39,68,0.06)] px-5 py-3.5 flex items-center gap-3 flex-wrap">
+        <div className="border-t border-[var(--color-wise-ring)] px-5 py-3.5 flex items-center gap-3 flex-wrap">
           <button
             type="button"
             onClick={() => onApprove(submission)}
             className={cn(
               'px-4 py-2 rounded-full text-[13px] font-[700] transition-colors',
-              'bg-[#e6f4ec] text-[#054d28] hover:bg-[#c8ecda]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#16a34a]',
+              'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)] hover:bg-[var(--color-wise-mint)]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-wise-success)]',
             )}
           >
             Approve
@@ -415,8 +418,8 @@ function SubmissionCard({
             onClick={() => onReject(submission)}
             className={cn(
               'px-4 py-2 rounded-full text-[13px] font-[700] transition-colors border',
-              'border-[rgba(208,50,56,0.3)] text-[#d03238] hover:bg-[#fdeaeb]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d03238]',
+              'border-[rgba(208,50,56,0.3)] text-[var(--color-wise-danger)] hover:bg-[var(--color-wise-danger-soft)]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-wise-danger)]',
             )}
           >
             Reject
@@ -426,8 +429,8 @@ function SubmissionCard({
             onClick={() => onEscalate(submission)}
             className={cn(
               'ml-auto px-4 py-2 rounded-full text-[13px] font-[700] transition-colors',
-              'bg-[#fff8e6] text-[#8a5a00] hover:bg-[#fff0cc]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f59e0b]',
+              'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text-warm)] hover:bg-[var(--color-wise-warning-soft)]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-wise-warning)]',
             )}
           >
             Flag for Human Review
@@ -437,9 +440,9 @@ function SubmissionCard({
 
       {/* Rejection reason display for rejected items */}
       {submission.status === 'REJECTED' && submission.rejectionReason && (
-        <div className="border-t border-[rgba(26,39,68,0.06)] px-5 py-3.5 bg-[#fdeaeb]">
-          <span className="text-[12px] font-[600] text-[#d03238]">Rejection reason: </span>
-          <span className="text-[12px] text-[#d03238]">{submission.rejectionReason}</span>
+        <div className="border-t border-[var(--color-wise-ring)] px-5 py-3.5 bg-[var(--color-wise-danger-soft)]">
+          <span className="text-[12px] font-[600] text-[var(--color-wise-danger)]">Rejection reason: </span>
+          <span className="text-[12px] text-[var(--color-wise-danger)]">{submission.rejectionReason}</span>
         </div>
       )}
     </div>
@@ -554,7 +557,7 @@ export default function ScreenshotReviewPage() {
       <div className="p-8">
         {/* Tab bar */}
         <div
-          className="flex gap-0 border-b border-[rgba(26,39,68,0.08)] mb-8"
+          className="flex gap-0 border-b border-[var(--color-wise-ring)] mb-8"
           role="tablist"
           aria-label="Submission status filter"
         >
@@ -568,8 +571,8 @@ export default function ScreenshotReviewPage() {
               className={cn(
                 'px-5 py-3.5 text-[14px] font-[600] border-b-2 transition-colors -mb-px',
                 activeTab === tab.value
-                  ? 'text-[#4a9ad4] border-[#4a9ad4]'
-                  : 'text-[#717182] border-transparent hover:text-[#1a2744]',
+                  ? 'text-[var(--color-wise-primary-text)] border-[var(--color-wise-primary-text)]'
+                  : 'text-[var(--color-wise-text-muted)] border-transparent hover:text-[var(--color-wise-text)]',
               )}
             >
               {tab.label}
@@ -588,30 +591,28 @@ export default function ScreenshotReviewPage() {
 
         {/* Error */}
         {isError && !isLoading && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="text-[40px] mb-4" aria-hidden="true">⚠️</div>
-            <p className="text-[16px] font-[600] text-[#1a2744]">Failed to load submissions</p>
-            <p className="text-[14px] text-[#717182] mt-1">Check your connection and try again.</p>
-          </div>
+          <EmptyState
+            icon={AlertTriangle}
+            title="Failed to load submissions"
+            description="Check your connection and try again."
+          />
         )}
 
         {/* Empty state */}
         {!isLoading && !isError && submissions.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="text-[48px] mb-4" aria-hidden="true">
-              {activeTab === 'PENDING_REVIEW' ? '🎉' : '📭'}
-            </div>
-            <p className="text-[16px] font-[600] text-[#1a2744]">
-              {activeTab === 'PENDING_REVIEW'
-                ? 'Queue is clear!'
-                : `No ${activeTab.toLowerCase().replace('_', ' ')} submissions`}
-            </p>
-            <p className="text-[14px] text-[#717182] mt-1">
-              {activeTab === 'PENDING_REVIEW'
+          <EmptyState
+            icon={activeTab === 'PENDING_REVIEW' ? CircleCheck : Inbox}
+            title={
+              activeTab === 'PENDING_REVIEW'
+                ? 'All caught up'
+                : `No ${activeTab.toLowerCase().replace('_', ' ')} submissions`
+            }
+            description={
+              activeTab === 'PENDING_REVIEW'
                 ? 'All submissions have been reviewed.'
-                : 'Nothing here yet.'}
-            </p>
-          </div>
+                : 'Nothing here yet.'
+            }
+          />
         )}
 
         {/* Submission cards */}

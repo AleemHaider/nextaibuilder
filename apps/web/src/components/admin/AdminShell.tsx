@@ -1,4 +1,5 @@
 // FIR-165 / FIR-166 / FIR-173 — Shared admin shell layout with sidebar + topbar
+// Sprint 3 Story 16: migrated from navy/blue palette to Wise theme tokens.
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router'
 import {
@@ -37,22 +38,6 @@ interface NavItem {
 interface NavSection {
   label: string
   items: NavItem[]
-}
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const AVATAR_GRADIENTS = [
-  'linear-gradient(135deg, #4a9ad4, #1a2744)',
-  'linear-gradient(135deg, #cc4a00, #ff8c5a)',
-  'linear-gradient(135deg, #054d28, #16a34a)',
-  'linear-gradient(135deg, #7c3aed, #4a9ad4)',
-  'linear-gradient(135deg, #d97706, #f59e0b)',
-]
-
-function getAvatarGradient(name: string): string {
-  return AVATAR_GRADIENTS[name.charCodeAt(0) % AVATAR_GRADIENTS.length]
 }
 
 // ---------------------------------------------------------------------------
@@ -168,52 +153,16 @@ function SidebarContent({ onClose }: SidebarContentProps) {
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        background: '#0d1a3a',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Subtle background glow */}
-      <div style={{
-        position: 'absolute',
-        top: -60,
-        left: -60,
-        width: 280,
-        height: 280,
-        background: 'radial-gradient(circle, rgba(74,154,212,0.08) 0%, transparent 70%)',
-        pointerEvents: 'none',
-      }} />
-
+    <div className="flex h-full flex-col bg-[var(--color-wise-dark)] relative overflow-hidden">
       {/* Logo area */}
-      <div style={{
-        padding: '20px 20px 16px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
-        flexShrink: 0,
-      }}>
+      <div className="px-5 pt-5 pb-4 flex items-center justify-between border-b border-white/5 flex-shrink-0">
         <Logo size="sm" variant="dark" />
         {onClose && (
           <button
             type="button"
             onClick={onClose}
             aria-label="Close sidebar"
-            style={{
-              padding: 6,
-              borderRadius: 8,
-              background: 'transparent',
-              border: 'none',
-              color: 'rgba(255,255,255,0.35)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-            }}
+            className="p-1.5 rounded-lg bg-transparent border-0 text-white/40 hover:text-white/70 cursor-pointer flex items-center focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary)] focus-visible:outline-offset-2"
           >
             <X size={16} />
           </button>
@@ -222,20 +171,12 @@ function SidebarContent({ onClose }: SidebarContentProps) {
 
       {/* Nav */}
       <nav
-        style={{ flex: 1, overflowY: 'auto', padding: '12px 12px 8px', position: 'relative', zIndex: 1 }}
+        className="flex-1 overflow-y-auto px-3 pt-3 pb-2 relative z-10"
         aria-label="Admin navigation"
       >
         {navSections.map((section) => (
-          <div key={section.label} style={{ marginBottom: 24 }}>
-            <p style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: 'rgba(255,255,255,0.25)',
-              textTransform: 'uppercase',
-              letterSpacing: '1.5px',
-              padding: '0 10px',
-              marginBottom: 4,
-            }}>
+          <div key={section.label} className="mb-6">
+            <p className="text-[10px] font-bold text-white/25 uppercase tracking-[1.5px] px-2.5 mb-1">
               {section.label}
             </p>
             {section.items.map((item) => (
@@ -245,56 +186,21 @@ function SidebarContent({ onClose }: SidebarContentProps) {
                 onClick={onClose}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-3 rounded-xl text-[13px] font-[500]',
-                    'transition-all duration-150 no-underline',
+                    'flex items-center gap-2.5 rounded-xl text-[13px] px-2.5 py-2 mb-0.5',
+                    'transition-colors duration-150 no-underline',
+                    'focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary)] focus-visible:outline-offset-2',
                     isActive
-                      ? 'font-[700]'
-                      : '',
+                      ? 'font-bold bg-[var(--color-wise-primary)]/15 text-[var(--color-wise-primary)]'
+                      : 'font-medium text-white/75 hover:text-[var(--color-wise-primary)] hover:bg-white/5',
                   )
                 }
-                style={({ isActive }) => ({
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '9px 10px',
-                  borderRadius: 10,
-                  marginBottom: 2,
-                  fontSize: 13,
-                  fontWeight: isActive ? 700 : 500,
-                  textDecoration: 'none',
-                  color: isActive ? '#ffffff' : 'rgba(255,255,255,0.45)',
-                  background: isActive ? 'rgba(74,154,212,0.18)' : 'transparent',
-                  borderLeft: isActive ? '3px solid #4a9ad4' : '3px solid transparent',
-                  paddingLeft: isActive ? 7 : 10,
-                  transition: 'all 0.15s ease',
-                })}
               >
-                <span
-                  aria-hidden="true"
-                  style={{
-                    flexShrink: 0,
-                    width: 16,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: 0.9,
-                  }}
-                >
+                <span aria-hidden="true" className="flex-shrink-0 w-4 flex items-center justify-center opacity-90">
                   {item.icon}
                 </span>
-                <span style={{ flex: 1 }}>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
                 {item.badge != null && item.badge > 0 && (
-                  <span style={{
-                    background: '#4a9ad4',
-                    color: '#fff',
-                    fontSize: 10,
-                    fontWeight: 800,
-                    padding: '2px 6px',
-                    borderRadius: 9999,
-                    minWidth: 18,
-                    textAlign: 'center',
-                    lineHeight: 1.4,
-                  }}>
+                  <span className="bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)] text-[10px] font-extrabold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-[1.4]">
                     {item.badge}
                   </span>
                 )}
@@ -305,41 +211,23 @@ function SidebarContent({ onClose }: SidebarContentProps) {
       </nav>
 
       {/* Divider */}
-      <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', flexShrink: 0 }} />
+      <div className="h-px bg-white/5 flex-shrink-0" />
 
       {/* User + logout */}
-      <div style={{ padding: '12px', flexShrink: 0, position: 'relative', zIndex: 1 }}>
+      <div className="p-3 flex-shrink-0 relative z-10">
         {user && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '10px 10px',
-            borderRadius: 12,
-          }}>
+          <div className="flex items-center gap-2.5 p-2.5 rounded-xl">
             <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: '50%',
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#fff',
-                fontSize: 13,
-                fontWeight: 700,
-                background: getAvatarGradient(user.name),
-                boxShadow: '0 0 0 2px rgba(255,255,255,0.1)',
-              }}
+              className="w-[34px] h-[34px] rounded-full flex-shrink-0 flex items-center justify-center text-white text-[13px] font-bold bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)] ring-2 ring-white/10"
+              aria-hidden="true"
             >
               {user.name.charAt(0).toUpperCase()}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-bold text-white truncate">
                 {user.name}
               </div>
-              <div style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <div className="text-[10px] font-medium text-white/35 uppercase tracking-[0.8px]">
                 {user.role.replace('_', ' ')}
               </div>
             </div>
@@ -347,27 +235,7 @@ function SidebarContent({ onClose }: SidebarContentProps) {
               type="button"
               onClick={handleLogout}
               aria-label="Sign out"
-              style={{
-                padding: 7,
-                borderRadius: 8,
-                background: 'transparent',
-                border: 'none',
-                color: 'rgba(255,255,255,0.25)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                transition: 'color 0.15s, background 0.15s',
-              }}
-              onMouseEnter={(e) => {
-                const btn = e.currentTarget as HTMLButtonElement
-                btn.style.color = '#ff6b6b'
-                btn.style.background = 'rgba(255,107,107,0.12)'
-              }}
-              onMouseLeave={(e) => {
-                const btn = e.currentTarget as HTMLButtonElement
-                btn.style.color = 'rgba(255,255,255,0.25)'
-                btn.style.background = 'transparent'
-              }}
+              className="p-1.5 rounded-lg bg-transparent border-0 text-white/30 hover:text-[var(--color-wise-danger)] hover:bg-[var(--color-wise-danger)]/12 cursor-pointer flex items-center transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary)] focus-visible:outline-offset-2"
             >
               <LogOut size={14} />
             </button>
@@ -387,20 +255,10 @@ export default function AdminShell({ children, title, actions }: AdminShellProps
   const { user } = useAuth()
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#f8f9fb', overflow: 'hidden' }}>
-
+    <div className="flex h-screen overflow-hidden bg-[var(--color-wise-canvas)]">
       {/* Desktop sidebar — fixed 240px */}
       <aside
-        style={{
-          display: 'none',
-          flexDirection: 'column',
-          width: 240,
-          background: '#0d1a3a',
-          flexShrink: 0,
-          height: '100%',
-          position: 'relative',
-        }}
-        className="lg:flex"
+        className="hidden lg:flex flex-col w-60 flex-shrink-0 h-full relative bg-[var(--color-wise-dark)]"
         aria-label="Sidebar"
       >
         <SidebarContent />
@@ -409,143 +267,70 @@ export default function AdminShell({ children, title, actions }: AdminShellProps
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 40, display: 'flex' }}
+          className="fixed inset-0 z-40 flex"
           role="dialog"
           aria-modal="true"
           aria-label="Navigation"
         >
           {/* Backdrop */}
           <div
-            style={{ position: 'fixed', inset: 0, background: 'rgba(13,26,58,0.55)', backdropFilter: 'blur(3px)' }}
+            className="fixed inset-0 bg-[rgba(14,15,12,0.55)] backdrop-blur-sm"
             aria-hidden="true"
             onClick={() => setSidebarOpen(false)}
           />
           {/* Drawer */}
-          <aside style={{
-            position: 'relative',
-            zIndex: 50,
-            width: 240,
-            background: '#0d1a3a',
-            height: '100%',
-            boxShadow: '4px 0 40px rgba(13,26,58,0.4)',
-          }}>
+          <aside className="relative z-50 w-60 h-full bg-[var(--color-wise-dark)] shadow-[4px_0_40px_rgba(14,15,12,0.4)]">
             <SidebarContent onClose={() => setSidebarOpen(false)} />
           </aside>
         </div>
       )}
 
       {/* Main panel */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Topbar */}
-        <header style={{
-          height: 60,
-          background: '#ffffff',
-          borderBottom: '1px solid rgba(26,39,68,0.07)',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 28px',
-          flexShrink: 0,
-          gap: 16,
-          boxShadow: '0 1px 0 rgba(26,39,68,0.04)',
-        }}>
+        <header className="h-[60px] bg-[var(--color-wise-canvas)] border-b border-[var(--color-wise-ring)] flex items-center px-7 flex-shrink-0 gap-4">
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
             aria-label="Open navigation"
-            style={{
-              padding: 8,
-              borderRadius: 8,
-              background: 'transparent',
-              border: 'none',
-              color: '#717182',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-            className="lg:hidden"
+            className="lg:hidden p-2 rounded-lg bg-transparent border-0 text-[var(--color-wise-text-muted)] hover:bg-[var(--color-wise-surface-soft)] cursor-pointer flex items-center focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary)] focus-visible:outline-offset-2"
           >
             <Menu size={18} />
           </button>
 
           {/* Breadcrumb / title */}
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <span style={{ fontSize: 12, color: 'rgba(26,39,68,0.35)', fontWeight: 500 }}>Admin</span>
-            <ChevronRight size={12} style={{ color: 'rgba(26,39,68,0.25)', flexShrink: 0 }} />
-            <h1 style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: '#1a2744',
-              margin: 0,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              letterSpacing: '-0.2px',
-            }}>
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <span className="text-[12px] text-[var(--color-wise-text-muted)] font-medium">Admin</span>
+            <ChevronRight size={12} className="text-[var(--color-wise-text-muted)] flex-shrink-0" />
+            <h1 className="text-[14px] font-bold text-[var(--color-wise-text)] m-0 truncate tracking-[-0.2px]">
               {title}
             </h1>
           </div>
 
           {/* Right actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {actions && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{actions}</div>}
+          <div className="flex items-center gap-2">
+            {actions && <div className="flex items-center gap-2">{actions}</div>}
 
             <button
               type="button"
               aria-label="Notifications"
-              style={{
-                position: 'relative',
-                width: 34,
-                height: 34,
-                borderRadius: 10,
-                background: '#f8f9fb',
-                border: '1px solid rgba(26,39,68,0.06)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#717182',
-                cursor: 'pointer',
-              }}
+              className="relative w-[34px] h-[34px] rounded-[10px] bg-[var(--color-wise-surface)] border border-[var(--color-wise-ring)] flex items-center justify-center text-[var(--color-wise-text-warm)] hover:bg-[var(--color-wise-surface-soft)] cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary)] focus-visible:outline-offset-2"
             >
               <Bell size={15} />
-              <span style={{
-                position: 'absolute',
-                top: 7,
-                right: 7,
-                width: 7,
-                height: 7,
-                background: '#ef4444',
-                borderRadius: '50%',
-                border: '1.5px solid #fff',
-              }} aria-hidden="true" />
+              <span
+                className="absolute top-[7px] right-[7px] w-[7px] h-[7px] bg-[var(--color-wise-danger)] rounded-full ring-[1.5px] ring-white"
+                aria-hidden="true"
+              />
             </button>
 
             {user && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-end',
-                }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#1a2744', lineHeight: 1.2 }}>{user.name}</span>
-                  <span style={{ fontSize: 10, color: '#a3a3b8', fontWeight: 500, textTransform: 'capitalize' }}>{user.role.replace('_', ' ')}</span>
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col items-end">
+                  <span className="text-[12px] font-bold text-[var(--color-wise-text)] leading-[1.2]">{user.name}</span>
+                  <span className="text-[10px] text-[var(--color-wise-text-muted)] font-medium capitalize">{user.role.replace('_', ' ')}</span>
                 </div>
                 <div
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 10,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#fff',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    flexShrink: 0,
-                    background: getAvatarGradient(user.name),
-                    boxShadow: '0 2px 8px rgba(26,39,68,0.15)',
-                    cursor: 'default',
-                  }}
+                  className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center text-[13px] font-bold flex-shrink-0 bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)] shadow-[0_2px_8px_rgba(14,15,12,0.15)]"
                   aria-label={user.name}
                 >
                   {user.name.charAt(0).toUpperCase()}
@@ -556,7 +341,7 @@ export default function AdminShell({ children, title, actions }: AdminShellProps
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, overflowY: 'auto', background: '#f8f9fb' }}>
+        <main className="flex-1 overflow-y-auto bg-[var(--color-wise-canvas)]">
           {children}
         </main>
       </div>

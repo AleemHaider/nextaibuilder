@@ -4,6 +4,7 @@ import { useParams, useNavigate, Link } from 'react-router'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
 import { authFetch } from '../../lib/api'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -48,11 +49,11 @@ interface StudentDetail {
 // ---------------------------------------------------------------------------
 
 const AVATAR_GRADIENTS = [
-  'linear-gradient(135deg,#4a9ad4,#1a3a6a)',
-  'linear-gradient(135deg,#f59e0b,#b45309)',
-  'linear-gradient(135deg,#059669,#064e3b)',
-  'linear-gradient(135deg,#7c3aed,#4c1d95)',
-  'linear-gradient(135deg,#ef4444,#991b1b)',
+  'linear-gradient(135deg,var(--color-wise-primary-text),var(--color-wise-primary-text))',
+  'linear-gradient(135deg,var(--color-wise-warning),var(--color-wise-warning))',
+  'linear-gradient(135deg,var(--color-wise-success),var(--color-wise-success))',
+  'linear-gradient(135deg,var(--color-wise-primary-text),var(--color-wise-primary-text))',
+  'linear-gradient(135deg,var(--color-wise-danger),var(--color-wise-danger))',
 ]
 
 function getAvatarGradient(name: string): string {
@@ -63,29 +64,29 @@ const ENROLLMENT_STATUS_CFG: Record<
   Enrollment['status'],
   { bg: string; color: string; dot: string; label: string }
 > = {
-  ACTIVE:    { bg: 'rgba(5,150,105,0.1)',   color: '#065f46', dot: '#059669', label: 'Active'    },
-  PENDING:   { bg: 'rgba(245,158,11,0.1)',  color: '#92400e', dot: '#f59e0b', label: 'Pending'   },
-  COMPLETED: { bg: 'rgba(59,130,246,0.1)',  color: '#1e40af', dot: '#3b82f6', label: 'Completed' },
-  REVOKED:   { bg: 'rgba(239,68,68,0.1)',   color: '#991b1b', dot: '#ef4444', label: 'Revoked'   },
+  ACTIVE:    { bg: 'rgba(5,150,105,0.1)',   color: 'var(--color-wise-success)', dot: 'var(--color-wise-success)', label: 'Active'    },
+  PENDING:   { bg: 'rgba(245,158,11,0.1)',  color: 'var(--color-wise-text-warm)', dot: 'var(--color-wise-warning)', label: 'Pending'   },
+  COMPLETED: { bg: 'rgba(59,130,246,0.1)',  color: 'var(--color-wise-primary-text)', dot: 'var(--color-wise-primary-text)', label: 'Completed' },
+  REVOKED:   { bg: 'rgba(239,68,68,0.1)',   color: 'var(--color-wise-danger)', dot: 'var(--color-wise-danger)', label: 'Revoked'   },
 }
 
 const PAYMENT_STATUS_CFG: Record<
   PaymentRecord['status'],
   { bg: string; color: string }
 > = {
-  SUCCESS: { bg: 'rgba(5,150,105,0.1)',  color: '#065f46' },
-  PENDING: { bg: 'rgba(245,158,11,0.1)', color: '#92400e' },
-  FAILED:  { bg: 'rgba(239,68,68,0.1)',  color: '#991b1b' },
+  SUCCESS: { bg: 'rgba(5,150,105,0.1)',  color: 'var(--color-wise-success)' },
+  PENDING: { bg: 'rgba(245,158,11,0.1)', color: 'var(--color-wise-text-warm)' },
+  FAILED:  { bg: 'rgba(239,68,68,0.1)',  color: 'var(--color-wise-danger)' },
 }
 
 const ENROLLMENT_PAYMENT_CFG: Record<
   Enrollment['paymentStatus'],
   { bg: string; color: string }
 > = {
-  PAID:    { bg: 'rgba(5,150,105,0.1)',  color: '#065f46' },
-  PENDING: { bg: 'rgba(245,158,11,0.1)', color: '#92400e' },
-  FAILED:  { bg: 'rgba(239,68,68,0.1)',  color: '#991b1b' },
-  FREE:    { bg: 'rgba(100,116,139,0.1)', color: '#717182' },
+  PAID:    { bg: 'rgba(5,150,105,0.1)',  color: 'var(--color-wise-success)' },
+  PENDING: { bg: 'rgba(245,158,11,0.1)', color: 'var(--color-wise-text-warm)' },
+  FAILED:  { bg: 'rgba(239,68,68,0.1)',  color: 'var(--color-wise-danger)' },
+  FREE:    { bg: 'rgba(100,116,139,0.1)', color: 'var(--color-wise-text-muted)' },
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +108,7 @@ function SkeletonBlock({
         width: w,
         height: h,
         borderRadius: radius,
-        background: 'linear-gradient(90deg,rgba(26,39,68,0.08) 25%,#f8f9fb 50%,rgba(26,39,68,0.08) 75%)',
+        background: 'linear-gradient(90deg,var(--color-wise-ring) 25%,var(--color-wise-canvas) 50%,var(--color-wise-ring) 75%)',
         backgroundSize: '200% 100%',
         animation: 'shimmer 1.4s infinite',
         flexShrink: 0,
@@ -169,10 +170,10 @@ function StatusPill({
 function ProgressBar({ value }: { value: number }) {
   const color =
     value === 100
-      ? 'linear-gradient(90deg,#22c55e,#16a34a)'
+      ? 'linear-gradient(90deg,var(--color-wise-success),var(--color-wise-success))'
       : value === 0
-      ? 'rgba(26,39,68,0.08)'
-      : 'linear-gradient(90deg,#4a9ad4,#7c3aed)'
+      ? 'var(--color-wise-ring)'
+      : 'linear-gradient(90deg,var(--color-wise-primary-text),var(--color-wise-primary-text))'
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -180,7 +181,7 @@ function ProgressBar({ value }: { value: number }) {
         style={{
           width: 80,
           height: 5,
-          background: '#f8f9fb',
+          background: 'var(--color-wise-canvas)',
           borderRadius: 99,
           overflow: 'hidden',
           flexShrink: 0,
@@ -195,7 +196,7 @@ function ProgressBar({ value }: { value: number }) {
           }}
         />
       </div>
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#717182', flexShrink: 0 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-wise-text-muted)', flexShrink: 0 }}>
         {value}%
       </span>
     </div>
@@ -218,11 +219,11 @@ function StatCard({
   return (
     <div
       style={{
-        background: '#fff',
+        background: 'var(--color-wise-surface)',
         borderRadius: 14,
         padding: '18px 20px',
-        border: '1px solid rgba(26,39,68,0.07)',
-        boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.03)',
+        border: '1px solid var(--color-wise-ring)',
+        boxShadow: '0 1px 3px var(--color-wise-ring), 0 4px 16px var(--color-wise-ring)',
         flex: 1,
       }}
     >
@@ -230,14 +231,14 @@ function StatCard({
         style={{
           fontSize: 26,
           fontWeight: 900,
-          color: '#1a2744',
+          color: 'var(--color-wise-text)',
           letterSpacing: '-0.5px',
           marginBottom: 4,
         }}
       >
         {value}
       </div>
-      <div style={{ fontSize: 12, color: '#717182', fontWeight: 500 }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--color-wise-text-muted)', fontWeight: 500 }}>{label}</div>
       <div
         style={{
           marginTop: 10,
@@ -275,7 +276,7 @@ function Toast({
         fontSize: 13,
         fontWeight: 600,
         background: type === 'success' ? 'rgba(5,150,105,0.1)' : 'rgba(239,68,68,0.1)',
-        color: type === 'success' ? '#065f46' : '#991b1b',
+        color: type === 'success' ? 'var(--color-wise-success)' : 'var(--color-wise-danger)',
         border: `1px solid ${type === 'success' ? 'rgba(5,150,105,0.2)' : 'rgba(239,68,68,0.2)'}`,
       }}
     >
@@ -284,7 +285,7 @@ function Toast({
           width: 7,
           height: 7,
           borderRadius: '50%',
-          background: type === 'success' ? '#059669' : '#ef4444',
+          background: type === 'success' ? 'var(--color-wise-success)' : 'var(--color-wise-danger)',
           flexShrink: 0,
         }}
       />
@@ -307,10 +308,10 @@ function Card({
   return (
     <div
       style={{
-        background: '#fff',
+        background: 'var(--color-wise-surface)',
         borderRadius: 18,
-        border: '1px solid rgba(26,39,68,0.07)',
-        boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.03)',
+        border: '1px solid var(--color-wise-ring)',
+        boxShadow: '0 1px 3px var(--color-wise-ring), 0 4px 16px var(--color-wise-ring)',
         overflow: 'hidden',
         ...extraStyle,
       }}
@@ -332,13 +333,13 @@ function Th({ children }: { children: React.ReactNode }) {
         textAlign: 'left',
         fontSize: 10,
         fontWeight: 700,
-        color: '#a3a3b8',
+        color: 'var(--color-wise-text-muted)',
         padding: '10px 20px',
         textTransform: 'uppercase',
         letterSpacing: '0.8px',
-        borderBottom: '1px solid rgba(26,39,68,0.05)',
+        borderBottom: '1px solid var(--color-wise-ring)',
         whiteSpace: 'nowrap',
-        background: '#f8f9fb',
+        background: 'var(--color-wise-canvas)',
       }}
     >
       {children}
@@ -358,6 +359,7 @@ export default function StudentDetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [statusLoading, setStatusLoading] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   // Fetch student detail
@@ -391,15 +393,15 @@ export default function StudentDetailPage() {
     return () => clearTimeout(t)
   }, [toast])
 
-  // Toggle account status
-  async function handleStatusToggle() {
+  // Toggle account status — opens ConfirmDialog instead of window.confirm()
+  function handleStatusToggle() {
+    if (!student) return
+    setConfirmOpen(true)
+  }
+
+  async function handleStatusToggleConfirmed() {
     if (!student) return
     const nextStatus = student.status === 'active' ? 'suspended' : 'active'
-    const actionLabel = nextStatus === 'suspended' ? 'suspend' : 'activate'
-    const confirmed = window.confirm(
-      `Are you sure you want to ${actionLabel} ${student.name}'s account?`,
-    )
-    if (!confirmed) return
 
     setStatusLoading(true)
     try {
@@ -442,17 +444,17 @@ export default function StudentDetailPage() {
             style={{
               fontSize: 64,
               fontWeight: 900,
-              color: 'rgba(26,39,68,0.08)',
+              color: 'var(--color-wise-ring)',
               letterSpacing: '-3px',
               lineHeight: 1,
             }}
           >
             404
           </div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#1a2744' }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-wise-text)' }}>
             Student not found
           </div>
-          <div style={{ fontSize: 13, color: '#a3a3b8' }}>
+          <div style={{ fontSize: 13, color: 'var(--color-wise-text-muted)' }}>
             The student you're looking for doesn't exist or was removed.
           </div>
           <button
@@ -464,8 +466,8 @@ export default function StudentDetailPage() {
               gap: 6,
               padding: '9px 18px',
               borderRadius: 10,
-              background: '#1a2744',
-              color: '#fff',
+              background: 'var(--color-wise-text)',
+              color: 'var(--color-wise-surface)',
               fontSize: 13,
               fontWeight: 700,
               border: 'none',
@@ -515,10 +517,10 @@ export default function StudentDetailPage() {
                 key={i}
                 style={{
                   flex: 1,
-                  background: '#fff',
+                  background: 'var(--color-wise-surface)',
                   borderRadius: 14,
                   padding: '18px 20px',
-                  border: '1px solid rgba(26,39,68,0.07)',
+                  border: '1px solid var(--color-wise-ring)',
                 }}
               >
                 <SkeletonBlock w={60} h={28} radius={6} />
@@ -531,7 +533,7 @@ export default function StudentDetailPage() {
 
           {/* Table skeleton */}
           <Card>
-            <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(26,39,68,0.06)' }}>
+            <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--color-wise-ring)' }}>
               <SkeletonBlock w={160} h={18} />
             </div>
             <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -559,7 +561,7 @@ export default function StudentDetailPage() {
           0%   { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
-        .sd-tr:hover td { background: #f8f9fb !important; }
+        .sd-tr:hover td { background: var(--color-wise-canvas) !important; }
       `}</style>
 
       <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -574,13 +576,13 @@ export default function StudentDetailPage() {
               gap: 6,
               fontSize: 13,
               fontWeight: 600,
-              color: '#717182',
+              color: 'var(--color-wise-text-muted)',
               textDecoration: 'none',
               padding: '7px 12px',
               borderRadius: 8,
-              background: '#fff',
-              border: '1px solid rgba(26,39,68,0.08)',
-              boxShadow: '0 1px 2px rgba(26,39,68,0.04)',
+              background: 'var(--color-wise-surface)',
+              border: '1px solid var(--color-wise-ring)',
+              boxShadow: '0 1px 2px var(--color-wise-ring)',
             }}
           >
             <ArrowLeft size={14} /> Back to Students
@@ -614,7 +616,7 @@ export default function StudentDetailPage() {
                 justifyContent: 'center',
                 fontSize: 28,
                 fontWeight: 900,
-                color: '#fff',
+                color: 'var(--color-wise-surface)',
                 flexShrink: 0,
                 boxShadow: '0 4px 16px rgba(26,39,68,0.18)',
               }}
@@ -628,7 +630,7 @@ export default function StudentDetailPage() {
                 style={{
                   fontSize: 22,
                   fontWeight: 900,
-                  color: '#1a2744',
+                  color: 'var(--color-wise-text)',
                   margin: 0,
                   letterSpacing: '-0.4px',
                   whiteSpace: 'nowrap',
@@ -641,7 +643,7 @@ export default function StudentDetailPage() {
               <div
                 style={{
                   fontSize: 13,
-                  color: '#717182',
+                  color: 'var(--color-wise-text-muted)',
                   marginTop: 3,
                   fontWeight: 500,
                 }}
@@ -665,7 +667,7 @@ export default function StudentDetailPage() {
                     padding: '3px 9px',
                     borderRadius: 6,
                     background: 'rgba(74,154,212,0.1)',
-                    color: '#1a5276',
+                    color: 'var(--color-wise-primary-text)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.6px',
                   }}
@@ -677,8 +679,8 @@ export default function StudentDetailPage() {
                 <StatusPill
                   label={isSuspended ? 'Suspended' : 'Active'}
                   bg={isSuspended ? 'rgba(239,68,68,0.1)' : 'rgba(5,150,105,0.1)'}
-                  color={isSuspended ? '#991b1b' : '#065f46'}
-                  dot={isSuspended ? '#ef4444' : '#059669'}
+                  color={isSuspended ? 'var(--color-wise-danger)' : 'var(--color-wise-success)'}
+                  dot={isSuspended ? 'var(--color-wise-danger)' : 'var(--color-wise-success)'}
                 />
               </div>
             </div>
@@ -699,8 +701,8 @@ export default function StudentDetailPage() {
                 border: 'none',
                 cursor: statusLoading ? 'not-allowed' : 'pointer',
                 opacity: statusLoading ? 0.7 : 1,
-                background: isSuspended ? '#059669' : '#ef4444',
-                color: '#fff',
+                background: isSuspended ? 'var(--color-wise-success)' : 'var(--color-wise-danger)',
+                color: 'var(--color-wise-surface)',
                 boxShadow: isSuspended
                   ? '0 2px 8px rgba(5,150,105,0.3)'
                   : '0 2px 8px rgba(239,68,68,0.3)',
@@ -722,17 +724,17 @@ export default function StudentDetailPage() {
           <StatCard
             label="Total Enrollments"
             value={student.totalEnrollments}
-            accent="#4a9ad4"
+            accent="var(--color-wise-primary-text)"
           />
           <StatCard
             label="Completed Courses"
             value={student.completedCourses}
-            accent="#059669"
+            accent="var(--color-wise-success)"
           />
           <StatCard
             label="Total Paid"
             value={`$${student.totalPaid.toLocaleString()}`}
-            accent="#7c3aed"
+            accent="var(--color-wise-primary-text)"
           />
         </div>
 
@@ -744,7 +746,7 @@ export default function StudentDetailPage() {
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '18px 24px',
-              borderBottom: '1px solid rgba(26,39,68,0.06)',
+              borderBottom: '1px solid var(--color-wise-ring)',
             }}
           >
             <div>
@@ -752,13 +754,13 @@ export default function StudentDetailPage() {
                 style={{
                   fontSize: 15,
                   fontWeight: 800,
-                  color: '#1a2744',
+                  color: 'var(--color-wise-text)',
                   margin: 0,
                 }}
               >
                 Enrollments
               </h2>
-              <p style={{ fontSize: 12, color: '#a3a3b8', marginTop: 2, marginBottom: 0 }}>
+              <p style={{ fontSize: 12, color: 'var(--color-wise-text-muted)', marginTop: 2, marginBottom: 0 }}>
                 All course enrollments for this student
               </p>
             </div>
@@ -766,7 +768,7 @@ export default function StudentDetailPage() {
               style={{
                 fontSize: 12,
                 fontWeight: 700,
-                color: '#4a9ad4',
+                color: 'var(--color-wise-primary-text)',
                 background: 'rgba(74,154,212,0.08)',
                 padding: '4px 12px',
                 borderRadius: 20,
@@ -782,7 +784,7 @@ export default function StudentDetailPage() {
               style={{
                 padding: '40px 24px',
                 textAlign: 'center',
-                color: '#a3a3b8',
+                color: 'var(--color-wise-text-muted)',
                 fontSize: 13,
               }}
             >
@@ -815,7 +817,7 @@ export default function StudentDetailPage() {
                         style={{
                           borderBottom:
                             i < student.enrollments.length - 1
-                              ? '1px solid rgba(26,39,68,0.04)'
+                              ? '1px solid var(--color-wise-ring)'
                               : 'none',
                         }}
                       >
@@ -824,13 +826,13 @@ export default function StudentDetailPage() {
                             style={{
                               fontSize: 13,
                               fontWeight: 700,
-                              color: '#1a2744',
+                              color: 'var(--color-wise-text)',
                             }}
                           >
                             {enr.courseTitle}
                           </div>
                           {enr.cohortTitle && (
-                            <div style={{ fontSize: 11, color: '#a3a3b8', marginTop: 2 }}>
+                            <div style={{ fontSize: 11, color: 'var(--color-wise-text-muted)', marginTop: 2 }}>
                               {enr.cohortTitle}
                             </div>
                           )}
@@ -854,7 +856,7 @@ export default function StudentDetailPage() {
                           <ProgressBar value={enr.progress} />
                         </td>
                         <td style={{ padding: '14px 20px' }}>
-                          <span style={{ fontSize: 11, color: '#a3a3b8', fontWeight: 500 }}>
+                          <span style={{ fontSize: 11, color: 'var(--color-wise-text-muted)', fontWeight: 500 }}>
                             {new Date(enr.enrolledAt).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric',
@@ -871,7 +873,7 @@ export default function StudentDetailPage() {
                               gap: 4,
                               fontSize: 11,
                               fontWeight: 700,
-                              color: '#4a9ad4',
+                              color: 'var(--color-wise-primary-text)',
                               textDecoration: 'none',
                               padding: '5px 10px',
                               borderRadius: 7,
@@ -900,7 +902,7 @@ export default function StudentDetailPage() {
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '18px 24px',
-              borderBottom: '1px solid rgba(26,39,68,0.06)',
+              borderBottom: '1px solid var(--color-wise-ring)',
             }}
           >
             <div>
@@ -908,13 +910,13 @@ export default function StudentDetailPage() {
                 style={{
                   fontSize: 15,
                   fontWeight: 800,
-                  color: '#1a2744',
+                  color: 'var(--color-wise-text)',
                   margin: 0,
                 }}
               >
                 Payment History
               </h2>
-              <p style={{ fontSize: 12, color: '#a3a3b8', marginTop: 2, marginBottom: 0 }}>
+              <p style={{ fontSize: 12, color: 'var(--color-wise-text-muted)', marginTop: 2, marginBottom: 0 }}>
                 All payment transactions for this student
               </p>
             </div>
@@ -925,7 +927,7 @@ export default function StudentDetailPage() {
               style={{
                 padding: '40px 24px',
                 textAlign: 'center',
-                color: '#a3a3b8',
+                color: 'var(--color-wise-text-muted)',
                 fontSize: 13,
               }}
             >
@@ -957,12 +959,12 @@ export default function StudentDetailPage() {
                         style={{
                           borderBottom:
                             i < student.payments.length - 1
-                              ? '1px solid rgba(26,39,68,0.04)'
+                              ? '1px solid var(--color-wise-ring)'
                               : 'none',
                         }}
                       >
                         <td style={{ padding: '14px 20px' }}>
-                          <span style={{ fontSize: 12, color: '#717182', fontWeight: 500 }}>
+                          <span style={{ fontSize: 12, color: 'var(--color-wise-text-muted)', fontWeight: 500 }}>
                             {new Date(pmt.date).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric',
@@ -980,7 +982,7 @@ export default function StudentDetailPage() {
                               background: isStripe
                                 ? 'rgba(99,91,255,0.1)'
                                 : 'rgba(245,158,11,0.1)',
-                              color: isStripe ? '#4338ca' : '#92400e',
+                              color: isStripe ? 'var(--color-wise-primary-text)' : 'var(--color-wise-text-warm)',
                               textTransform: 'uppercase',
                               letterSpacing: '0.5px',
                             }}
@@ -993,7 +995,7 @@ export default function StudentDetailPage() {
                             style={{
                               fontSize: 13,
                               fontWeight: 800,
-                              color: '#1a2744',
+                              color: 'var(--color-wise-text)',
                             }}
                           >
                             ${pmt.amount.toLocaleString()}
@@ -1011,7 +1013,7 @@ export default function StudentDetailPage() {
                             style={{
                               fontSize: 12,
                               fontWeight: 600,
-                              color: '#1a2744',
+                              color: 'var(--color-wise-text)',
                             }}
                           >
                             {pmt.courseTitle}
@@ -1026,6 +1028,26 @@ export default function StudentDetailPage() {
           )}
         </Card>
       </div>
+
+      {/* Confirm dialog — replaces window.confirm() for status toggle */}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={
+          student?.status === 'active'
+            ? 'Suspend account?'
+            : 'Activate account?'
+        }
+        description={
+          student
+            ? `This will ${student.status === 'active' ? 'suspend' : 'activate'} ${student.name}'s account.`
+            : 'Please confirm the action.'
+        }
+        confirmLabel={student?.status === 'active' ? 'Suspend account' : 'Activate account'}
+        variant={student?.status === 'active' ? 'danger' : 'warning'}
+        isLoading={statusLoading}
+        onConfirm={handleStatusToggleConfirmed}
+      />
     </AdminShell>
   )
 }

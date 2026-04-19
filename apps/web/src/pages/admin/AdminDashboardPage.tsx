@@ -1,10 +1,12 @@
-// FIR-165 / FIR-166 / FIR-173 — Admin Dashboard (world-class redesign)
+// FIR-165 / FIR-166 / FIR-173 — Admin Dashboard
+// Sprint 3 Story 16: migrated from navy/blue palette to Wise theme + lucide icons.
 import { Link } from 'react-router'
 import {
   Users, DollarSign, Clock, BookOpen, Camera,
   ArrowUpRight, ArrowDownRight, ArrowRight,
   Activity, CheckCircle2, AlertCircle, TrendingUp,
   ChevronRight, MoreHorizontal, Plus, Zap,
+  GraduationCap, CreditCard, Mail, BarChart2, Rocket,
 } from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
 
@@ -20,8 +22,6 @@ const KPI = [
     up: true,
     sub: 'vs last month',
     icon: DollarSign,
-    accent: '#4a9ad4',
-    softBg: 'rgba(74,154,212,0.09)',
   },
   {
     label: 'Active Students',
@@ -30,8 +30,6 @@ const KPI = [
     up: true,
     sub: 'vs last month',
     icon: Users,
-    accent: '#7c3aed',
-    softBg: 'rgba(124,58,237,0.09)',
   },
   {
     label: 'Active Cohorts',
@@ -40,8 +38,6 @@ const KPI = [
     up: true,
     sub: 'this month',
     icon: BookOpen,
-    accent: '#059669',
-    softBg: 'rgba(5,150,105,0.09)',
   },
   {
     label: 'Pending Payments',
@@ -50,8 +46,6 @@ const KPI = [
     up: false,
     sub: 'manual receipts',
     icon: Clock,
-    accent: '#f59e0b',
-    softBg: 'rgba(245,158,11,0.09)',
     urgent: true,
   },
   {
@@ -61,50 +55,40 @@ const KPI = [
     up: false,
     sub: 'pending reviews',
     icon: Camera,
-    accent: '#ef4444',
-    softBg: 'rgba(239,68,68,0.09)',
     urgent: true,
   },
-]
+] as const
 
 const ENROLLMENTS = [
-  { id: '1', name: 'Sara Ahmed',   email: 'sara@example.com',  gi: 0, course: 'AI Product Bootcamp',    status: 'Active'    as const, progress: 42,  date: 'Jan 8'  },
-  { id: '2', name: 'Aleem Haider', email: 'aleem@nextai.com',  gi: 1, course: 'Claude API Mastery',     status: 'Active'    as const, progress: 78,  date: 'Dec 10' },
-  { id: '3', name: 'Jordan Lee',   email: 'jordan@gmail.com',  gi: 2, course: 'AI Product Bootcamp',    status: 'Pending'   as const, progress: 0,   date: 'Jan 8'  },
-  { id: '4', name: 'Priya Sharma', email: 'priya@outlook.com', gi: 3, course: 'Prompt Engineering Pro', status: 'Completed' as const, progress: 100, date: 'Oct 3'  },
-  { id: '5', name: 'Marcus Webb',  email: 'marcus@dev.io',     gi: 4, course: 'Full-Stack AI Dev',      status: 'Active'    as const, progress: 15,  date: 'Jan 12' },
+  { id: '1', name: 'Sara Ahmed',   email: 'sara@example.com',  course: 'AI Product Bootcamp',    status: 'Active'    as const, progress: 42,  date: 'Jan 8'  },
+  { id: '2', name: 'Aleem Haider', email: 'aleem@nextai.com',  course: 'Claude API Mastery',     status: 'Active'    as const, progress: 78,  date: 'Dec 10' },
+  { id: '3', name: 'Jordan Lee',   email: 'jordan@gmail.com',  course: 'AI Product Bootcamp',    status: 'Pending'   as const, progress: 0,   date: 'Jan 8'  },
+  { id: '4', name: 'Priya Sharma', email: 'priya@outlook.com', course: 'Prompt Engineering Pro', status: 'Completed' as const, progress: 100, date: 'Oct 3'  },
+  { id: '5', name: 'Marcus Webb',  email: 'marcus@dev.io',     course: 'Full-Stack AI Dev',      status: 'Active'    as const, progress: 15,  date: 'Jan 12' },
 ]
 
 const ACTIVITY = [
-  { emoji: '🎓', color: '#4a9ad4', softBg: 'rgba(74,154,212,0.1)',  text: 'Sara Ahmed enrolled in AI Product Bootcamp', time: '2 min ago'   },
-  { emoji: '💳', color: '#f59e0b', softBg: 'rgba(245,158,11,0.1)',  text: 'New manual payment receipt uploaded by Omar', time: '18 min ago'  },
-  { emoji: '✅', color: '#059669', softBg: 'rgba(5,150,105,0.1)',   text: 'Priya Sharma completed Prompt Engineering',  time: '1 hour ago'  },
-  { emoji: '📸', color: '#ef4444', softBg: 'rgba(239,68,68,0.1)',   text: '3 new screenshot submissions awaiting review', time: '3 hours ago' },
-  { emoji: '🚀', color: '#7c3aed', softBg: 'rgba(124,58,237,0.1)', text: 'Cohort "Claude API Feb" launched',             time: '5 hours ago' },
+  { icon: GraduationCap, text: 'Sara Ahmed enrolled in AI Product Bootcamp', time: '2 min ago'   },
+  { icon: CreditCard,    text: 'New manual payment receipt uploaded by Omar', time: '18 min ago'  },
+  { icon: CheckCircle2,  text: 'Priya Sharma completed Prompt Engineering',  time: '1 hour ago'  },
+  { icon: Camera,        text: '3 new screenshot submissions awaiting review', time: '3 hours ago' },
+  { icon: Rocket,        text: 'Cohort "Claude API Feb" launched',             time: '5 hours ago' },
 ]
 
 const QUICK_ACTIONS = [
-  { to: '/admin/courses',           emoji: '📚', label: 'Courses',      sub: 'Manage content',  accent: '#4a9ad4', count: null },
-  { to: '/admin/manual-payments',   emoji: '💳', label: 'Payments',     sub: '7 pending',       accent: '#f59e0b', count: 7   },
-  { to: '/admin/screenshot-review', emoji: '📸', label: 'Screenshots',  sub: '12 in queue',     accent: '#ef4444', count: 12  },
-  { to: '/admin/students',          emoji: '👥', label: 'Students',     sub: '247 active',      accent: '#059669', count: null },
-  { to: '/admin/broadcast-email',   emoji: '📧', label: 'Broadcast',    sub: 'Send email',      accent: '#7c3aed', count: null },
-  { to: '/admin/reporting',         emoji: '📊', label: 'Analytics',    sub: 'View reports',    accent: '#0ea5e9', count: null },
-]
-
-const AVATARS = [
-  'linear-gradient(135deg,#4a9ad4,#1a3a6a)',
-  'linear-gradient(135deg,#f59e0b,#b45309)',
-  'linear-gradient(135deg,#059669,#064e3b)',
-  'linear-gradient(135deg,#7c3aed,#4c1d95)',
-  'linear-gradient(135deg,#ef4444,#991b1b)',
+  { to: '/admin/courses',           icon: BookOpen,   label: 'Courses',      sub: 'Manage content',  count: null as number | null },
+  { to: '/admin/manual-payments',   icon: CreditCard, label: 'Payments',     sub: '7 pending',       count: 7    as number | null },
+  { to: '/admin/screenshot-review', icon: Camera,     label: 'Screenshots',  sub: '12 in queue',     count: 12   as number | null },
+  { to: '/admin/students',          icon: Users,      label: 'Students',     sub: '247 active',      count: null as number | null },
+  { to: '/admin/broadcast-email',   icon: Mail,       label: 'Broadcast',    sub: 'Send email',      count: null as number | null },
+  { to: '/admin/reporting',         icon: BarChart2,  label: 'Analytics',    sub: 'View reports',    count: null as number | null },
 ]
 
 const STATUS_CFG = {
-  Active:    { bg: 'rgba(5,150,105,0.1)',   color: '#065f46', dot: '#059669' },
-  Pending:   { bg: 'rgba(245,158,11,0.1)',  color: '#92400e', dot: '#f59e0b' },
-  Completed: { bg: 'rgba(59,130,246,0.1)', color: '#1e40af', dot: '#3b82f6' },
-}
+  Active:    { cls: 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]' },
+  Pending:   { cls: 'bg-[var(--color-wise-warning-soft)] text-[var(--color-wise-text-warm)]' },
+  Completed: { cls: 'bg-[var(--color-wise-success)]/10 text-[var(--color-wise-success)]' },
+} as const
 
 const HEALTH = [
   { label: 'API',              value: '42ms avg',      ok: true,  icon: Zap           },
@@ -117,75 +101,36 @@ const HEALTH = [
 // KPI Card
 // ---------------------------------------------------------------------------
 
-function KpiCard({ k }: { k: typeof KPI[0] }) {
+function KpiCard({ k }: { k: typeof KPI[number] }) {
   const Icon = k.icon
   return (
-    <div
-      style={{
-        background: '#ffffff',
-        borderRadius: 18,
-        padding: '22px 22px 18px',
-        border: '1px solid rgba(26,39,68,0.07)',
-        boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.04)',
-        position: 'relative',
-        overflow: 'hidden',
-        cursor: 'default',
-        transition: 'transform 0.18s, box-shadow 0.18s',
-      }}
-      onMouseEnter={e => {
-        const el = e.currentTarget as HTMLDivElement
-        el.style.transform = 'translateY(-3px)'
-        el.style.boxShadow = '0 8px 24px rgba(26,39,68,0.1), 0 2px 8px rgba(26,39,68,0.06)'
-      }}
-      onMouseLeave={e => {
-        const el = e.currentTarget as HTMLDivElement
-        el.style.transform = 'translateY(0)'
-        el.style.boxShadow = '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.04)'
-      }}
-    >
-      {/* Top accent bar */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.accent, borderRadius: '18px 18px 0 0' }} />
-
-      {/* Corner tint */}
-      <div style={{ position: 'absolute', bottom: -20, right: -20, width: 100, height: 100, background: k.softBg, borderRadius: '50%', pointerEvents: 'none' }} />
-
+    <div className="relative overflow-hidden bg-[var(--color-wise-surface)] rounded-[30px] px-6 py-5 ring-1 ring-[var(--color-wise-ring)] shadow-[0_1px_3px_rgba(14,15,12,0.04),0_4px_16px_rgba(14,15,12,0.03)] transition-transform duration-150 hover:-translate-y-0.5">
       {/* Urgent badge */}
-      {k.urgent && (
-        <div style={{
-          position: 'absolute', top: 14, right: 14,
-          background: '#fef2f2', color: '#dc2626',
-          fontSize: 9, fontWeight: 800, padding: '2px 7px',
-          borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.4px',
-          border: '1px solid rgba(220,38,38,0.15)',
-        }}>
+      {'urgent' in k && k.urgent && (
+        <div className="absolute top-3.5 right-3.5 bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-[0.4px] border border-[var(--color-wise-danger)]/15">
           Action needed
         </div>
       )}
 
       {/* Icon */}
-      <div style={{
-        width: 42, height: 42, borderRadius: 13,
-        background: k.softBg,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        marginBottom: 16, position: 'relative',
-      }}>
-        <Icon size={19} color={k.accent} strokeWidth={2} />
+      <div className="w-[42px] h-[42px] rounded-[13px] bg-[var(--color-wise-mint)] flex items-center justify-center mb-4 text-[var(--color-wise-primary-text)]">
+        <Icon size={19} strokeWidth={2} aria-hidden="true" />
       </div>
 
       {/* Value */}
-      <div style={{ fontSize: 32, fontWeight: 900, color: '#1a2744', letterSpacing: '-1.5px', lineHeight: 1, marginBottom: 4 }}>
+      <div className="text-[32px] font-black text-[var(--color-wise-text)] tracking-[-1.5px] leading-none mb-1">
         {k.value}
       </div>
-      <div style={{ fontSize: 12, color: '#717182', fontWeight: 500, marginBottom: 14 }}>{k.label}</div>
+      <div className="text-[12px] text-[var(--color-wise-text-muted)] font-medium mb-3.5">{k.label}</div>
 
       {/* Trend */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div className="flex items-center gap-1">
         {k.up
-          ? <ArrowUpRight size={12} color="#059669" strokeWidth={2.5} />
-          : <ArrowDownRight size={12} color="#f59e0b" strokeWidth={2.5} />
+          ? <ArrowUpRight size={12} className="text-[var(--color-wise-success)]" strokeWidth={2.5} aria-hidden="true" />
+          : <ArrowDownRight size={12} className="text-[var(--color-wise-danger)]" strokeWidth={2.5} aria-hidden="true" />
         }
-        <span style={{ fontSize: 11, fontWeight: 700, color: k.up ? '#059669' : '#d97706' }}>{k.change}</span>
-        <span style={{ fontSize: 11, color: '#a3a3b8' }}> · {k.sub}</span>
+        <span className={`text-[11px] font-bold ${k.up ? 'text-[var(--color-wise-success)]' : 'text-[var(--color-wise-danger)]'}`}>{k.change}</span>
+        <span className="text-[11px] text-[var(--color-wise-text-muted)]"> · {k.sub}</span>
       </div>
     </div>
   )
@@ -203,85 +148,65 @@ export default function AdminDashboardPage() {
 
   return (
     <AdminShell title="Dashboard">
-      <div style={{ padding: '28px 32px', minHeight: '100%', background: '#f8f9fb' }}>
-
+      <div className="px-8 py-7 min-h-full bg-[var(--color-wise-canvas)]">
         {/* ── Header ── */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+        <div className="flex items-start justify-between mb-7 flex-wrap gap-3">
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 900, color: '#1a2744', margin: 0, letterSpacing: '-0.5px' }}>
-              {greeting}, Aleem 👋
+            <h1 className="text-[24px] font-black text-[var(--color-wise-text)] m-0 tracking-[-0.5px]">
+              {greeting}, Aleem
             </h1>
-            <p style={{ fontSize: 13, color: '#a3a3b8', marginTop: 4, fontWeight: 500 }}>{dateStr}</p>
+            <p className="text-[13px] text-[var(--color-wise-text-muted)] mt-1 font-medium">{dateStr}</p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="flex items-center gap-2.5">
             {/* Live pill */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 7,
-              background: '#fff', border: '1px solid rgba(26,39,68,0.08)',
-              borderRadius: 10, padding: '8px 14px',
-              boxShadow: '0 1px 3px rgba(26,39,68,0.05)',
-            }}>
-              <Activity size={14} color="#4a9ad4" />
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#1a2744' }}>Live</span>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.2)', display: 'inline-block' }} />
+            <div className="flex items-center gap-2 bg-[var(--color-wise-surface)] ring-1 ring-[var(--color-wise-ring)] rounded-[10px] px-3.5 py-2">
+              <Activity size={14} className="text-[var(--color-wise-primary-text)]" aria-hidden="true" />
+              <span className="text-[12px] font-semibold text-[var(--color-wise-text)]">Live</span>
+              <span className="w-[7px] h-[7px] rounded-full bg-[var(--color-wise-primary)] ring-[3px] ring-[var(--color-wise-primary)]/25 inline-block" aria-hidden="true" />
             </div>
             {/* CTA */}
-            <Link to="/admin/courses" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              background: '#1a2744', color: '#fff',
-              fontSize: 13, fontWeight: 700, textDecoration: 'none',
-              padding: '9px 18px', borderRadius: 10,
-              boxShadow: '0 2px 10px rgba(26,39,68,0.28)',
-            }}>
-              <Plus size={14} strokeWidth={2.5} />
+            <Link
+              to="/admin/courses"
+              className="inline-flex items-center gap-1.5 bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)] text-[13px] font-bold no-underline px-4 py-2.5 rounded-[10px] hover:bg-[var(--color-wise-primary-hover)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2"
+            >
+              <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
               New Course
             </Link>
           </div>
         </div>
 
         {/* ── KPI Row ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 16, marginBottom: 24 }} className="kpi-row">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
           {KPI.map(k => <KpiCard key={k.label} k={k} />)}
         </div>
 
         {/* ── Main layout ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 344px', gap: 20 }} className="main-layout">
-
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_344px] gap-5">
           {/* ── Enrollments table ── */}
-          <div style={{
-            background: '#fff', borderRadius: 18,
-            border: '1px solid rgba(26,39,68,0.07)',
-            boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.03)',
-            overflow: 'hidden',
-          }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '18px 24px', borderBottom: '1px solid rgba(26,39,68,0.06)',
-            }}>
+          <div className="bg-[var(--color-wise-surface)] rounded-[30px] ring-1 ring-[var(--color-wise-ring)] shadow-[0_1px_3px_rgba(14,15,12,0.04)] overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-wise-ring)]">
               <div>
-                <h2 style={{ fontSize: 15, fontWeight: 800, color: '#1a2744', margin: 0 }}>Recent Enrollments</h2>
-                <p style={{ fontSize: 12, color: '#a3a3b8', marginTop: 2 }}>Latest activity across all courses</p>
+                <h2 className="text-[15px] font-extrabold text-[var(--color-wise-text)] m-0">Recent Enrollments</h2>
+                <p className="text-[12px] text-[var(--color-wise-text-muted)] mt-0.5">Latest activity across all courses</p>
               </div>
-              <Link to="/admin/students" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-                fontSize: 12, fontWeight: 700, color: '#4a9ad4', textDecoration: 'none',
-                padding: '6px 12px', borderRadius: 8,
-                background: 'rgba(74,154,212,0.08)', border: '1px solid rgba(74,154,212,0.15)',
-              }}>
+              <Link
+                to="/admin/students"
+                className="inline-flex items-center gap-1 text-[12px] font-bold text-[var(--color-wise-primary-text)] no-underline px-3 py-1.5 rounded-lg bg-[var(--color-wise-mint)] hover:bg-[var(--color-wise-primary-hover)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2"
+              >
                 View all <ArrowRight size={12} strokeWidth={2.5} />
               </Link>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }} aria-label="Recent enrollments">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse" aria-label="Recent enrollments">
                 <thead>
-                  <tr style={{ background: '#f8f9fb' }}>
+                  <tr className="bg-[var(--color-wise-surface-soft)]">
                     {['Student', 'Course', 'Status', 'Progress', 'Date', ''].map(col => (
-                      <th key={col} scope="col" style={{
-                        textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#a3a3b8',
-                        padding: '10px 20px', textTransform: 'uppercase', letterSpacing: '0.8px',
-                        borderBottom: '1px solid rgba(26,39,68,0.05)', whiteSpace: 'nowrap',
-                      }}>
+                      <th
+                        key={col}
+                        scope="col"
+                        className="text-left text-[12px] font-bold text-[var(--color-wise-text-warm)] px-5 py-2.5 uppercase tracking-[0.6px] border-b border-[var(--color-wise-ring)] whitespace-nowrap"
+                      >
                         {col}
                       </th>
                     ))}
@@ -293,71 +218,61 @@ export default function AdminDashboardPage() {
                     return (
                       <tr
                         key={row.id}
-                        style={{ borderBottom: i < ENROLLMENTS.length - 1 ? '1px solid rgba(26,39,68,0.04)' : 'none', cursor: 'pointer' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = '#f8f9fb')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        className={`cursor-pointer hover:bg-[var(--color-wise-surface-soft)]/60 ${i < ENROLLMENTS.length - 1 ? 'border-b border-[var(--color-wise-ring)]' : ''}`}
                       >
                         {/* Student */}
-                        <td style={{ padding: '14px 20px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                            <div style={{
-                              width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              color: '#fff', fontSize: 13, fontWeight: 800,
-                              background: AVATARS[row.gi],
-                              boxShadow: '0 2px 6px rgba(26,39,68,0.15)',
-                            }}>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)] text-[13px] font-extrabold"
+                              aria-hidden="true"
+                            >
                               {row.name.charAt(0)}
                             </div>
                             <div>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: '#1a2744', whiteSpace: 'nowrap' }}>{row.name}</div>
-                              <div style={{ fontSize: 11, color: '#a3a3b8', marginTop: 1 }}>{row.email}</div>
+                              <div className="text-[13px] font-bold text-[var(--color-wise-text)] whitespace-nowrap">{row.name}</div>
+                              <div className="text-[11px] text-[var(--color-wise-text-muted)] mt-px">{row.email}</div>
                             </div>
                           </div>
                         </td>
 
                         {/* Course */}
-                        <td style={{ padding: '14px 20px' }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: '#1a2744' }}>{row.course}</span>
+                        <td className="px-5 py-3">
+                          <span className="text-[12px] font-semibold text-[var(--color-wise-text)]">{row.course}</span>
                         </td>
 
                         {/* Status */}
-                        <td style={{ padding: '14px 20px' }}>
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 5,
-                            fontSize: 11, fontWeight: 700, padding: '4px 10px',
-                            borderRadius: 20, background: st.bg, color: st.color,
-                          }}>
-                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: st.dot, flexShrink: 0 }} />
+                        <td className="px-5 py-3">
+                          <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full ${st.cls}`}>
                             {row.status}
                           </span>
                         </td>
 
                         {/* Progress */}
-                        <td style={{ padding: '14px 20px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                            <div style={{ width: 88, height: 5, background: '#f8f9fb', borderRadius: 99, overflow: 'hidden', flexShrink: 0 }}>
-                              <div style={{
-                                height: '100%', borderRadius: 99,
-                                width: `${row.progress}%`,
-                                background: row.progress === 100
-                                  ? 'linear-gradient(90deg,#22c55e,#16a34a)'
-                                  : row.progress === 0 ? 'rgba(26,39,68,0.08)'
-                                  : 'linear-gradient(90deg,#4a9ad4,#7c3aed)',
-                              }} />
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-[88px] h-[5px] bg-[var(--color-wise-surface-soft)] rounded-full overflow-hidden flex-shrink-0">
+                              <div
+                                className="h-full rounded-full bg-[var(--color-wise-primary)]"
+                                style={{ width: `${row.progress}%` }}
+                              />
                             </div>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: '#717182', flexShrink: 0 }}>{row.progress}%</span>
+                            <span className="text-[11px] font-bold text-[var(--color-wise-text-warm)] flex-shrink-0">{row.progress}%</span>
                           </div>
                         </td>
 
                         {/* Date */}
-                        <td style={{ padding: '14px 20px' }}>
-                          <span style={{ fontSize: 11, color: '#a3a3b8', fontWeight: 500 }}>{row.date}</span>
+                        <td className="px-5 py-3">
+                          <span className="text-[11px] text-[var(--color-wise-text-muted)] font-medium">{row.date}</span>
                         </td>
 
                         {/* Menu */}
-                        <td style={{ padding: '14px 16px' }}>
-                          <button type="button" style={{ padding: 5, border: 'none', background: 'transparent', cursor: 'pointer', color: '#a3a3b8', display: 'flex', alignItems: 'center', borderRadius: 6 }}>
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            aria-label="Row actions"
+                            className="p-1.5 border-0 bg-transparent cursor-pointer text-[var(--color-wise-text-muted)] hover:text-[var(--color-wise-text)] flex items-center rounded-md focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2"
+                          >
                             <MoreHorizontal size={15} />
                           </button>
                         </td>
@@ -369,103 +284,67 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Footer */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '11px 24px', borderTop: '1px solid rgba(26,39,68,0.05)', background: '#fafbfc',
-            }}>
-              <span style={{ fontSize: 11, color: '#a3a3b8' }}>Showing 5 of 247 students</span>
-              <Link to="/admin/students" style={{
-                fontSize: 11, fontWeight: 700, color: '#4a9ad4', textDecoration: 'none',
-                display: 'flex', alignItems: 'center', gap: 3,
-              }}>
+            <div className="flex items-center justify-between px-6 py-3 border-t border-[var(--color-wise-ring)] bg-[var(--color-wise-canvas)]">
+              <span className="text-[11px] text-[var(--color-wise-text-muted)]">Showing 5 of 247 students</span>
+              <Link
+                to="/admin/students"
+                className="text-[11px] font-bold text-[var(--color-wise-primary-text)] no-underline flex items-center gap-1 hover:underline"
+              >
                 All students <ChevronRight size={11} strokeWidth={3} />
               </Link>
             </div>
           </div>
 
           {/* ── Right column ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
+          <div className="flex flex-col gap-4">
             {/* Quick Actions */}
-            <div style={{
-              background: '#fff', borderRadius: 18,
-              border: '1px solid rgba(26,39,68,0.07)',
-              boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.03)',
-              overflow: 'hidden',
-            }}>
-              <div style={{ padding: '16px 20px 10px', borderBottom: '1px solid rgba(26,39,68,0.06)' }}>
-                <h2 style={{ fontSize: 14, fontWeight: 800, color: '#1a2744', margin: 0 }}>Quick Actions</h2>
+            <div className="bg-[var(--color-wise-surface)] rounded-[30px] ring-1 ring-[var(--color-wise-ring)] shadow-[0_1px_3px_rgba(14,15,12,0.04)] overflow-hidden">
+              <div className="px-5 pt-4 pb-2.5 border-b border-[var(--color-wise-ring)]">
+                <h2 className="text-[14px] font-extrabold text-[var(--color-wise-text)] m-0">Quick Actions</h2>
               </div>
-              <div style={{ padding: '8px 12px 12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {QUICK_ACTIONS.map(item => (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    style={{
-                      display: 'flex', flexDirection: 'column', gap: 6,
-                      padding: '12px 14px', borderRadius: 12, textDecoration: 'none',
-                      background: '#f8f9fb', border: '1px solid rgba(26,39,68,0.05)',
-                      position: 'relative', transition: 'all 0.15s',
-                    }}
-                    onMouseEnter={e => {
-                      const el = e.currentTarget as HTMLAnchorElement
-                      el.style.background = '#f0f4f8'
-                      el.style.borderColor = item.accent + '35'
-                    }}
-                    onMouseLeave={e => {
-                      const el = e.currentTarget as HTMLAnchorElement
-                      el.style.background = '#f8f9fb'
-                      el.style.borderColor = 'rgba(26,39,68,0.05)'
-                    }}
-                  >
-                    <span style={{ fontSize: 20, lineHeight: 1 }}>{item.emoji}</span>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#1a2744', lineHeight: 1.2 }}>{item.label}</div>
-                      <div style={{ fontSize: 10, color: '#a3a3b8', marginTop: 2, fontWeight: 500 }}>{item.sub}</div>
-                    </div>
-                    {item.count !== null && (
-                      <span style={{
-                        position: 'absolute', top: 8, right: 8,
-                        background: item.accent, color: '#fff',
-                        fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 20,
-                      }}>
-                        {item.count}
-                      </span>
-                    )}
-                  </Link>
-                ))}
+              <div className="px-3 pt-2 pb-3 grid grid-cols-2 gap-2">
+                {QUICK_ACTIONS.map(item => {
+                  const QIcon = item.icon
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className="flex flex-col gap-1.5 p-3.5 rounded-xl no-underline bg-[var(--color-wise-canvas)] ring-1 ring-[var(--color-wise-ring)] hover:bg-[var(--color-wise-surface-soft)] hover:ring-[var(--color-wise-ring-strong)] transition-colors relative focus-visible:outline-2 focus-visible:outline-[var(--color-wise-primary-text)] focus-visible:outline-offset-2"
+                    >
+                      <QIcon size={20} className="text-[var(--color-wise-primary-text)]" aria-hidden="true" />
+                      <div>
+                        <div className="text-[12px] font-bold text-[var(--color-wise-text)] leading-tight">{item.label}</div>
+                        <div className="text-[10px] text-[var(--color-wise-text-muted)] mt-0.5 font-medium">{item.sub}</div>
+                      </div>
+                      {item.count !== null && (
+                        <span className="absolute top-2 right-2 bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)] text-[9px] font-extrabold px-1.5 py-0.5 rounded-full">
+                          {item.count}
+                        </span>
+                      )}
+                    </Link>
+                  )
+                })}
               </div>
             </div>
 
             {/* Platform Health */}
-            <div style={{
-              background: '#fff', borderRadius: 18,
-              border: '1px solid rgba(26,39,68,0.07)',
-              boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.03)',
-              overflow: 'hidden',
-            }}>
-              <div style={{ padding: '16px 20px 10px', borderBottom: '1px solid rgba(26,39,68,0.06)' }}>
-                <h2 style={{ fontSize: 14, fontWeight: 800, color: '#1a2744', margin: 0 }}>Platform Health</h2>
+            <div className="bg-[var(--color-wise-surface)] rounded-[30px] ring-1 ring-[var(--color-wise-ring)] shadow-[0_1px_3px_rgba(14,15,12,0.04)] overflow-hidden">
+              <div className="px-5 pt-4 pb-2.5 border-b border-[var(--color-wise-ring)]">
+                <h2 className="text-[14px] font-extrabold text-[var(--color-wise-text)] m-0">Platform Health</h2>
               </div>
-              <div style={{ padding: '10px 20px 16px' }}>
+              <div className="px-5 pt-2.5 pb-4">
                 {HEALTH.map((item, i) => {
                   const HIcon = item.icon
                   return (
-                    <div key={i} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '9px 0',
-                      borderBottom: i < HEALTH.length - 1 ? '1px solid rgba(26,39,68,0.04)' : 'none',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                        <HIcon size={14} color={item.ok ? '#059669' : '#f59e0b'} strokeWidth={2} />
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#1a2744' }}>{item.label}</span>
+                    <div
+                      key={i}
+                      className={`flex items-center justify-between py-2.5 ${i < HEALTH.length - 1 ? 'border-b border-[var(--color-wise-ring)]' : ''}`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <HIcon size={14} className={item.ok ? 'text-[var(--color-wise-success)]' : 'text-[var(--color-wise-danger)]'} strokeWidth={2} aria-hidden="true" />
+                        <span className="text-[12px] font-semibold text-[var(--color-wise-text)]">{item.label}</span>
                       </div>
-                      <span style={{
-                        fontSize: 11, fontWeight: 700,
-                        color: item.ok ? '#059669' : '#d97706',
-                        background: item.ok ? 'rgba(5,150,105,0.08)' : 'rgba(245,158,11,0.08)',
-                        padding: '3px 9px', borderRadius: 20,
-                      }}>
+                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${item.ok ? 'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]' : 'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)]'}`}>
                         {item.value}
                       </span>
                     </div>
@@ -475,48 +354,29 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Live Activity */}
-            <div style={{
-              background: '#fff', borderRadius: 18,
-              border: '1px solid rgba(26,39,68,0.07)',
-              boxShadow: '0 1px 3px rgba(26,39,68,0.06), 0 4px 16px rgba(26,39,68,0.03)',
-              overflow: 'hidden',
-            }}>
-              <div style={{ padding: '16px 20px 10px', borderBottom: '1px solid rgba(26,39,68,0.06)' }}>
-                <h2 style={{ fontSize: 14, fontWeight: 800, color: '#1a2744', margin: 0 }}>Live Activity</h2>
+            <div className="bg-[var(--color-wise-surface)] rounded-[30px] ring-1 ring-[var(--color-wise-ring)] shadow-[0_1px_3px_rgba(14,15,12,0.04)] overflow-hidden">
+              <div className="px-5 pt-4 pb-2.5 border-b border-[var(--color-wise-ring)]">
+                <h2 className="text-[14px] font-extrabold text-[var(--color-wise-text)] m-0">Live Activity</h2>
               </div>
-              <div style={{ padding: '8px 16px 14px', position: 'relative' }}>
-                {/* Timeline connector */}
-                <div style={{
-                  position: 'absolute', top: 26, bottom: 20, left: 31,
-                  width: 1, background: 'linear-gradient(to bottom, rgba(26,39,68,0.08), transparent)',
-                }} />
-                {ACTIVITY.map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', position: 'relative' }}>
-                    <div style={{
-                      width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                      background: item.softBg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 13, border: '2px solid #fff',
-                      boxShadow: '0 1px 4px rgba(26,39,68,0.1)', zIndex: 1, position: 'relative',
-                    }}>
-                      {item.emoji}
+              <div className="px-4 pt-2 pb-3.5 relative">
+                {ACTIVITY.map((item, i) => {
+                  const AIcon = item.icon
+                  return (
+                    <div key={i} className="flex items-start gap-2.5 py-2 relative">
+                      <div className="w-[30px] h-[30px] rounded-full flex-shrink-0 bg-[var(--color-wise-mint)] flex items-center justify-center text-[var(--color-wise-primary-text)] ring-2 ring-white relative z-10">
+                        <AIcon size={14} aria-hidden="true" />
+                      </div>
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <p className="text-[11px] text-[var(--color-wise-text)] font-medium m-0 leading-[1.5]">{item.text}</p>
+                        <p className="text-[10px] text-[var(--color-wise-text-muted)] mt-0.5">{item.time}</p>
+                      </div>
                     </div>
-                    <div style={{ flex: 1, minWidth: 0, paddingTop: 3 }}>
-                      <p style={{ fontSize: 11, color: '#1a2744', fontWeight: 500, margin: 0, lineHeight: 1.5 }}>{item.text}</p>
-                      <p style={{ fontSize: 10, color: '#a3a3b8', marginTop: 2 }}>{item.time}</p>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>
         </div>
-
-        {/* Responsive overrides */}
-        <style>{`
-          @media (max-width: 1200px) { .kpi-row { grid-template-columns: repeat(3,1fr) !important; } }
-          @media (max-width: 900px)  { .kpi-row { grid-template-columns: repeat(2,1fr) !important; } .main-layout { grid-template-columns: 1fr !important; } }
-          @media (max-width: 540px)  { .kpi-row { grid-template-columns: 1fr !important; } }
-        `}</style>
       </div>
     </AdminShell>
   )
