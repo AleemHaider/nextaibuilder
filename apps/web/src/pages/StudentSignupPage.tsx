@@ -12,6 +12,7 @@ import { Button } from '../components/ui/Button'
 import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
 import { Logo } from '../components/Logo'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 function GoogleIcon() {
   return (
@@ -33,6 +34,7 @@ const PERKS = [
 ]
 
 export default function StudentSignupPage() {
+  usePageMeta({ title: 'Create account' })
   const { isAuthenticated, isLoading, login } = useAuth()
   const navigate = useNavigate()
 

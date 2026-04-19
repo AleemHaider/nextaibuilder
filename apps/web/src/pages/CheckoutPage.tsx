@@ -42,6 +42,7 @@ import {
   type OneTimeCheckoutResponse,
 } from '../lib/api'
 import { cn } from '../lib/utils'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -1116,6 +1117,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 // ---------------------------------------------------------------------------
 
 export default function CheckoutPage() {
+  usePageMeta({ title: 'Checkout' })
   const { slug = '' } = useParams<{ slug: string }>()
   const [searchParams] = useSearchParams()
   const paymentPlanId = searchParams.get('plan') ?? 'default'

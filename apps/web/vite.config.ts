@@ -13,13 +13,14 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png', 'og-image.png'],
       manifest: {
-        name: 'nextaibuilder',
+        name: 'nextaibuilder — AI product cohorts that ship',
         short_name: 'nextaibuilder',
-        description: 'AI cohort learning platform',
-        theme_color: '#1a2744',
-        background_color: '#f8f9fb',
+        description:
+          'Live and recorded cohorts that teach you to ship production AI products with the Anthropic Claude API.',
+        theme_color: '#0e0f0c',
+        background_color: '#0e0f0c',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',

@@ -13,6 +13,7 @@ import { Button } from '../components/ui/Button'
 import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
 import { Logo } from '../components/Logo'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 // ---------------------------------------------------------------------------
 // SSO icons — kept as inline SVGs so Google's brand colours remain literal
@@ -53,6 +54,7 @@ const PERKS = [
 // StudentLoginPage
 // ---------------------------------------------------------------------------
 export default function StudentLoginPage() {
+  usePageMeta({ title: 'Sign in' })
   const { isAuthenticated, isLoading, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()

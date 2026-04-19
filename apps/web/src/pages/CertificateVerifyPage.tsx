@@ -33,6 +33,7 @@ import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { cn } from '../lib/utils'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -74,6 +75,7 @@ function formatDate(iso: string | null): string {
 // ── Page ──────────────────────────────────────────────────────────────────
 
 export default function CertificateVerifyPage() {
+  usePageMeta({ title: 'Verify certificate' })
   const { token } = useParams<{ token: string }>()
   const navigate = useNavigate()
 

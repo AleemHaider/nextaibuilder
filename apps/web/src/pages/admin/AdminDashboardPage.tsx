@@ -9,6 +9,7 @@ import {
   GraduationCap, CreditCard, Mail, BarChart2, Rocket,
 } from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
+import { usePageMeta } from '../../hooks/usePageMeta'
 
 // ---------------------------------------------------------------------------
 // Data
@@ -141,6 +142,7 @@ function KpiCard({ k }: { k: typeof KPI[number] }) {
 // ---------------------------------------------------------------------------
 
 export default function AdminDashboardPage() {
+  usePageMeta({ title: 'Admin dashboard' })
   const now   = new Date()
   const hour  = now.getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'

@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { adminLogin } from '../lib/api'
 import { Logo } from '../components/Logo'
 import { cn } from '../lib/utils'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 // ---------------------------------------------------------------------------
 // Shared admin left panel — Wise-themed
@@ -87,6 +88,7 @@ const inputBase = cn(
 // AdminLoginPage
 // ---------------------------------------------------------------------------
 export default function AdminLoginPage() {
+  usePageMeta({ title: 'Admin sign in' })
   const { isAuthenticated, isLoading, user, login } = useAuth()
   const navigate = useNavigate()
 
