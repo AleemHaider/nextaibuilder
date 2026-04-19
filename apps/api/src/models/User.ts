@@ -52,6 +52,12 @@ export interface IUser extends Document {
   progressResetAt?: Date | null
   // FIR-23 — Stripe customer linkage
   stripeCustomerId?: string | null
+  // Sprint 4 Story 20 — soft-delete timestamp set by the student danger-zone
+  // account-delete flow (POST /api/student/profile/delete). `null` means the
+  // account is live; a Date means the account is tombstoned and the PII has
+  // been anonymised. The middleware-level `isActive` guard still blocks
+  // authentication, so a tombstoned user cannot log back in.
+  deletedAt?: Date | null
 }
 
 const userSchema = new Schema<IUser>(
@@ -97,6 +103,8 @@ const userSchema = new Schema<IUser>(
     progressResetAt:     { type: Date, default: null },
     // FIR-23 — Stripe customer linkage
     stripeCustomerId:    { type: String, default: null },
+    // Sprint 4 Story 20 — soft-delete timestamp (null = live, Date = tombstoned)
+    deletedAt:           { type: Date, default: null },
   },
   { timestamps: true },
 )

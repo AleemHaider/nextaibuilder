@@ -800,6 +800,25 @@ export async function fetchLiveSessions(slug: string): Promise<LiveSessionsRespo
   return res.json() as Promise<LiveSessionsResponse>
 }
 
+// Sprint 4 Story 21 — Enrollment status (used by LiveSessionsPage to gate
+// Zoom links behind the PAID paymentStatus). Kept intentionally narrow: a
+// full enrollment fetch would drag in installments + progress enrichment.
+export interface StudentEnrollmentStatus {
+  paymentStatus: 'PAID' | 'PARTIAL' | 'PENDING' | 'FAILED'
+  status: 'ACTIVE' | 'COMPLETED' | 'SUSPENDED' | 'REVOKED'
+}
+
+export async function fetchStudentEnrollmentStatus(
+  slug: string,
+): Promise<StudentEnrollmentStatus> {
+  const res = await authFetch(`${BASE}/student/enrollments/${slug}/status`)
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to fetch enrollment status')
+  }
+  return res.json() as Promise<StudentEnrollmentStatus>
+}
+
 // FIR-58 — Fetch student certificates
 export async function fetchStudentCertificates(): Promise<CertificatesResponse> {
   const res = await authFetch(`${BASE}/student/certificates`)
@@ -1282,6 +1301,60 @@ export async function markAllNotificationsRead(): Promise<{ success: true }> {
     throw new Error(body.message ?? 'Failed to mark all notifications read')
   }
   return res.json() as Promise<{ success: true }>
+}
+
+// Sprint 4 Story 20 — Delete a single notification. The backend route lives
+// under /api/student (not /api/v1/student) to match every other student
+// notification helper above. Ownership is enforced server-side in the Mongo
+// query, so a 404 from the server means either the id doesn't exist OR it
+// belongs to somebody else — both cases are indistinguishable to the client,
+// which is intentional (no enumeration side-channel).
+export async function deleteNotification(id: string): Promise<{ ok: true }> {
+  const res = await authFetch(`/api/student/notifications/${id}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to delete notification')
+  }
+  return res.json() as Promise<{ ok: true }>
+}
+
+// Sprint 4 Story 20 — Bulk delete. When `status` is omitted the server nukes
+// every notification the caller owns. When "read" is passed only previously
+// read rows are removed — this backs the "Delete all read" CTA in the
+// NotificationsPage header.
+export async function deleteAllNotifications(
+  status?: 'read' | 'unread',
+): Promise<{ ok: true; deletedCount: number }> {
+  const qs = status ? `?status=${status}` : ''
+  const res = await authFetch(`/api/student/notifications${qs}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to delete notifications')
+  }
+  return res.json() as Promise<{ ok: true; deletedCount: number }>
+}
+
+// Sprint 4 Story 20 — Student danger-zone account-delete. POST (not DELETE)
+// because the payload carries the confirmation string, and some CDN / proxy
+// layers still strip bodies from DELETE requests. On success the caller
+// should clear auth state and redirect to `/`.
+export async function deleteStudentAccount(
+  confirmation: string,
+): Promise<{ deleted: true }> {
+  const res = await authFetch('/api/student/profile/delete', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ confirmation }),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to delete account')
+  }
+  return res.json() as Promise<{ deleted: true }>
 }
 
 // ---------------------------------------------------------------------------

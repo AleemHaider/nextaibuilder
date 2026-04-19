@@ -5,7 +5,9 @@
 // PATCH  /api/student/profile/avatar
 // PATCH  /api/student/profile/notifications
 // PATCH  /api/student/profile/password
-// DELETE /api/student/profile
+// DELETE /api/student/profile                 — legacy hard-delete (PBA-315)
+// POST   /api/student/profile/delete          — soft-delete / anonymise
+//                                               (Sprint 4 Story 20)
 
 import type { FastifyInstance } from 'fastify'
 import bcrypt from 'bcryptjs'
@@ -18,6 +20,9 @@ import { StudentStep } from '../../models/StudentStep.js'
 import { StepSubmission } from '../../models/StepSubmission.js'
 import { UserBadge } from '../../models/UserBadge.js'
 import { Certificate } from '../../models/Certificate.js'
+import { RefreshToken } from '../../models/RefreshToken.js'
+import { Enrollment } from '../../models/Enrollment.js'
+import { stripe } from '../../lib/stripe.js'
 import { s3, BUCKET_NAME, buildAvatarS3Key, IS_S3_CONFIGURED } from '../../lib/s3.js'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
@@ -58,6 +63,16 @@ const deleteAccountSchema = z.object({
   password:     z.string().optional(),
   confirmation: z.string().optional(),
 })
+
+// Sprint 4 Story 20 — danger-zone soft-delete schema. The student types
+// "DELETE MY ACCOUNT" or their own email into a confirmation Input. We
+// require the literal string so an automated client or a mis-wired button
+// can't wipe an account by accident.
+const softDeleteAccountSchema = z.object({
+  confirmation: z.string().min(1, 'Confirmation is required.'),
+})
+
+const SOFT_DELETE_TOKEN = 'DELETE MY ACCOUNT'
 
 // ── Password strength validator ────────────────────────────────────────────
 
@@ -409,6 +424,145 @@ export async function studentProfileRoutes(fastify: FastifyInstance) {
       reply.clearCookie('nab_refresh', { path: '/api/auth' })
 
       return reply.code(200).send({ message: 'Account deleted.' })
+    },
+  )
+
+  // ── POST /profile/delete ── Sprint 4 Story 20 (student danger zone) ────
+  //
+  // Soft-delete / anonymise flow. Unlike the legacy DELETE /profile above
+  // (which hard-deletes every child record), this endpoint preserves
+  // enrollments, StripePayment, EmailLog and Certificate rows — those hold
+  // the immutable financial + audit truth the finance team needs for
+  // refunds and tax. The User document itself is tombstoned by:
+  //   • isActive = false            → authenticate() middleware blocks future logins
+  //   • deletedAt = now              → explicit tombstone timestamp
+  //   • email, firstName, lastName, oauthId, oauthProvider, passwordHash
+  //                                  → overwritten with anonymised placeholders
+  //     so there's no residual PII on the row.
+  //
+  // Side effects (best-effort, wrapped in try/catch so a Stripe outage or
+  // placeholder API key doesn't block the local tombstone):
+  //   • stripe.subscriptions.cancel() for every active Enrollment subscription
+  //   • RefreshToken.deleteMany() so every sessioned device is revoked
+  //
+  // The request is gated behind a confirmation body — the student must
+  // type either the literal string "DELETE MY ACCOUNT" or their own email.
+  // Any other value → 400 CONFIRMATION_MISMATCH. This mirrors GitHub's
+  // org-delete UX and prevents a stray click or broken button from wiping
+  // the account.
+  fastify.post<{ Body: { confirmation?: string } }>(
+    '/profile/delete',
+    { preHandler: requireStudent },
+    async (request, reply) => {
+      const { sub: userId } = request.user as JwtPayload
+
+      const parse = softDeleteAccountSchema.safeParse(request.body ?? {})
+      if (!parse.success) {
+        return reply.code(400).send({
+          error:   'INVALID_BODY',
+          message: 'Confirmation is required.',
+          details: parse.error.flatten().fieldErrors,
+        })
+      }
+      const { confirmation } = parse.data
+
+      const dbUser = await User.findById(userId)
+      if (!dbUser) {
+        return reply.code(404).send({
+          error:   'USER_NOT_FOUND',
+          message: 'User not found.',
+        })
+      }
+
+      // Already tombstoned — treat as 404 so repeated calls are idempotent
+      // without leaking "this account used to exist" metadata.
+      if (dbUser.deletedAt) {
+        return reply.code(404).send({
+          error:   'USER_NOT_FOUND',
+          message: 'User not found.',
+        })
+      }
+
+      // Guard: must match either the literal token or the user's email.
+      // Trim + case-insensitive email comparison matches how humans actually
+      // type these in a stressed "I'm deleting my account" moment.
+      const trimmed = confirmation.trim()
+      const matchesToken = trimmed === SOFT_DELETE_TOKEN
+      const matchesEmail = trimmed.toLowerCase() === (dbUser.email ?? '').toLowerCase()
+      if (!matchesToken && !matchesEmail) {
+        return reply.code(400).send({
+          error:   'CONFIRMATION_MISMATCH',
+          message: `Type "${SOFT_DELETE_TOKEN}" or your email to confirm.`,
+        })
+      }
+
+      fastify.log.info({ userId }, 'Student account soft-delete requested')
+
+      // ── Cancel active Stripe subscriptions (best-effort) ────────────────
+      // We load the enrollments fresh so an active row that was created
+      // between request parse and now is still caught. Cancel failures are
+      // logged and swallowed — a placeholder STRIPE_SECRET_KEY in dev or a
+      // Stripe outage must not block the local tombstone.
+      try {
+        const activeEnrollments = await Enrollment.find({
+          studentId: userId,
+          stripeSubscriptionId: { $exists: true, $ne: null },
+          status: 'ACTIVE',
+        }).select('stripeSubscriptionId')
+
+        for (const enr of activeEnrollments) {
+          const subId = enr.stripeSubscriptionId
+          if (!subId) continue
+          try {
+            await stripe.subscriptions.cancel(subId)
+          } catch (err) {
+            fastify.log.warn(
+              { userId, subId, err: (err as Error).message },
+              'Stripe subscription cancel failed during account delete — continuing',
+            )
+          }
+        }
+      } catch (err) {
+        fastify.log.warn(
+          { userId, err: (err as Error).message },
+          'Failed to enumerate Stripe subscriptions for cancellation — continuing',
+        )
+      }
+
+      // ── Revoke all refresh tokens (force-logout every device) ───────────
+      try {
+        await RefreshToken.deleteMany({ userId })
+      } catch (err) {
+        fastify.log.warn(
+          { userId, err: (err as Error).message },
+          'RefreshToken.deleteMany failed during account delete — continuing',
+        )
+      }
+
+      // ── Anonymise PII + tombstone ───────────────────────────────────────
+      // The anon-local TLD is a reserved sink that will never accept real
+      // mail, so if any worker tries to send to this address it will bounce
+      // loudly rather than silently reach a real inbox.
+      const tombstoneEmail = `deleted-${userId}@anon.local`
+      await User.findByIdAndUpdate(userId, {
+        $set: {
+          email:         tombstoneEmail,
+          firstName:     'Deleted',
+          lastName:      'User',
+          oauthId:       null,
+          oauthProvider: null,
+          passwordHash:  null,
+          isActive:      false,
+          deletedAt:     new Date(),
+        },
+      })
+
+      // Clear the refresh cookie on this browser too — the deleteMany above
+      // revoked every server-side token, but the cookie still sits in the
+      // client until we explicitly clear it.
+      reply.clearCookie('nab_refresh', { path: '/api/auth' })
+
+      return reply.code(200).send({ deleted: true })
     },
   )
 }

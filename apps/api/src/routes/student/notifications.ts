@@ -3,6 +3,8 @@
 // PATCH  /api/student/notifications/read-all — mark all as read
 // PATCH  /api/student/notifications/:id/read — mark single notification as read
 // DELETE /api/student/notifications/:id      — delete a notification
+// DELETE /api/student/notifications          — bulk delete (optional ?status=read)
+//                                              Sprint 4 Story 20
 
 import type { FastifyInstance } from 'fastify'
 import { Types } from 'mongoose'
@@ -92,6 +94,33 @@ export async function studentNotificationsRoutes(fastify: FastifyInstance) {
 
       const doc = notification as typeof notification & { id: string }
       return reply.send({ id: doc.id, read: notification.read })
+    },
+  )
+
+  // ── DELETE /notifications ── Bulk delete (Sprint 4 Story 20) ───────────
+  // Optional `?status=read` narrows the scope to only read notifications,
+  // which is what the NotificationsPage "Delete all read" CTA sends. When
+  // the query is omitted we delete every notification the user owns — this
+  // mirrors the semantics of Gmail's "delete all" trash action.
+  //
+  // IMPORTANT: registered BEFORE /:id so Fastify's path matcher doesn't try
+  // to parse the collection-level DELETE as a notificationId.
+  fastify.delete<{ Querystring: { status?: string } }>(
+    '/notifications',
+    { preHandler: requireStudent },
+    async (request, reply) => {
+      const { sub: userId } = request.user as JwtPayload
+      const status = request.query.status
+
+      const filter: { userId: Types.ObjectId; read?: boolean } = {
+        userId: new Types.ObjectId(userId),
+      }
+      if (status === 'read') filter.read = true
+      else if (status === 'unread') filter.read = false
+      // Any other value (including undefined) → delete everything the user owns.
+
+      const result = await Notification.deleteMany(filter)
+      return reply.send({ ok: true, deletedCount: result.deletedCount ?? 0 })
     },
   )
 
