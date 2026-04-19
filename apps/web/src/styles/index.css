@@ -73,24 +73,36 @@
   --shadow-focus: 0 0 0 3px rgba(159, 232, 112, 0.35);
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/*
+ * Base resets — wrapped in @layer base so Tailwind's declared layer order
+ * (theme, base, components, utilities) places utilities AFTER these rules.
+ * Without the @layer wrapper the `*` reset was unlayered and beat Tailwind's
+ * spacing utilities at matching specificity — which meant `pl-11`, `px-20`,
+ * `p-10`, etc. were being silently overridden by `padding: 0`. That looked
+ * like widespread Sprint 3/Wave 10 design regressions (icon overlaps,
+ * bottom-anchored flex content, cramped cards) but was actually a single
+ * cascade-order bug. Do NOT move these rules back out of @layer base.
+ */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 
-body {
-  font-family: 'Inter', sans-serif;
-  /* Canonical Wise canvas; legacy pages previously rendered on #f8f9fb. */
-  background: #fafaf8;
-  color: #1a2744;
-  /* Enable Wise's contextual-alternates convention globally so components
-     don't have to opt in per-surface. */
-  font-feature-settings: "calt" 1;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  body {
+    font-family: 'Inter', sans-serif;
+    /* Canonical Wise canvas; legacy pages previously rendered on #f8f9fb. */
+    background: var(--color-wise-canvas);
+    color: var(--color-wise-text);
+    /* Enable Wise's contextual-alternates convention globally so components
+       don't have to opt in per-surface. */
+    font-feature-settings: "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
 /* FIR-161 — Prose class for markdown text lessons */
