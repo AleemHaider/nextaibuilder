@@ -1,0 +1,5 @@
+# Playwright E2E artifacts (Sprint 4 Story 17)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

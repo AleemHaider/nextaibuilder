@@ -23,5 +23,8 @@ export default defineConfig({
     globals: true,
     setupFiles: [resolve(__dirname, 'src/test/setup.ts')],
     css: true,
+    // Story 17 added Playwright E2E specs under tests/e2e/; vitest picks them
+    // up otherwise and fails (Playwright APIs are not in scope here).
+    exclude: ['node_modules/**', 'dist/**', 'tests/e2e/**'],
   },
 })
