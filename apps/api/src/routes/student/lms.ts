@@ -21,6 +21,14 @@ import { LiveSession } from '../../models/LiveSession.js'
 import { Certificate } from '../../models/Certificate.js'
 import { PaymentPlan } from '../../models/PaymentPlan.js'
 import { User } from '../../models/User.js'
+import { SetupStep } from '../../models/SetupStep.js'
+import { StudentStep } from '../../models/StudentStep.js'
+import { StepSubmission } from '../../models/StepSubmission.js'
+import {
+  buildS3Key,
+  getPresignedPutUrl,
+  getPresignedReadUrl,
+} from '../../lib/s3.js'
 import { bullMQConnection } from '../../lib/redis.js'
 import type { IEnrollment } from '../../models/Enrollment.js'
 import type { ICohort } from '../../models/Cohort.js'
@@ -31,6 +39,16 @@ const emailNotificationsQueue = new Queue('email-notifications', {
   connection: bullMQConnection,
   defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 2000 } },
 })
+
+// Sprint 2 Story 12 — Screenshot validation queue (shares the worker
+// registered by the PBA step submission flow — see screenshotValidationWorker.ts).
+const screenshotQueue = new Queue('screenshot-validation-queue', {
+  connection: bullMQConnection,
+})
+
+// Sprint 2 Story 12 — Max attempts per lesson per day (mirrors PBA step cap).
+const TOOL_SETUP_DAILY_LIMIT = 10
+const TOOL_SETUP_ALLOWED_CONTENT_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 
 // ── Loom embed URL helper (same pattern as student/steps.ts) ─────────────
 function toStudentEmbedUrl(videoUrl: string | null | undefined): string | null {
@@ -808,6 +826,281 @@ export async function studentLmsRoutes(fastify: FastifyInstance) {
       })
 
       return reply.send({ certificates: result })
+    },
+  )
+
+  // ── Sprint 2 Story 12 — Tool-setup screenshot validation (LMS adapter) ───
+  //
+  // Lessons of type TOOL_SETUP reference a SetupStep via `setupStepId`. That
+  // step owns the validation criteria and checklist consumed by the Claude
+  // Vision worker. This adapter provides a lesson-scoped surface that
+  // re-uses the exact same StepSubmission / screenshot-validation-queue
+  // plumbing as the PBA-style `/api/student/steps` endpoints, so the worker
+  // (screenshotValidationWorker.ts) remains untouched.
+  //
+  // Flow:
+  //   1. POST /lessons/:lessonId/tool-setup-submission/presign → presigned PUT
+  //   2. Client PUTs the file to the returned URL.
+  //   3. POST /lessons/:lessonId/tool-setup-submission → enqueues ML job.
+  //   4. GET  /lessons/:lessonId/tool-setup-submission/latest → polled.
+
+  /**
+   * Shared helper: resolve a TOOL_SETUP lesson for this student, returning
+   * the linked SetupStep document or null when not applicable.
+   */
+  async function resolveToolSetupContext(
+    studentId: string,
+    lessonId: string,
+  ): Promise<
+    | { ok: true; lesson: ILesson; setupStepId: Types.ObjectId; enrollment: IEnrollment }
+    | { ok: false; code: number; error: string; message: string }
+  > {
+    if (!Types.ObjectId.isValid(lessonId)) {
+      return { ok: false, code: 400, error: 'VALIDATION_ERROR', message: 'Invalid lessonId.' }
+    }
+
+    const lesson = await Lesson.findOne({
+      _id:         new Types.ObjectId(lessonId),
+      isPublished: true,
+    }).lean() as (ILesson | null)
+
+    if (!lesson) {
+      return { ok: false, code: 404, error: 'NOT_FOUND', message: 'Lesson not found.' }
+    }
+
+    if (lesson.type !== 'TOOL_SETUP') {
+      return {
+        ok: false,
+        code: 400,
+        error: 'NOT_TOOL_SETUP',
+        message: 'Lesson is not a TOOL_SETUP lesson.',
+      }
+    }
+
+    if (!lesson.setupStepId) {
+      // Misconfigured lesson — admin should attach a SetupStep. Treat as 409
+      // so the student can see a clear error while the situation is fixed.
+      return {
+        ok: false,
+        code: 409,
+        error: 'NO_SETUP_STEP_LINKED',
+        message: 'This tool-setup lesson is not yet linked to a validation step.',
+      }
+    }
+
+    const enrollment = await findActiveEnrollment(
+      studentId,
+      lesson.cohortId as Types.ObjectId,
+    )
+    if (!enrollment) {
+      return { ok: false, code: 403, error: 'NOT_ENROLLED', message: 'Active enrollment required.' }
+    }
+
+    return {
+      ok: true,
+      lesson,
+      setupStepId: lesson.setupStepId as Types.ObjectId,
+      enrollment,
+    }
+  }
+
+  // POST /api/v1/student/lessons/:lessonId/tool-setup-submission/presign
+  fastify.post<{
+    Params: { lessonId: string }
+    Body:   { contentType?: string }
+  }>(
+    '/lessons/:lessonId/tool-setup-submission/presign',
+    { preHandler: requireStudent },
+    async (request, reply) => {
+      const { sub: studentId } = request.user as JwtPayload
+      const { lessonId } = request.params
+      const { contentType } = request.body ?? {}
+
+      const ctx = await resolveToolSetupContext(studentId, lessonId)
+      if (!ctx.ok) return reply.code(ctx.code).send({ error: ctx.error, message: ctx.message })
+
+      // Block while a previous submission is still in flight.
+      const existingPending = await StepSubmission.findOne({
+        userId: studentId,
+        stepId: ctx.setupStepId,
+        status: { $in: ['PENDING', 'ML_PROCESSING', 'HUMAN_REVIEW'] },
+      })
+      if (existingPending) {
+        return reply.code(409).send({
+          error:   'PENDING_SUBMISSION_EXISTS',
+          message: 'A submission is already under review for this lesson.',
+        })
+      }
+
+      // Daily cap — mirrors the PBA step flow.
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+      const todayCount = await StepSubmission.countDocuments({
+        userId:    studentId,
+        stepId:    ctx.setupStepId,
+        createdAt: { $gte: todayStart },
+      })
+      if (todayCount >= TOOL_SETUP_DAILY_LIMIT) {
+        return reply.code(429).send({
+          error:   'RATE_LIMIT',
+          message: 'Maximum 10 submissions per lesson per day.',
+        })
+      }
+
+      const totalAttempts = await StepSubmission.countDocuments({
+        userId: studentId,
+        stepId: ctx.setupStepId,
+      })
+
+      const resolvedContentType =
+        contentType && TOOL_SETUP_ALLOWED_CONTENT_TYPES.includes(contentType)
+          ? contentType
+          : 'image/png'
+
+      const s3Key = buildS3Key(studentId, ctx.setupStepId.toString(), totalAttempts + 1)
+      const presignedUrl = await getPresignedPutUrl(s3Key, resolvedContentType, 300)
+
+      return reply.send({
+        presignedUrl,
+        s3Key,
+        contentType: resolvedContentType,
+      })
+    },
+  )
+
+  // POST /api/v1/student/lessons/:lessonId/tool-setup-submission
+  fastify.post<{
+    Params: { lessonId: string }
+    Body:   { s3Key: string }
+  }>(
+    '/lessons/:lessonId/tool-setup-submission',
+    { preHandler: requireStudent },
+    async (request, reply) => {
+      const { sub: studentId } = request.user as JwtPayload
+      const { lessonId } = request.params
+      const { s3Key } = request.body ?? {}
+
+      if (!s3Key) {
+        return reply.code(400).send({ error: 'MISSING_S3_KEY', message: 's3Key is required.' })
+      }
+
+      const ctx = await resolveToolSetupContext(studentId, lessonId)
+      if (!ctx.ok) return reply.code(ctx.code).send({ error: ctx.error, message: ctx.message })
+
+      // IDOR guard — the key must live under this student + step prefix.
+      const keyPrefix = process.env.S3_KEY_PREFIX ? `${process.env.S3_KEY_PREFIX}/` : ''
+      const expectedPrefix =
+        `${keyPrefix}screenshots/${studentId}/${ctx.setupStepId.toString()}/`
+      if (!s3Key.startsWith(expectedPrefix)) {
+        return reply.code(403).send({ error: 'FORBIDDEN', message: 'Invalid S3 key.' })
+      }
+
+      const existingPending = await StepSubmission.findOne({
+        userId: studentId,
+        stepId: ctx.setupStepId,
+        status: { $in: ['PENDING', 'ML_PROCESSING', 'HUMAN_REVIEW'] },
+      })
+      if (existingPending) {
+        return reply.code(409).send({
+          error:   'PENDING_SUBMISSION_EXISTS',
+          message: 'A submission is already under review for this lesson.',
+        })
+      }
+
+      // Upsert the StudentStep record that the worker keys off of.
+      let studentStepDoc = await StudentStep.findOne({
+        userId: studentId,
+        stepId: ctx.setupStepId,
+      })
+      if (!studentStepDoc) {
+        studentStepDoc = await StudentStep.create({
+          userId:      studentId,
+          stepId:      ctx.setupStepId,
+          status:      'PENDING_REVIEW',
+          attempts:    1,
+          unlockedAt:  new Date(),
+        })
+      } else {
+        studentStepDoc.status   = 'PENDING_REVIEW'
+        studentStepDoc.attempts = (studentStepDoc.attempts ?? 0) + 1
+        await studentStepDoc.save()
+      }
+
+      const submission = await StepSubmission.create({
+        userId:        studentId,
+        stepId:        ctx.setupStepId,
+        studentStepId: studentStepDoc._id,
+        s3Key,
+        status:        'PENDING',
+      })
+
+      await screenshotQueue.add('validate-screenshot', {
+        submissionId: submission.id as string,
+        s3Key,
+        stepId:       ctx.setupStepId.toString(),
+        userId:       studentId,
+        // Passed for observability only — the worker ignores unknown fields.
+        lessonId,
+      })
+
+      return reply.code(201).send({
+        submissionId: submission.id,
+        status:       'VALIDATING',
+      })
+    },
+  )
+
+  // GET /api/v1/student/lessons/:lessonId/tool-setup-submission/latest
+  fastify.get<{ Params: { lessonId: string } }>(
+    '/lessons/:lessonId/tool-setup-submission/latest',
+    { preHandler: requireStudent },
+    async (request, reply) => {
+      const { sub: studentId } = request.user as JwtPayload
+      const { lessonId } = request.params
+
+      const ctx = await resolveToolSetupContext(studentId, lessonId)
+      if (!ctx.ok) return reply.code(ctx.code).send({ error: ctx.error, message: ctx.message })
+
+      const submission = await StepSubmission.findOne(
+        { userId: studentId, stepId: ctx.setupStepId },
+        null,
+        { sort: { createdAt: -1 } },
+      )
+
+      if (!submission) {
+        return reply.send({ submission: null })
+      }
+
+      // Map the PBA-side submission lifecycle into the four states the LMS
+      // frontend cares about. PENDING + ML_PROCESSING both mean "the worker
+      // is still thinking", so we collapse them to VALIDATING.
+      const uiStatus: 'VALIDATING' | 'APPROVED' | 'REJECTED' | 'UNDER_REVIEW' =
+        submission.status === 'APPROVED'      ? 'APPROVED'
+        : submission.status === 'REJECTED'    ? 'REJECTED'
+        : submission.status === 'HUMAN_REVIEW' ? 'UNDER_REVIEW'
+        : 'VALIDATING'
+
+      // Surface a presigned GET URL for the screenshot preview — matches the
+      // PBA step endpoint contract so admins and students see the same shape.
+      let screenshotUrl: string | null = null
+      try {
+        screenshotUrl = await getPresignedReadUrl(submission.s3Key, 300)
+      } catch {
+        screenshotUrl = null
+      }
+
+      return reply.send({
+        submission: {
+          id:            submission.id,
+          status:        uiStatus,
+          rawStatus:     submission.status,
+          mlFeedback:    submission.mlFeedback,
+          mlScore:       submission.mlScore,
+          screenshotUrl,
+          createdAt:     submission.createdAt,
+          reviewedAt:    submission.reviewedAt,
+        },
+      })
     },
   )
 }

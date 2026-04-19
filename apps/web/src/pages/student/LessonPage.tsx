@@ -1,15 +1,24 @@
 // FIR-53 — Lesson player: VIDEO (Loom embed), TEXT (prose markdown), TOOL_SETUP
 // FIR-161 — Markdown text lesson rendering via .prose class
+// Sprint 2 Story 12 — Real Claude Vision validation for TOOL_SETUP lessons
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import {
+  fetchLatestToolSetupSubmission,
   fetchLesson,
   markLessonComplete,
+  presignToolSetupUpload,
+  submitToolSetupScreenshot,
+  uploadToolSetupScreenshot,
   type LessonDetail,
+  type ToolSetupValidationStatus,
 } from '../../lib/api'
 import { useCourse } from './CoursePage'
 import { cn } from '../../lib/utils'
 import { sanitizeLessonHtml } from '../../lib/sanitize'
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { AlertTriangle, Clock } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Video embed — Loom iframe at 16:9
@@ -84,42 +93,165 @@ function TextLesson({ content }: { content: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Tool setup lesson type — screenshot submission flow
-// Based on 10-tool-setup.html design
+// Tool setup lesson type — screenshot submission flow (Sprint 2 Story 12)
+//
+// Previously this flow simulated validation with a hardcoded `setTimeout`.
+// We now hit the real backend:
+//
+//   1. presignToolSetupUpload → get a presigned PUT URL + s3Key
+//   2. uploadToolSetupScreenshot → PUT the file to S3 / local uploads
+//   3. submitToolSetupScreenshot → enqueue the Claude Vision BullMQ job
+//   4. fetchLatestToolSetupSubmission (every 3s) → poll for terminal status
+//
+// Terminal statuses: APPROVED | REJECTED | UNDER_REVIEW. The worker routes
+// low-confidence and Claude-unavailable outcomes to UNDER_REVIEW (HUMAN_REVIEW
+// in DB terms). In dev without ANTHROPIC_API_KEY the worker always produces
+// UNDER_REVIEW, so the UI still surfaces a useful state.
 // ---------------------------------------------------------------------------
 
-interface ToolSetupStep {
-  id: string
-  title: string
-  instructions: string
-  tutorialLoomUrl?: string
-  status: 'COMPLETED' | 'ACTIVE' | 'INCOMPLETE' | 'LOCKED'
-  validationStatus?: 'VALIDATING' | 'APPROVED' | 'REJECTED' | 'UNDER_REVIEW' | null
+// The hook owns the submit → poll → terminal state transitions so the render
+// tree stays thin and easy to test.
+const TOOL_SETUP_POLL_INTERVAL_MS = 3000
+const TOOL_SETUP_POLL_TIMEOUT_MS  = 5 * 60 * 1000 // 5 minutes
+
+type ToolSetupUiStatus =
+  | 'IDLE'
+  | 'UPLOADING'
+  | ToolSetupValidationStatus
+  | 'STALLED'
+
+interface UseToolSetupValidationResult {
+  status:       ToolSetupUiStatus
+  feedback:     string | null
+  uploadedName: string | null
+  errorMessage: string | null
+  submit:       (file: File) => Promise<void>
+  reset:        () => void
 }
 
-function ToolSetupLesson({ lesson }: { lesson: LessonDetail }) {
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [validationStatus, setValidationStatus] = useState<
-    'IDLE' | 'VALIDATING' | 'APPROVED' | 'REJECTED' | 'UNDER_REVIEW'
-  >('IDLE')
+export function useToolSetupValidation(
+  lessonId: string,
+  onApproved?: () => void,
+): UseToolSetupValidationResult {
+  const [status,       setStatus]       = useState<ToolSetupUiStatus>('IDLE')
+  const [feedback,     setFeedback]     = useState<string | null>(null)
+  const [uploadedName, setUploadedName] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  // Guard against setting state on an unmounted component and against
+  // overlapping poll sessions (e.g. student clicks Retry during a poll).
+  const pollCancelRef     = useRef<{ cancelled: boolean } | null>(null)
+  const onApprovedRef     = useRef(onApproved)
+  onApprovedRef.current   = onApproved
+
+  // Hydrate from a prior submission when the page first loads so the
+  // student doesn't lose context if they close and re-open the tab mid-poll.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const { submission } = await fetchLatestToolSetupSubmission(lessonId)
+        if (cancelled || !submission) return
+        setStatus(submission.status)
+        setFeedback(submission.mlFeedback ?? null)
+        if (submission.status === 'VALIDATING') {
+          // The worker may still be crunching — re-enter polling.
+          startPolling()
+        }
+      } catch {
+        // Non-fatal — a brand-new lesson has no submission yet.
+      }
+    })()
+    return () => {
+      cancelled = true
+      if (pollCancelRef.current) pollCancelRef.current.cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId])
+
+  function startPolling() {
+    // Cancel any prior poll session before starting a fresh one.
+    if (pollCancelRef.current) pollCancelRef.current.cancelled = true
+    const handle = { cancelled: false }
+    pollCancelRef.current = handle
+
+    const startedAt = Date.now()
+    async function tick() {
+      if (handle.cancelled) return
+      try {
+        const { submission } = await fetchLatestToolSetupSubmission(lessonId)
+        if (handle.cancelled) return
+        if (!submission) {
+          // Shouldn't happen right after submit — keep polling.
+        } else if (submission.status !== 'VALIDATING') {
+          setStatus(submission.status)
+          setFeedback(submission.mlFeedback ?? null)
+          if (submission.status === 'APPROVED') onApprovedRef.current?.()
+          return
+        }
+      } catch {
+        // Transient network errors shouldn't kill the polling loop — the
+        // next tick will retry.
+      }
+
+      if (Date.now() - startedAt > TOOL_SETUP_POLL_TIMEOUT_MS) {
+        if (!handle.cancelled) setStatus('STALLED')
+        return
+      }
+
+      setTimeout(tick, TOOL_SETUP_POLL_INTERVAL_MS)
+    }
+    setTimeout(tick, TOOL_SETUP_POLL_INTERVAL_MS)
+  }
+
+  async function submit(file: File): Promise<void> {
+    setErrorMessage(null)
+    setUploadedName(file.name)
+    setStatus('UPLOADING')
+    try {
+      const contentType = file.type || 'image/png'
+      const { presignedUrl, s3Key } = await presignToolSetupUpload(lessonId, contentType)
+      await uploadToolSetupScreenshot(presignedUrl, file)
+      await submitToolSetupScreenshot(lessonId, s3Key)
+      setStatus('VALIDATING')
+      startPolling()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Upload failed'
+      setErrorMessage(msg)
+      setStatus('IDLE')
+    }
+  }
+
+  function reset() {
+    if (pollCancelRef.current) pollCancelRef.current.cancelled = true
+    setStatus('IDLE')
+    setFeedback(null)
+    setErrorMessage(null)
+    setUploadedName(null)
+  }
+
+  return { status, feedback, uploadedName, errorMessage, submit, reset }
+}
+
+interface ToolSetupLessonProps {
+  lesson: LessonDetail
+  onApproved?: () => void
+}
+
+function ToolSetupLesson({ lesson, onApproved }: ToolSetupLessonProps) {
+  const { status, feedback, uploadedName, errorMessage, submit, reset } =
+    useToolSetupValidation(lesson.id, onApproved)
   const [dragOver, setDragOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-
-  function handleFile(file: File) {
-    setUploadedFile(file)
-    setValidationStatus('VALIDATING')
-    // Simulate AI validation feedback — real implementation calls API
-    setTimeout(() => {
-      setValidationStatus('APPROVED')
-    }, 2000)
-  }
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault()
     setDragOver(false)
     const file = e.dataTransfer.files[0]
-    if (file) handleFile(file)
+    if (file) void submit(file)
   }
+
+  const showUploadZone = status === 'IDLE' || status === 'REJECTED'
 
   return (
     <div>
@@ -158,62 +290,112 @@ function ToolSetupLesson({ lesson }: { lesson: LessonDetail }) {
         </div>
       )}
 
-      {/* Validation status strips */}
-      {validationStatus === 'VALIDATING' && (
-        <div className="bg-[#fff8e6] border border-[rgba(255,192,145,0.4)] rounded-xl p-[14px_18px] flex items-start gap-3 mb-4">
-          <span className="text-[20px]">⏳</span>
+      {/* Network / upload error banner — non-terminal, user can retry. */}
+      {errorMessage && (
+        <div
+          role="alert"
+          data-testid="tool-setup-error"
+          className={cn(
+            'rounded-xl p-[14px_18px] flex items-start gap-3 mb-4',
+            'bg-[var(--color-wise-danger-soft)] border border-[rgba(208,50,56,0.2)]',
+          )}
+        >
+          <AlertTriangle className="h-5 w-5 text-[var(--color-wise-danger)] shrink-0 mt-0.5" aria-hidden="true" />
           <div>
-            <p className="text-[14px] font-700 text-[#8a5a00] mb-0.5">Validating with AI...</p>
-            <p className="text-[13px] text-[#717182]">Analyzing your screenshot. This usually takes a few seconds.</p>
+            <p className="text-[14px] font-700 text-[var(--color-wise-danger)] mb-0.5">Upload failed</p>
+            <p className="text-[13px] text-[var(--color-wise-text-muted)]">{errorMessage}</p>
           </div>
         </div>
       )}
 
-      {validationStatus === 'APPROVED' && (
-        <div className="bg-[#e6f4ec] border border-[rgba(5,77,40,0.2)] rounded-xl p-[14px_18px] flex items-start gap-3 mb-4">
-          <span className="text-[20px]">✅</span>
+      {/* Validation status strips — uploading + the four terminal states */}
+      {(status === 'UPLOADING' || status === 'VALIDATING') && (
+        <div
+          data-testid={status === 'UPLOADING' ? 'tool-setup-uploading' : 'tool-setup-validating'}
+          className={cn(
+            'rounded-xl p-[14px_18px] flex items-start gap-3 mb-4',
+            'bg-[var(--color-wise-warning-soft)] border border-[rgba(255,192,145,0.4)]',
+          )}
+        >
+          <LoadingSpinner size="sm" label={status === 'UPLOADING' ? 'Uploading' : 'Validating with AI'} />
           <div>
-            <p className="text-[14px] font-700 text-[#054d28] mb-0.5">Validated! Step complete.</p>
-            <p className="text-[13px] text-[#717182]">Great work — your screenshot was accepted.</p>
-          </div>
-        </div>
-      )}
-
-      {validationStatus === 'REJECTED' && (
-        <div className="bg-[#fdeaeb] border border-[rgba(208,50,56,0.2)] rounded-xl p-[14px_18px] flex items-start gap-3 mb-4">
-          <span className="text-[20px]">⚠️</span>
-          <div>
-            <p className="text-[14px] font-700 text-[#d03238] mb-0.5">Screenshot not recognized</p>
-            <p className="text-[13px] text-[#717182] mb-2">
-              Your screenshot doesn't clearly show the required output. Please try again.
+            <p className="text-[14px] font-700 text-[#8a5a00] mb-0.5">
+              {status === 'UPLOADING' ? 'Uploading screenshot…' : 'Validating with AI…'}
             </p>
-            <button
-              type="button"
-              className="bg-[#d03238] text-white px-3.5 py-1.5 rounded-full text-[12px] font-700 border-none cursor-pointer font-sans"
-              onClick={() => { setValidationStatus('IDLE'); setUploadedFile(null) }}
-            >
-              Upload Again
-            </button>
+            <p className="text-[13px] text-[var(--color-wise-text-muted)]">
+              {status === 'UPLOADING'
+                ? 'Sending your screenshot to our servers.'
+                : 'Analyzing your screenshot. This usually takes a few seconds.'}
+            </p>
           </div>
         </div>
       )}
 
-      {validationStatus === 'UNDER_REVIEW' && (
-        <div className="bg-[#fff8e6] border border-[rgba(255,192,145,0.4)] rounded-xl p-[14px_18px] flex items-start gap-3 mb-4">
-          <span className="text-[20px]">🕐</span>
+      {status === 'APPROVED' && (
+        <div
+          data-testid="tool-setup-approved"
+          className={cn(
+            'rounded-xl p-[14px_18px] flex items-start gap-3 mb-4',
+            'bg-[var(--color-wise-mint)] border border-[rgba(5,77,40,0.2)]',
+          )}
+        >
+          <span className="text-[20px]" aria-hidden="true">✓</span>
           <div>
-            <p className="text-[14px] font-700 text-[#8a5a00] mb-0.5">Under manual review</p>
-            <p className="text-[13px] text-[#717182]">Our team is reviewing your setup. We'll notify you via email within 2 hours.</p>
+            <p className="text-[14px] font-700 text-[var(--color-wise-success)] mb-0.5">
+              Validated! You can mark this lesson complete.
+            </p>
+            <p className="text-[13px] text-[var(--color-wise-text-muted)]">
+              {feedback ?? 'Great work — your screenshot was accepted.'}
+            </p>
           </div>
         </div>
       )}
 
-      {/* Upload zone */}
-      {(validationStatus === 'IDLE' || validationStatus === 'REJECTED') && (
+      {status === 'REJECTED' && (
+        <div data-testid="tool-setup-rejected">
+          <EmptyState
+            icon={AlertTriangle}
+            title="Screenshot not recognized"
+            description={
+              feedback ??
+              'Your screenshot doesn’t clearly show the required output. Please review the instructions and try again.'
+            }
+            action={{ label: 'Try again', onClick: reset }}
+            className="mb-4"
+          />
+        </div>
+      )}
+
+      {status === 'UNDER_REVIEW' && (
+        <div data-testid="tool-setup-under-review">
+          <EmptyState
+            icon={Clock}
+            title="Our team is reviewing your submission"
+            description="The AI wasn’t confident enough to auto-approve, so a human coach will take a look. We’ll email you within 2 hours."
+            className="mb-4"
+          />
+        </div>
+      )}
+
+      {status === 'STALLED' && (
+        <div data-testid="tool-setup-stalled">
+          <EmptyState
+            icon={Clock}
+            title="Still working on it"
+            description="Validation is taking longer than expected. You can resubmit to try again, or wait for an email update."
+            action={{ label: 'Resubmit', onClick: reset }}
+            className="mb-4"
+          />
+        </div>
+      )}
+
+      {/* Upload zone — shown only in IDLE or after a rejection */}
+      {showUploadZone && (
         <div
           role="button"
           tabIndex={0}
           aria-label="Upload screenshot"
+          data-testid="tool-setup-upload-zone"
           className={cn(
             'border-2 border-dashed border-[#4a9ad4] rounded-[16px] bg-[#f8fbff]',
             'p-10 text-center cursor-pointer mb-6 transition-colors',
@@ -225,20 +407,21 @@ function ToolSetupLesson({ lesson }: { lesson: LessonDetail }) {
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
         >
-          <div className="text-[32px] mb-3">📸</div>
+          <div className="text-[32px] mb-3" aria-hidden="true">+</div>
           <p className="text-[16px] font-700 text-[#1a2744] mb-1.5">
-            {uploadedFile ? uploadedFile.name : 'Upload your screenshot'}
+            {uploadedName ?? 'Upload your screenshot'}
           </p>
-          <p className="text-[13px] text-[#717182] mb-2">Drag & drop or click to browse</p>
+          <p className="text-[13px] text-[#717182] mb-2">Drag and drop or click to browse</p>
           <span className="text-[14px] font-600 text-[#4a9ad4]">Browse files</span>
           <input
             ref={fileRef}
             type="file"
             accept="image/*"
             className="hidden"
+            data-testid="tool-setup-file-input"
             onChange={(e) => {
               const file = e.target.files?.[0]
-              if (file) handleFile(file)
+              if (file) void submit(file)
             }}
           />
         </div>
@@ -283,6 +466,10 @@ export default function LessonPage() {
   const [error, setError] = useState<string | null>(null)
   const [isMarkingComplete, setIsMarkingComplete] = useState(false)
   const [justCompleted, setJustCompleted] = useState(false)
+  // Tracks the tool-setup validation status so the parent can gate the
+  // "Mark as Complete" button — it only appears once Claude Vision approves
+  // (or an admin later escalates the HUMAN_REVIEW submission).
+  const [toolSetupApproved, setToolSetupApproved] = useState(false)
 
   const loadLesson = useCallback(async () => {
     setIsLoading(true)
@@ -305,6 +492,7 @@ export default function LessonPage() {
   useEffect(() => {
     void loadLesson()
     setJustCompleted(false)
+    setToolSetupApproved(false)
   }, [loadLesson])
 
   async function handleMarkComplete() {
@@ -353,7 +541,13 @@ export default function LessonPage() {
   const isCurrentLessonComplete = modules
     .flatMap((m) => m.lessons)
     .find((l) => l.id === lessonId)?.status === 'COMPLETED'
-  const showCompleteBtn = !isCurrentLessonComplete && !justCompleted && lesson.type !== 'TOOL_SETUP'
+  // For TOOL_SETUP lessons the Mark-Complete CTA is gated on Claude Vision
+  // approval. For VIDEO/TEXT it shows unconditionally once the lesson is
+  // unlocked.
+  const toolSetupGateSatisfied =
+    lesson.type !== 'TOOL_SETUP' || toolSetupApproved
+  const showCompleteBtn =
+    !isCurrentLessonComplete && !justCompleted && toolSetupGateSatisfied
 
   return (
     <div className="px-12 py-10 lesson-container">
@@ -378,7 +572,17 @@ export default function LessonPage() {
       {/* Content based on type */}
       {lesson.type === 'VIDEO' && <VideoPlayer lesson={lesson} />}
       {lesson.type === 'TEXT' && lesson.content && <TextLesson content={lesson.content} />}
-      {lesson.type === 'TOOL_SETUP' && <ToolSetupLesson lesson={lesson} />}
+      {lesson.type === 'TOOL_SETUP' && (
+        <ToolSetupLesson
+          lesson={lesson}
+          onApproved={() => {
+            setToolSetupApproved(true)
+            // Re-fetch curriculum so any worker-driven status change (e.g.
+            // StudentLesson flip) reflects in the sidebar immediately.
+            void refreshCurriculum()
+          }}
+        />
+      )}
 
       {/* Mark as complete */}
       {showCompleteBtn && (
