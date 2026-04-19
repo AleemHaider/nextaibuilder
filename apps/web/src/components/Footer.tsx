@@ -44,7 +44,7 @@ const LEARN_LINKS = [
   { label: 'Live Cohorts', to: '/courses' },
   { label: 'Course Catalog', to: '/courses' },
   { label: 'Student Login', to: '/login' },
-  { label: 'Verify Certificate', to: '/courses' },
+  { label: 'Verify Certificate', to: '/verify-certificate' },
 ]
 
 const COMPANY_LINKS = [

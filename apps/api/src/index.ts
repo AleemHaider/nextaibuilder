@@ -54,6 +54,7 @@ import { securityPlugin } from './plugins/security.js'                          
 import { startScreenshotValidationWorker } from './workers/screenshotValidationWorker.js'
 import { startScheduledEmailWorker } from './workers/scheduledEmailWorker.js'
 import { startStripeWebhookWorker } from './workers/stripeWebhookWorker.js'               // FIR-43/44
+import { startInstallmentReminderWorker } from './workers/installmentReminderWorker.js'   // Sprint 2 Story 10 (GAP-037)
 import { startSlackInviteWorker } from './workers/slackInviteWorker.js'                  // FIR-66
 import { startNotificationWorker } from './workers/notificationWorker.js'                // FIR-68–71
 import { startReEngagementCron } from './jobs/reEngagementCron.js'                       // FIR-170
@@ -156,6 +157,10 @@ async function start() {
   await server.register(studentProfileRoutes, { prefix: '/api/student' }) // PBA-315
   await server.register(troubleshootRoutes, { prefix: '/api/student' }) // PBA-316
   await server.register(certificateRoutes, { prefix: '/api/certificate' }) // PBA-314
+  // Sprint 2 Story 7 — BRD-mandated public /verify-certificate/:token page
+  // hits the v1-prefixed route; keep the legacy /api/certificate mount for
+  // backward compatibility with older share links.
+  await server.register(certificateRoutes, { prefix: '/api/v1/certificate' })
   // Admin routes (PBA-130, PBA-131)
   await server.register(adminSubmissionsRoutes, { prefix: '/api/admin/submissions' })
   await server.register(adminDashboardRoutes, { prefix: '/api/admin' })
@@ -218,6 +223,7 @@ async function start() {
     void startScreenshotValidationWorker()    // PBA-150 / PBA-372 (async for startup health checks)
     startScheduledEmailWorker()               // PBA-134
     startStripeWebhookWorker()                // FIR-43/44
+    startInstallmentReminderWorker()          // Sprint 2 Story 10 (GAP-037)
     startSlackInviteWorker()                  // FIR-66
     startNotificationWorker()                 // FIR-68–71
     startReEngagementCron()                   // FIR-170

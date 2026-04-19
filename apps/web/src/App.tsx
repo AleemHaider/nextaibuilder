@@ -48,6 +48,8 @@ import TransactionLedgerPage from './pages/admin/TransactionLedgerPage'
 import StudentDetailPage from './pages/admin/StudentDetailPage'
 // FIR-213/214/215 — Enrollment management
 import EnrollmentManagementPage from './pages/admin/EnrollmentManagementPage'
+// Sprint 2 Story 7 — BRD-mandatory public certificate verification page
+import CertificateVerifyPage from './pages/CertificateVerifyPage'
 // FIR-74 — PWA install prompt
 import { PwaInstallPrompt } from './components/PwaInstallPrompt'
 import { cn } from './lib/utils'
@@ -135,6 +137,15 @@ function AppRoutes() {
         <Route path="/courses/:slug" element={<CohortDetailPage />} />
         <Route path="/about" element={<AboutPage />} />
 
+        {/* Sprint 2 Story 7 — Public certificate verification (no auth) */}
+        <Route path="/verify-certificate" element={<CertificateVerifyPage />} />
+        <Route
+          path="/verify-certificate/:token"
+          element={<CertificateVerifyPage />}
+        />
+        {/* FIR-158 / Sprint 2 Story 8 — public manual payment upload page */}
+        <Route path="/manual-payment/:slug" element={<ManualPaymentPage />} />
+
         {/* Auth routes (Epic 3) */}
         <Route path="/login" element={<StudentLoginPage />} />
         <Route path="/signup" element={<StudentSignupPage />} />
@@ -151,7 +162,6 @@ function AppRoutes() {
         <Route element={<StudentRoute />}>
           <Route path="/checkout/:slug" element={<CheckoutPage />} />
           <Route path="/enrollment/success" element={<EnrollmentSuccessPage />} />
-          <Route path="/manual-payment/:slug" element={<ManualPaymentPage />} />
 
           {/* FIR-51 — Student dashboard */}
           <Route path="/student/dashboard" element={<DashboardPage />} />
