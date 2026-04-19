@@ -1,12 +1,11 @@
 // FIR-169 — Full notifications page with mark-all-read and empty state
-// Sprint 3 Story 15 — Wise theme migration. Rows now ride on Wise surface
-// tokens with lucide type-icons; the mark-all-read CTA is a ghost <Button>.
-// The empty-state path consolidates onto the canonical <EmptyState>.
-//
-// NB: the hook does not expose a per-row delete mutation today, so we don't
-// render a delete/confirm dialog here — adding that business logic is out of
-// scope for a theme migration story. When delete lands in a later sprint it
-// should wire through <Button variant="danger"> + <ConfirmDialog>.
+// Sprint 3 Story 15 — Wise theme migration. Rows ride on Wise surface tokens
+// with lucide type-icons; the mark-all-read CTA is a ghost <Button>.
+// Sprint 4 Story 20 — per-row delete + "Delete all read" CTA wired to the
+// new useNotifications().deleteNotification / deleteAllRead mutations. Both
+// actions are gated behind a <ConfirmDialog variant="danger"> to match the
+// Wave 6 destructive-action pattern.
+import { useState } from 'react'
 import { Link } from 'react-router'
 import {
   ArrowLeft,
@@ -16,11 +15,13 @@ import {
   CircleCheck,
   Zap,
   Megaphone,
+  Trash2,
   type LucideIcon,
 } from 'lucide-react'
 import { useNotifications } from '../../hooks/useNotifications'
 import { TopNav } from '../../components/TopNav'
 import { Button } from '../../components/ui/Button'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ListItemSkeleton } from '../../components/ui/LoadingSkeleton'
 import { cn } from '../../lib/utils'
@@ -69,15 +70,24 @@ function typeLabel(type: string): string {
 
 interface NotificationRowProps {
   notification: Notification
-  onRead: (id: string) => void
+  onRead:   (id: string) => void
+  onDelete: (id: string) => void
 }
 
-function NotificationRow({ notification, onRead }: NotificationRowProps) {
+function NotificationRow({ notification, onRead, onDelete }: NotificationRowProps) {
   const { _id, title, body, isRead, createdAt, type, link } = notification
   const Icon = typeIcon(type)
 
   function handleClick() {
     if (!isRead) onRead(_id)
+  }
+
+  function handleDeleteClick(e: React.MouseEvent) {
+    // The row itself is a link/button — stop the click so the delete action
+    // doesn't also navigate to the deep link or mark the row read.
+    e.preventDefault()
+    e.stopPropagation()
+    onDelete(_id)
   }
 
   const inner = (
@@ -127,12 +137,26 @@ function NotificationRow({ notification, onRead }: NotificationRowProps) {
               {typeLabel(type)}
             </span>
           </div>
-          {!isRead && (
-            <div
-              className="w-2.5 h-2.5 rounded-full bg-[var(--color-wise-primary)] flex-shrink-0 mt-1"
-              aria-label="Unread"
-            />
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {!isRead && (
+              <div
+                className="w-2.5 h-2.5 rounded-full bg-[var(--color-wise-primary)] mt-1"
+                aria-label="Unread"
+              />
+            )}
+            {/* Sprint 4 Story 20 — per-row trash icon. Ghost so it doesn't
+                compete with the unread dot; aria-label is descriptive so
+                screen readers announce "Delete notification: <title>". */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 rounded-full"
+              aria-label={`Delete notification: ${title}`}
+              onClick={handleDeleteClick}
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
         </div>
         <p className="text-[14px] text-[var(--color-wise-text-muted)] leading-relaxed mb-2">{body}</p>
         <p className="text-[12px] text-[var(--color-wise-text-muted)]">{relativeTime(createdAt)}</p>
@@ -164,7 +188,28 @@ export default function NotificationsPage() {
     markAllRead,
     markOneRead,
     isMarkingAll,
+    deleteNotification,
+    deleteAllRead,
+    isDeletingAllRead,
   } = useNotifications()
+
+  // Which notification the user is currently staring down the "are you sure"
+  // dialog for. `null` when no dialog is open. We keep this as { id, title }
+  // so the dialog description can reference the row by name.
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+
+  const readCount = notifications.filter((n) => n.isRead).length
+
+  async function handleConfirmDeleteOne() {
+    if (!pendingDelete) return
+    await deleteNotification(pendingDelete.id)
+    setPendingDelete(null)
+  }
+
+  async function handleConfirmDeleteAllRead() {
+    await deleteAllRead()
+  }
 
   return (
     <div className="min-h-screen bg-[var(--color-wise-canvas)]">
@@ -197,17 +242,29 @@ export default function NotificationsPage() {
               )}
             </div>
 
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => markAllRead()}
-                isLoading={isMarkingAll}
-                disabled={isMarkingAll}
-              >
-                Mark all read
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => markAllRead()}
+                  isLoading={isMarkingAll}
+                  disabled={isMarkingAll}
+                >
+                  Mark all read
+                </Button>
+              )}
+              {readCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setBulkDeleteOpen(true)}
+                  disabled={isDeletingAllRead}
+                >
+                  Delete all read
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -245,11 +302,38 @@ export default function NotificationsPage() {
                 key={n._id}
                 notification={n}
                 onRead={markOneRead}
+                onDelete={(id) => setPendingDelete({ id, title: n.title })}
               />
             ))
           )}
         </div>
       </main>
+
+      {/* Sprint 4 Story 20 — per-row delete confirm dialog. `pendingDelete`
+          is the single source of truth for which row's delete is pending.
+          Dialog is mounted unconditionally so Radix's focus-trap animation
+          lands cleanly; `open` flips when a trash button is clicked. */}
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => { if (!open) setPendingDelete(null) }}
+        title="Delete notification?"
+        description="This can't be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={handleConfirmDeleteOne}
+      />
+
+      {/* Sprint 4 Story 20 — bulk "delete all read" confirm dialog. */}
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title="Delete all read notifications?"
+        description={`${readCount} read notification${readCount !== 1 ? 's' : ''} will be permanently removed. Unread notifications are kept.`}
+        confirmLabel="Delete all read"
+        variant="danger"
+        isLoading={isDeletingAllRead}
+        onConfirm={handleConfirmDeleteAllRead}
+      />
     </div>
   )
 }

@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext'
 import { cn } from '../lib/utils'
 import { NotificationBell } from './NotificationBell'
 import { Logo } from './Logo'
+import { SkipToMainLink } from './SkipToMainLink'
 import { Button } from './ui/Button'
 
 // ---------------------------------------------------------------------------
@@ -75,10 +76,44 @@ interface UserDropdownProps {
 }
 
 function UserDropdown({ items, onClose }: UserDropdownProps) {
+  // Sprint 4 Story 18 — focus trap: cycle Tab/Shift+Tab inside the menu and
+  // focus the first item when the menu mounts. ESC is handled at the parent
+  // so focus can be restored to the trigger button.
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const root = menuRef.current
+    if (!root) return
+    const first = root.querySelector<HTMLElement>('[role="menuitem"]')
+    first?.focus()
+  }, [])
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== 'Tab') return
+    const root = menuRef.current
+    if (!root) return
+    const focusables = Array.from(
+      root.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+    ).filter((el) => !el.hasAttribute('disabled'))
+    if (focusables.length === 0) return
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+    const active = document.activeElement as HTMLElement | null
+    if (e.shiftKey && active === first) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
+
   return (
     <div
+      ref={menuRef}
       role="menu"
       aria-label="User menu"
+      onKeyDown={handleKeyDown}
       className={cn(
         'absolute right-0 top-[calc(100%+8px)] w-48 z-50 py-1',
         'bg-white overflow-hidden',
@@ -91,6 +126,7 @@ function UserDropdown({ items, onClose }: UserDropdownProps) {
           'no-underline cursor-pointer transition-colors',
           'bg-transparent border-none',
           'hover:bg-[var(--color-wise-mint)]',
+          'focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--color-wise-primary-text)]',
           item.danger
             ? 'text-[var(--color-wise-danger)]'
             : 'text-[var(--color-wise-text)] hover:text-[var(--color-wise-primary-text)]',
@@ -132,6 +168,9 @@ export function TopNav() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  // Sprint 4 Story 18 — remember the trigger so we can restore focus when the
+  // user closes the menu with ESC or by selecting an item.
+  const dropdownTriggerRef = useRef<HTMLButtonElement>(null)
 
   // Close mobile menu on route change / resize
   useEffect(() => {
@@ -141,6 +180,36 @@ export function TopNav() {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // Sprint 4 Story 18 — ESC closes the dropdown and restores focus.
+  useEffect(() => {
+    if (!dropdownOpen) return
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setDropdownOpen(false)
+        dropdownTriggerRef.current?.focus()
+      }
+    }
+    function handleClick(e: MouseEvent) {
+      if (!dropdownRef.current?.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handleKey)
+    document.addEventListener('mousedown', handleClick)
+    return () => {
+      document.removeEventListener('keydown', handleKey)
+      document.removeEventListener('mousedown', handleClick)
+    }
+  }, [dropdownOpen])
+
+  // Close helper: returns focus to the trigger (covers menuitem activation).
+  function closeDropdown() {
+    setDropdownOpen(false)
+    // Defer so the newly-rendered target (route change / button) doesn't
+    // steal the focus we're trying to restore in the unauth-trigger case.
+    requestAnimationFrame(() => dropdownTriggerRef.current?.focus())
+  }
 
   async function handleLogout() {
     setDropdownOpen(false)
@@ -179,6 +248,9 @@ export function TopNav() {
 
   return (
     <>
+      {/* Sprint 4 Story 18 — skip link lives first in the tab order so */}
+      {/* keyboard users can jump the TopNav on every page. */}
+      <SkipToMainLink />
       <style>{`
         @media (max-width: 768px) {
           .topnav-links { display: none !important; }
@@ -290,6 +362,7 @@ export function TopNav() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
+                  ref={dropdownTriggerRef}
                   onClick={() => setDropdownOpen((o) => !o)}
                   aria-expanded={dropdownOpen}
                   aria-haspopup="menu"
@@ -298,6 +371,7 @@ export function TopNav() {
                     'flex items-center gap-2 rounded-full p-1',
                     'bg-transparent border-none cursor-pointer',
                     'hover:bg-[var(--color-wise-mint)] transition-colors',
+                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-wise-primary-text)]',
                   )}
                 >
                   <Avatar name={user.name} avatarUrl={user.avatarUrl} />
@@ -306,7 +380,7 @@ export function TopNav() {
                 {dropdownOpen && (
                   <UserDropdown
                     items={adminDropdownItems}
-                    onClose={() => setDropdownOpen(false)}
+                    onClose={closeDropdown}
                   />
                 )}
               </div>
@@ -321,6 +395,7 @@ export function TopNav() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
+                  ref={dropdownTriggerRef}
                   onClick={() => setDropdownOpen((o) => !o)}
                   aria-expanded={dropdownOpen}
                   aria-haspopup="menu"
@@ -329,6 +404,7 @@ export function TopNav() {
                     'flex items-center gap-2 rounded-full py-1 px-2',
                     'bg-transparent border-none cursor-pointer',
                     'hover:bg-[var(--color-wise-mint)] transition-colors',
+                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-wise-primary-text)]',
                   )}
                 >
                   <Avatar name={user.name} avatarUrl={user.avatarUrl} />
@@ -345,7 +421,7 @@ export function TopNav() {
                 {dropdownOpen && (
                   <UserDropdown
                     items={studentDropdownItems}
-                    onClose={() => setDropdownOpen(false)}
+                    onClose={closeDropdown}
                   />
                 )}
               </div>

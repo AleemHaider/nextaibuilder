@@ -88,9 +88,15 @@ export function FormField({
       {control}
 
       {hasError ? (
+        // Sprint 4 Story 18 — announce validation errors to assistive tech.
+        // `role="alert"` + implicit `aria-live="assertive"` on a freshly-
+        // mounted element ensures screen readers speak the message the
+        // instant the control becomes invalid.
         <p
           id={`${id}-error`}
           data-slot="form-field-error"
+          role="alert"
+          aria-live="polite"
           className="text-[12px] font-semibold text-[var(--color-wise-danger)]"
         >
           {errorText}

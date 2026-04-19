@@ -158,7 +158,7 @@ function NewsletterForm() {
 
 export function Footer() {
   return (
-    <footer className="bg-[var(--color-wise-dark)]">
+    <footer role="contentinfo" className="bg-[var(--color-wise-dark)]">
       <style>{`
         @media (max-width: 768px) {
           .footer-grid {

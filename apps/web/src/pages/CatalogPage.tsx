@@ -195,7 +195,7 @@ export default function CatalogPage() {
       </header>
 
       {/* ── Main content ──────────────────────────────────────────────────── */}
-      <main className="max-w-[1280px] mx-auto px-4 sm:px-12 lg:px-20 pt-10 pb-20">
+      <main id="main-content" tabIndex={-1} className="max-w-[1280px] mx-auto px-4 sm:px-12 lg:px-20 pt-10 pb-20 focus:outline-none">
         {/* Results bar */}
         {!isPending && !isError && (
           <p className="mb-6 text-sm font-medium text-[var(--color-wise-text-muted)]">

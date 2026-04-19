@@ -259,6 +259,8 @@ export default function HomePage() {
     <div className="min-h-screen bg-[var(--color-wise-canvas)] text-[var(--color-wise-text)] font-sans">
       <TopNav />
 
+      <main id="main-content" tabIndex={-1} className="focus:outline-none">
+
       {/* ------------------------------------------------------------------ */}
       {/* HERO                                                                */}
       {/* ------------------------------------------------------------------ */}
@@ -831,6 +833,8 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
+
+      </main>
 
       <Footer />
     </div>

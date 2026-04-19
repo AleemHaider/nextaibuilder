@@ -363,7 +363,7 @@ export default function CertificatePage() {
       <style>{PRINT_STYLES}</style>
       <TopNav />
 
-      <main className="px-4 sm:px-10 lg:px-20 py-12">
+      <main id="main-content" tabIndex={-1} className="px-4 sm:px-10 lg:px-20 py-12 focus:outline-none">
         <div className="max-w-[900px] mx-auto">
 
           {/* Back link */}

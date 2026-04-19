@@ -36,6 +36,7 @@ import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { CardSkeleton } from '../../components/ui/LoadingSkeleton'
 import { cn } from '../../lib/utils'
+import { usePageMeta } from '../../hooks/usePageMeta'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -628,6 +629,7 @@ const DASHBOARD_RESPONSIVE_STYLES = `
 `
 
 export default function DashboardPage() {
+  usePageMeta({ title: 'Dashboard' })
   const { user } = useAuth()
   const [enrollments, setEnrollments] = useState<EnrollmentSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -680,7 +682,9 @@ export default function DashboardPage() {
       <TopNav />
 
       <main
-        className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 pt-6 md:pt-10 pb-16"
+        id="main-content"
+        tabIndex={-1}
+        className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 pt-6 md:pt-10 pb-16 focus:outline-none"
       >
 
         {/* Greeting banner */}

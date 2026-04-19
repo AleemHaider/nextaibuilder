@@ -90,7 +90,7 @@ export default function BadgesPage() {
     <div className="min-h-screen bg-[var(--color-wise-canvas)]">
       <TopNav />
 
-      <main className="p-4 sm:p-10">
+      <main id="main-content" tabIndex={-1} className="p-4 sm:p-10 focus:outline-none">
         <h1 className="text-[32px] font-bold text-[var(--color-wise-text)] mb-2 tracking-[-0.5px]">
           My Badges
         </h1>

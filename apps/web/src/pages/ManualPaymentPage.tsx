@@ -561,7 +561,7 @@ export default function ManualPaymentPage() {
     return (
       <div className="min-h-screen bg-[var(--color-wise-surface-soft)]">
         <PageHeader slug={slug ?? ''} />
-        <main className="px-4 sm:px-10 md:px-20 py-12">
+        <main id="main-content" tabIndex={-1} className="px-4 sm:px-10 md:px-20 py-12 focus:outline-none">
           <div className="max-w-[640px] mx-auto">
             <LoadingSpinner centered label="Loading course details" size="lg" />
           </div>
@@ -575,7 +575,7 @@ export default function ManualPaymentPage() {
     return (
       <div className="min-h-screen bg-[var(--color-wise-surface-soft)]">
         <PageHeader slug={slug ?? ''} />
-        <main className="px-4 sm:px-10 md:px-20 py-12">
+        <main id="main-content" tabIndex={-1} className="px-4 sm:px-10 md:px-20 py-12 focus:outline-none">
           <div className="max-w-[640px] mx-auto">
             <EmptyState
               icon={CircleX}
@@ -594,7 +594,7 @@ export default function ManualPaymentPage() {
     return (
       <div className="min-h-screen bg-[var(--color-wise-surface-soft)]">
         <PageHeader slug={slug} />
-        <main className="px-4 sm:px-10 md:px-20 py-12">
+        <main id="main-content" tabIndex={-1} className="px-4 sm:px-10 md:px-20 py-12 focus:outline-none">
           <div className="max-w-[640px] mx-auto">
             <div
               className={cn(
@@ -653,7 +653,7 @@ export default function ManualPaymentPage() {
     return (
       <div className="min-h-screen bg-[var(--color-wise-surface-soft)]">
         <PageHeader slug={slug} />
-        <main className="px-4 sm:px-10 md:px-20 py-12">
+        <main id="main-content" tabIndex={-1} className="px-4 sm:px-10 md:px-20 py-12 focus:outline-none">
           <div className="max-w-[640px] mx-auto">
             <div
               className={cn(
@@ -677,7 +677,7 @@ export default function ManualPaymentPage() {
   return (
     <div className="min-h-screen bg-[var(--color-wise-surface-soft)]">
       <PageHeader slug={slug} />
-      <main className="px-4 sm:px-10 md:px-20 py-8 sm:py-12">
+      <main id="main-content" tabIndex={-1} className="px-4 sm:px-10 md:px-20 py-8 sm:py-12 focus:outline-none">
         <div className="max-w-[640px] mx-auto">
           <CohortHeaderCard cohort={cohort} />
 

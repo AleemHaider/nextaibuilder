@@ -568,7 +568,7 @@ export default function CoursePage() {
           </aside>
 
           {/* Main content area — Outlet renders LessonPage or LiveSessionsPage */}
-          <main className="flex-1 overflow-y-auto">
+          <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto focus:outline-none">
             <Outlet />
           </main>
         </div>

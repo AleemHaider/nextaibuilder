@@ -118,6 +118,8 @@ export default function EnrollmentSuccessPage() {
           'shadow-[var(--shadow-card)]',
         )}
         role="main"
+        id="main-content"
+        tabIndex={-1}
         aria-labelledby="success-heading"
       >
         {/* Animated checkmark */}

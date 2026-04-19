@@ -567,6 +567,8 @@ export default function CohortDetailPage() {
     <div className="min-h-screen bg-[var(--color-wise-canvas)]">
       <TopNav />
 
+      <main id="main-content" tabIndex={-1} className="focus:outline-none">
+
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden bg-[var(--color-wise-dark)]">
         {/* Decorative blobs */}
@@ -877,6 +879,8 @@ export default function CohortDetailPage() {
           <PricingCard cohort={cohort} />
         </div>
       </div>
+
+      </main>
 
       <Footer />
 

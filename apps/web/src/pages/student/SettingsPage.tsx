@@ -6,19 +6,22 @@
 //   - Save buttons are <Button variant="primary"> with isLoading
 //   - Toggle rows preserve the existing aria-switch semantics but switch to
 //     Wise primary/mint surfaces
-//   - The danger-zone account-deletion section is a theme hook only — we
-//     render the CTA + <ConfirmDialog> plumbing wired to a TODO so the audit
-//     has a pattern to point at; the backend delete endpoint is intentionally
-//     deferred to a separate sprint (no new business logic here).
+//
+// Sprint 4 Story 20 — danger-zone account-delete is now fully wired. The
+// CTA opens a <Modal> (not <ConfirmDialog>, because we need an <Input>
+// inside the body for the typed-confirmation guard) that calls
+// POST /api/student/profile/delete. On success we clear auth state and
+// redirect to `/`.
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router'
 import { CircleCheck, X, AlertTriangle } from 'lucide-react'
 import { TopNav } from '../../components/TopNav'
 import { useAuth } from '../../context/AuthContext'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { FormField } from '../../components/ui/FormField'
-import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { Modal } from '../../components/ui/Modal'
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton'
 import {
   fetchNotificationPreferences,
@@ -26,6 +29,7 @@ import {
   fetchStudentProfile,
   updateStudentProfile,
   changeStudentPassword,
+  deleteStudentAccount,
   type NotificationPreferences,
   type NotificationPreferencesResponse,
   type StudentProfile,
@@ -280,7 +284,8 @@ function NotificationsTab() {
 // ---------------------------------------------------------------------------
 
 function ProfileTab() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [toast, setToast] = useState<ToastState>(null)
 
@@ -341,10 +346,50 @@ function ProfileTab() {
     passwordMutation.mutate({ currentPassword, newPassword, confirmPassword })
   }
 
-  // Danger zone — account deletion placeholder. We render the surface but
-  // keep the action inert (console.warn) because there is no delete endpoint
-  // yet; a follow-up sprint will wire the real mutation.
+  // Sprint 4 Story 20 — danger-zone account delete. Opens a modal with a
+  // typed-confirmation guard; the final destructive Button is only enabled
+  // when the student types either the literal "DELETE MY ACCOUNT" or their
+  // own email. This mirrors GitHub's org-delete UX and keeps a stray click
+  // or broken button from wiping an account by accident.
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
+
+  const accountDeleteMutation = useMutation({
+    mutationFn: (confirmation: string) => deleteStudentAccount(confirmation),
+    onSuccess: async () => {
+      // Fire-and-forget auth teardown — even if the server-side logout
+      // endpoint hiccups the refresh cookie is already cleared by
+      // POST /profile/delete, and the access token expires within 15 min.
+      try { await logout() } catch { /* swallow */ }
+      setDeleteOpen(false)
+      setDeleteConfirmation('')
+      // Land on the marketing surface with a confirmation toast-via-state.
+      // We deliberately do not render a toast here — the SettingsPage is
+      // about to unmount so the ephemeral surface would flash and vanish.
+      navigate('/', {
+        replace: true,
+        state:   { accountDeleted: true },
+      })
+    },
+    onError: (err: Error) => {
+      // Don't log the user out on error — we want them to read the message
+      // and retry. The server may have rejected CONFIRMATION_MISMATCH or
+      // had a transient Stripe / DB wobble.
+      setToast({
+        message: err.message || 'Failed to delete account. Please try again.',
+        type:    'error',
+      })
+    },
+  })
+
+  // The confirm button stays disabled until the typed string matches one of
+  // the accepted tokens. Case-insensitive email comparison matches the
+  // server-side guard so what the student sees is what the server accepts.
+  const trimmedConfirmation = deleteConfirmation.trim()
+  const emailMatch = !!user?.email
+    && trimmedConfirmation.toLowerCase() === user.email.toLowerCase()
+  const tokenMatch = trimmedConfirmation === 'DELETE MY ACCOUNT'
+  const confirmationMatches = emailMatch || tokenMatch
 
   if (profileLoading) {
     return (
@@ -483,7 +528,10 @@ function ProfileTab() {
               type="button"
               variant="danger"
               size="md"
-              onClick={() => setDeleteOpen(true)}
+              onClick={() => {
+                setDeleteConfirmation('')
+                setDeleteOpen(true)
+              }}
             >
               Delete account
             </Button>
@@ -491,22 +539,65 @@ function ProfileTab() {
         </div>
       </div>
 
-      <ConfirmDialog
+      {/* Sprint 4 Story 20 — account-delete Modal with typed-confirmation
+          guard. We use <Modal> (not <ConfirmDialog>) so we can nest the
+          <FormField><Input /></FormField> pair inside the dialog body —
+          the student must type the confirmation string before the final
+          destructive button enables. */}
+      <Modal
         open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete your account?"
-        description="This permanently removes your enrollments, progress, and certificates. This action cannot be undone."
-        confirmLabel="Delete account"
-        variant="danger"
-        onConfirm={() => {
-          // No delete endpoint yet — surfaced in the next sprint. For now we
-          // just show a toast so the surface is observable in QA.
-          setToast({
-            message: 'Account deletion is not yet available. Please contact support.',
-            type: 'error',
-          })
+        onOpenChange={(open) => {
+          if (accountDeleteMutation.isPending) return // lock while mutating
+          setDeleteOpen(open)
+          if (!open) setDeleteConfirmation('')
         }}
-      />
+        title="Delete your account?"
+        description="This permanently removes access to your enrollments, progress, and profile. Purchase and certificate records are retained for audit."
+        size="sm"
+        showCloseButton={false}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() => {
+                setDeleteOpen(false)
+                setDeleteConfirmation('')
+              }}
+              disabled={accountDeleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="md"
+              isLoading={accountDeleteMutation.isPending}
+              disabled={!confirmationMatches || accountDeleteMutation.isPending}
+              onClick={() => accountDeleteMutation.mutate(trimmedConfirmation)}
+            >
+              Delete my account
+            </Button>
+          </>
+        }
+      >
+        <FormField
+          id="settings-delete-confirmation"
+          label="Type DELETE MY ACCOUNT or your email to confirm"
+          helperText={
+            user?.email
+              ? `We'll match against "DELETE MY ACCOUNT" or "${user.email}" (case-insensitive).`
+              : 'Type DELETE MY ACCOUNT to confirm.'
+          }
+        >
+          <Input
+            value={deleteConfirmation}
+            onChange={(e) => setDeleteConfirmation(e.target.value)}
+            placeholder="DELETE MY ACCOUNT"
+            autoComplete="off"
+            autoFocus
+          />
+        </FormField>
+      </Modal>
 
       <Toast state={toast} onDismiss={() => setToast(null)} />
     </div>
@@ -529,7 +620,7 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-[var(--color-wise-canvas)]">
       <TopNav />
 
-      <main className="max-w-[720px] mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      <main id="main-content" tabIndex={-1} className="max-w-[720px] mx-auto px-4 sm:px-6 py-8 sm:py-10 focus:outline-none">
         <h1 className="text-[28px] sm:text-[32px] font-black text-[var(--color-wise-text)] mb-6 tracking-[-0.5px]">
           Settings
         </h1>

@@ -59,7 +59,7 @@ export default function AboutPage() {
     <div className="min-h-screen bg-[var(--color-wise-canvas)]">
       <TopNav />
 
-      <main className="max-w-[1100px] mx-auto px-6 py-12 lg:py-16">
+      <main id="main-content" tabIndex={-1} className="max-w-[1100px] mx-auto px-6 py-12 lg:py-16 focus:outline-none">
 
         {/* ── Hero ──────────────────────────────────────────────────────── */}
         <section

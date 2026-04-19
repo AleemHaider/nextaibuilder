@@ -172,7 +172,7 @@ function SidebarContent({ onClose }: SidebarContentProps) {
       {/* Nav */}
       <nav
         className="flex-1 overflow-y-auto px-3 pt-3 pb-2 relative z-10"
-        aria-label="Admin navigation"
+        aria-label="Admin sidebar"
       >
         {navSections.map((section) => (
           <div key={section.label} className="mb-6">
@@ -341,7 +341,11 @@ export default function AdminShell({ children, title, actions }: AdminShellProps
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-[var(--color-wise-canvas)]">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto bg-[var(--color-wise-canvas)] focus:outline-none"
+        >
           {children}
         </main>
       </div>
