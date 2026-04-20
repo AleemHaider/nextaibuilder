@@ -26,6 +26,10 @@ export interface ICohort extends Document {
   enrollmentCount?: number
   liveStartDate?: Date | null
   liveEndDate?: Date | null
+  // NAB-P0-2 — course marketing content arrays
+  learningOutcomes?: string[]
+  requirements?: string[]
+  targetAudience?: string[]
 }
 
 const cohortSchema = new Schema<ICohort>(
@@ -55,6 +59,36 @@ const cohortSchema = new Schema<ICohort>(
     enrollmentCount: { type: Number, default: 0 },
     liveStartDate: { type: Date, default: null },
     liveEndDate: { type: Date, default: null },
+    // NAB-P0-2 — learning outcomes / requirements / target audience.
+    // Mongoose applies defaults lazily on load, so existing documents without
+    // the field will still return [] via `get` access once loaded. We also
+    // mirror the API-side caps (12/10/8, each ≤140 chars) as schema-level
+    // validators so direct Mongoose writes (e.g. from workers/migrations)
+    // cannot bypass the contract.
+    learningOutcomes: {
+      type: [{ type: String, trim: true, maxlength: 140 }],
+      default: [],
+      validate: {
+        validator: (v: string[]) => !Array.isArray(v) || v.length <= 12,
+        message: 'learningOutcomes supports at most 12 entries.',
+      },
+    },
+    requirements: {
+      type: [{ type: String, trim: true, maxlength: 140 }],
+      default: [],
+      validate: {
+        validator: (v: string[]) => !Array.isArray(v) || v.length <= 10,
+        message: 'requirements supports at most 10 entries.',
+      },
+    },
+    targetAudience: {
+      type: [{ type: String, trim: true, maxlength: 140 }],
+      default: [],
+      validate: {
+        validator: (v: string[]) => !Array.isArray(v) || v.length <= 8,
+        message: 'targetAudience supports at most 8 entries.',
+      },
+    },
   },
   { timestamps: true },
 )

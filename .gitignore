@@ -7,3 +7,7 @@ dist/
 coverage/
 .nyc_output/
 *.tsbuildinfo
+
+# Local dev uploads — when S3 not configured the backend writes here
+# (apps/api/src/routes/uploads.ts). Dev-only binary data, never commit.
+apps/api/uploads/
