@@ -78,3 +78,46 @@ describe('sanitizeLessonHtml', () => {
     expect(sanitizeLessonHtml('')).toBe('')
   })
 })
+
+// NAB-P0-4 — allow-list additions for TipTap-authored lesson bodies.
+describe('sanitizeHtml — NAB-P0-4 rich-text bodies', () => {
+  it('preserves <pre><code class="language-ts"> fenced code blocks', () => {
+    const dirty =
+      '<pre><code class="language-ts">const x: number = 1</code></pre>'
+    const clean = sanitizeHtml(dirty)
+    expect(clean).toContain('<pre>')
+    expect(clean).toContain('<code')
+    expect(clean).toContain('class="language-ts"')
+    expect(clean).toContain('const x')
+  })
+
+  it('preserves <img src="…" data-key="…"> with the upload bookkeeping attr', () => {
+    const dirty =
+      '<img src="/api/uploads/lesson-images/abc/def.png" data-key="lesson-images/abc/def.png" alt="diagram">'
+    const clean = sanitizeHtml(dirty)
+    expect(clean).toContain('<img')
+    expect(clean).toContain('src="/api/uploads/lesson-images/abc/def.png"')
+    expect(clean).toContain('data-key="lesson-images/abc/def.png"')
+    expect(clean).toContain('alt="diagram"')
+  })
+
+  it('strips <img onerror="…"> XSS attempts', () => {
+    const dirty = '<img src="x" onerror="alert(1)" data-key="abc">'
+    const clean = sanitizeHtml(dirty)
+    expect(clean).not.toContain('onerror')
+    expect(clean).not.toContain('alert')
+    // data-key is allow-listed; it should still be present.
+    expect(clean).toContain('data-key="abc"')
+  })
+
+  it('strips inline style="…" from arbitrary tags', () => {
+    const dirty =
+      '<p style="color:red;font-weight:bold">hello</p>' +
+      '<span style="color:#f00">world</span>'
+    const clean = sanitizeHtml(dirty)
+    expect(clean).not.toContain('style=')
+    expect(clean).not.toContain('color:')
+    expect(clean).toContain('<p>hello</p>')
+    expect(clean).toContain('<span>world</span>')
+  })
+})

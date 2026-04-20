@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* NAB-P0-4 — highlight.js theme for TipTap code blocks + sanitized lesson
+   bodies on the storefront. We pick the GitHub light theme to match the
+   light Wise-navy canvas; a dark variant can swap in when the student
+   player gains a dark mode. */
+@import "highlight.js/styles/github.css";
+
 @theme inline {
   /*
    * CANONICAL DESIGN TOKENS — Navy/blue/orange palette (Sprint 5, Story 23).

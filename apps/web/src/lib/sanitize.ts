@@ -14,6 +14,18 @@ import DOMPurify, { type Config } from 'dompurify'
 // Strict allow-list. Start tight; we'll extend only if a legitimate tag gets
 // stripped during smoke testing. Scripts, iframes, event handlers, and
 // `javascript:` URLs are all dropped by DOMPurify defaults plus this config.
+//
+// NAB-P0-4 — extended for TipTap-authored lesson bodies:
+//   * `pre` + `code` + `class` — fenced code blocks with a
+//     `language-<lang>` hint so highlight.js can style them client-side.
+//   * `img` + `data-key` — inline lesson images (the `data-key` lets a
+//     future cleanup job reconcile uploads against rendered references).
+//   * Everything else the toolbar can emit was already on the list.
+//
+// Inline `style` attributes are NOT in ALLOWED_ATTR — DOMPurify drops any
+// attr not on the list, so Google-Docs-style `style="color:#…"` spans are
+// stripped. This intentionally runs AFTER editor-side paste normalisation
+// so the only authoritative check is at render time.
 const DEFAULT_CONFIG: Config = {
   ALLOWED_TAGS: [
     'a', 'abbr', 'b', 'blockquote', 'br', 'code', 'em',
@@ -22,7 +34,11 @@ const DEFAULT_CONFIG: Config = {
     'strong', 'sub', 'sup',
     'table', 'tbody', 'td', 'th', 'thead', 'tr', 'ul',
   ],
-  ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'src', 'alt', 'class'],
+  ALLOWED_ATTR: [
+    'href', 'title', 'target', 'rel', 'src', 'alt', 'class',
+    // NAB-P0-4 — image-upload bookkeeping + code-block language hint.
+    'data-key', 'data-language',
+  ],
   // Allow target/rel so the post-sanitize hook below can set them safely.
   ADD_ATTR: ['target', 'rel'],
 }

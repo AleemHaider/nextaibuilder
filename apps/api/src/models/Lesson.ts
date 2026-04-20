@@ -3,10 +3,16 @@
 // videoDurationSeconds. The legacy `loomUrl` field is kept for back-compat
 // (marked @deprecated); a pre-save hook mirrors it into the new fields when
 // older writers only populate `loomUrl`.
+// NAB-P0-4 — Rich-text authoring: added `richContent` (HTML ≤100k) and
+// `contentFormat` ('MARKDOWN' | 'RICH_HTML') for the TipTap-backed editor.
+// Legacy `content` is kept verbatim; writers that populate `richContent`
+// also write a plain-text fallback into `content` so older render paths
+// keep working without a migration.
 import { Schema, model, Document, Model, Types } from 'mongoose'
 
 export type LessonType = 'VIDEO' | 'TEXT' | 'TOOL_SETUP'
 export type VideoProvider = 'LOOM' | 'YOUTUBE' | 'VIMEO'
+export type ContentFormat = 'MARKDOWN' | 'RICH_HTML'
 
 export interface ILesson extends Document {
   moduleId: Types.ObjectId
@@ -26,6 +32,10 @@ export interface ILesson extends Document {
   transcript?: string
   // TEXT
   content?: string
+  /** NAB-P0-4 — TipTap-authored HTML body (sanitized at render time). */
+  richContent?: string | null
+  /** NAB-P0-4 — distinguishes a plain-text / legacy `content` from a rich body. */
+  contentFormat?: ContentFormat | null
   // TOOL_SETUP
   setupStepId?: Types.ObjectId
   createdAt: Date
@@ -59,7 +69,17 @@ const lessonSchema = new Schema<ILesson>(
     loomUrl: { type: String, trim: true },
     transcript: { type: String },
     // TEXT fields
-    content: { type: String, maxlength: 50000 },
+    content:     { type: String, maxlength: 50000 },
+    // NAB-P0-4 — Rich HTML body (TipTap). Larger cap than plain-text `content`
+    // because the HTML envelope adds overhead even for modestly-sized lessons.
+    richContent: { type: String, maxlength: 100000, default: null },
+    // NAB-P0-4 — Null until a writer actually picks a format; legacy docs
+    // written via the pre-P0-4 routes stay null.
+    contentFormat: {
+      type: String,
+      enum: ['MARKDOWN', 'RICH_HTML', null],
+      default: null,
+    },
     // TOOL_SETUP fields
     setupStepId: { type: Schema.Types.ObjectId, ref: 'SetupStep' },
   },
