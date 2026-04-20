@@ -1,9 +1,10 @@
 // FIR-165 — Admin Course Builder: list + edit with tabs (Overview, Curriculum, Live Sessions, Pricing)
 // Wave 5 Story Y — Curriculum tab is API-backed with drag-reorder for modules + lessons.
 // Sprint 2 Story 11 — handleSave / Pricing / Live Sessions wired to the admin API.
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, GripVertical, ChevronDown, ChevronUp, Video, FileText, Wrench, Calendar, DollarSign, ImageIcon, X as XIcon, Pencil, Trash2 } from 'lucide-react'
+import { Search, Plus, GripVertical, ChevronDown, ChevronUp, Video, FileText, Wrench, Calendar, DollarSign, ImageIcon, X as XIcon, Pencil, Trash2, Check, AlertTriangle, Loader2 } from 'lucide-react'
+import { useDebouncedAutosave, type AutosaveState } from '../../hooks/useDebouncedAutosave'
 import AdminShell from '../../components/admin/AdminShell'
 import {
   fetchAdminCourses,
@@ -56,6 +57,8 @@ import { Modal } from '../../components/ui/Modal'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 import { EmptyState } from '../../components/ui/EmptyState'
+// NAB-P0-4 — TipTap-backed rich-text editor for TEXT lesson bodies.
+import { RichTextEditor } from '../../components/ui/RichTextEditor'
 import { cn } from '../../lib/utils'
 
 // ---------------------------------------------------------------------------
@@ -181,6 +184,220 @@ function lessonTypeIcon(type: LessonDraft['type']) {
   if (type === 'VIDEO') return <Video size={12} />
   if (type === 'TEXT') return <FileText size={12} />
   return <Wrench size={12} />
+}
+
+// ---------------------------------------------------------------------------
+// NAB-P0-1 — SaveStateIndicator + localStorage draft recovery
+// ---------------------------------------------------------------------------
+
+/**
+ * Formats a "Saved Xm ago" relative label. Uses Intl.RelativeTimeFormat when
+ * available (wide browser support — we don't need to polyfill). We keep the
+ * output in English because the rest of the admin is single-locale.
+ */
+function formatRelativeSaved(savedAt: number, now: number): string {
+  const diffMs = Math.max(0, now - savedAt)
+  const diffMinutes = Math.floor(diffMs / 60_000)
+  if (diffMinutes < 1) return 'Saved just now'
+  if (typeof Intl !== 'undefined' && typeof Intl.RelativeTimeFormat === 'function') {
+    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'always', style: 'short' })
+    // RTF produces "1 min. ago" / "2 min. ago" which reads naturally in the
+    // header chip. Prepend "Saved " for the final label.
+    return `Saved ${rtf.format(-diffMinutes, 'minute')}`
+  }
+  return `Saved ${diffMinutes}m ago`
+}
+
+function SaveStateIndicator({
+  state,
+  savedAt,
+  onRetry,
+}: {
+  state: AutosaveState
+  savedAt: number | null
+  onRetry: () => void
+}) {
+  // Tick every 60s so the "Saved Xm ago" label keeps itself fresh without
+  // re-rendering the entire editor. The interval only runs while we're
+  // sitting in the 'saved' state so idle pages don't burn timers.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (state !== 'saved') return
+    const interval = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(interval)
+  }, [state])
+
+  if (state === 'idle') {
+    // Render an empty aria-live region so screen readers are primed for the
+    // first transition announcement without a layout jump.
+    return <div aria-live="polite" className="sr-only" data-testid="save-state-indicator" />
+  }
+
+  const baseClass =
+    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-[600] transition-colors'
+
+  let content: React.ReactNode
+  if (state === 'saving') {
+    content = (
+      <span
+        className={cn(
+          baseClass,
+          'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-warm)]',
+        )}
+        data-state="saving"
+      >
+        <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+        Saving…
+      </span>
+    )
+  } else if (state === 'saved') {
+    const label = savedAt ? formatRelativeSaved(savedAt, now) : 'Saved just now'
+    content = (
+      <span
+        className={cn(
+          baseClass,
+          'bg-[var(--color-wise-mint)] text-[var(--color-wise-success)]',
+        )}
+        data-state="saved"
+      >
+        <Check size={12} aria-hidden="true" />
+        {label}
+      </span>
+    )
+  } else {
+    content = (
+      <span
+        className={cn(
+          baseClass,
+          'bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)]',
+        )}
+        data-state="error"
+      >
+        <AlertTriangle size={12} aria-hidden="true" />
+        Save failed
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 text-[12px]"
+          onClick={onRetry}
+        >
+          Retry
+        </Button>
+      </span>
+    )
+  }
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      data-testid="save-state-indicator"
+      className="flex items-center"
+    >
+      {content}
+    </div>
+  )
+}
+
+// localStorage helpers for brand-new-course draft recovery. Entries are keyed
+// by a session-scoped UUID so two tabs editing separate new drafts don't
+// collide on the same key.
+const DRAFT_STORAGE_PREFIX = 'nab:course-builder:draft:'
+const SESSION_UUID_KEY = 'nab:course-builder:session'
+const DRAFT_PERSIST_INTERVAL_MS = 500
+
+function getOrCreateSessionUuid(): string {
+  if (typeof window === 'undefined') return 'ssr'
+  try {
+    let uuid = window.sessionStorage.getItem(SESSION_UUID_KEY)
+    if (!uuid) {
+      uuid = crypto.randomUUID()
+      window.sessionStorage.setItem(SESSION_UUID_KEY, uuid)
+    }
+    return uuid
+  } catch {
+    // sessionStorage can throw in privacy mode — fall back to a per-call
+    // ephemeral id so the caller doesn't crash.
+    return 'ephemeral'
+  }
+}
+
+interface StoredDraftEntry {
+  draft: CourseDraft
+  savedAt: number
+}
+
+function draftStorageKey(sessionUuid: string): string {
+  return `${DRAFT_STORAGE_PREFIX}${sessionUuid}`
+}
+
+function readStoredDraft(sessionUuid: string): StoredDraftEntry | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(draftStorageKey(sessionUuid))
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as StoredDraftEntry
+    // Validate the bare minimum — if the shape has drifted we discard so the
+    // banner doesn't hydrate garbage. A missing `draft.id` key is expected
+    // (the whole point is unsaved-draft recovery).
+    if (!parsed || typeof parsed !== 'object' || !parsed.draft) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writeStoredDraft(sessionUuid: string, draft: CourseDraft): void {
+  if (typeof window === 'undefined') return
+  try {
+    const entry: StoredDraftEntry = { draft, savedAt: Date.now() }
+    window.localStorage.setItem(draftStorageKey(sessionUuid), JSON.stringify(entry))
+  } catch {
+    // Quota exceeded / privacy mode — silently drop. The user still has the
+    // in-memory draft, this is just a recovery nicety.
+  }
+}
+
+function clearStoredDraft(sessionUuid: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(draftStorageKey(sessionUuid))
+  } catch {
+    /* noop */
+  }
+}
+
+function isEmptyNewDraft(d: CourseDraft): boolean {
+  // "Empty new" = the default shape produced by newCourse() — no user input.
+  // We only show the recovery banner when the page mounts with this blank
+  // draft so editing an existing course never sees the banner.
+  return (
+    d.id === null &&
+    d.title === 'Untitled Course' &&
+    d.slug === '' &&
+    d.tagline === '' &&
+    d.description === '' &&
+    d.type === 'recorded' &&
+    d.startDate === '' &&
+    d.endDate === '' &&
+    d.maxSeats === '' &&
+    d.coverImageKey === null &&
+    d.modules.length === 0 &&
+    d.learningOutcomes.length === 0 &&
+    d.requirements.length === 0 &&
+    d.targetAudience.length === 0
+  )
+}
+
+function formatBannerRelative(ts: number, now: number): string {
+  const diffMs = Math.max(0, now - ts)
+  const minutes = Math.floor(diffMs / 60_000)
+  if (minutes < 1) return 'a moment'
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'}`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'}`
+  const days = Math.floor(hours / 24)
+  return `${days} day${days === 1 ? '' : 's'}`
 }
 
 // ---------------------------------------------------------------------------
@@ -336,12 +553,47 @@ function CourseListSidebar({
 function OverviewTab({
   draft,
   onChange,
+  recoverableDraft,
+  onResumeDraft,
+  onDiscardDraft,
 }: {
   draft: CourseDraft
   onChange: (updated: Partial<CourseDraft>) => void
+  recoverableDraft?: StoredDraftEntry | null
+  onResumeDraft?: () => void
+  onDiscardDraft?: () => void
 }) {
   return (
     <div className="p-8">
+      {/* NAB-P0-1 — localStorage draft recovery banner. Only appears when
+          the parent page detected an unsaved draft in localStorage *and*
+          the current draft is the blank "new course" shape. Once the user
+          either resumes or discards, the parent hides this. */}
+      {recoverableDraft && onResumeDraft && onDiscardDraft && (
+        <div
+          role="status"
+          aria-live="polite"
+          data-testid="draft-recovery-banner"
+          className="mb-6 flex items-center gap-3 p-4 rounded-[12px] border border-[var(--color-wise-ring)] bg-[var(--color-wise-mint)]"
+        >
+          <AlertTriangle
+            size={18}
+            className="text-[var(--color-wise-primary-text)] flex-shrink-0"
+            aria-hidden="true"
+          />
+          <p className="flex-1 text-[14px] text-[var(--color-wise-text)]">
+            Resume unsaved draft from{' '}
+            {formatBannerRelative(recoverableDraft.savedAt, Date.now())} ago?
+          </p>
+          <Button variant="primary" size="sm" onClick={onResumeDraft}>
+            Resume
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onDiscardDraft}>
+            Discard
+          </Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left column */}
         <div className="flex flex-col gap-5">
@@ -1367,6 +1619,8 @@ interface LessonFormState {
   /** NAB-P0-5 — replaces the old loom-only URL field. */
   videoUrl: string
   content: string
+  /** NAB-P0-4 — TipTap HTML body for TEXT lessons. */
+  richContent: string
   estimatedMinutes: string
 }
 
@@ -1376,8 +1630,31 @@ function blankLessonForm(): LessonFormState {
     type: 'VIDEO',
     videoUrl: '',
     content: '',
+    richContent: '',
     estimatedMinutes: '0',
   }
+}
+
+/**
+ * NAB-P0-4 — Derive an initial rich-text value from an existing lesson. If
+ * the lesson has been edited with the TipTap editor before, we use the
+ * stored HTML verbatim. Otherwise we wrap the legacy plain-text `content`
+ * in a paragraph tag so the editor has valid HTML to bootstrap into. Empty
+ * strings stay empty — the placeholder in the editor picks up the slack.
+ */
+function initialRichContentFor(lesson: AdminLesson): string {
+  if (lesson.richContent && lesson.richContent.trim().length > 0) {
+    return lesson.richContent
+  }
+  const plain = (lesson.content ?? '').trim()
+  if (!plain) return ''
+  // Escape before wrapping so pre-existing `<` / `>` in a plain-text body
+  // don't accidentally execute as HTML inside the editor.
+  const escaped = plain
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  return `<p>${escaped.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br />')}</p>`
 }
 
 // NAB-P0-5 — Human-readable label for the provider pill / detection hint.
@@ -1541,7 +1818,10 @@ function ServerLessonList({
       // NAB-P0-5 — Seed the field from the new videoUrl, falling back to the
       // legacy loomUrl so existing lessons render the value on edit.
       videoUrl: lesson.videoUrl ?? lesson.loomUrl ?? '',
-      content: '',
+      content: lesson.content ?? '',
+      // NAB-P0-4 — Prefer the rich HTML; fall back to wrapping legacy plain
+      // `content` in <p>…</p> so the editor has valid HTML to bootstrap.
+      richContent: initialRichContentFor(lesson),
       estimatedMinutes: String(lesson.estimatedMinutes),
     })
     setLessonFormError(null)
@@ -1558,6 +1838,12 @@ function ServerLessonList({
     }
     const videoUrl = lessonForm.videoUrl.trim()
     const content = lessonForm.content.trim()
+    // NAB-P0-4 — richContent is the TipTap HTML body. We DON'T `.trim()`
+    // the HTML because TipTap emits a trailing empty paragraph by default;
+    // an emptyish document is filtered via a regex below.
+    const richContent = lessonForm.richContent
+    const richContentIsEmpty =
+      richContent.replace(/<[^>]+>/g, '').trim().length === 0
     // NAB-P0-5 — Client-side validation: VIDEO lessons require a recognised
     // multi-provider URL. Block save on empty or unsupported input.
     let videoProvider: VideoProvider | null = null
@@ -1587,7 +1873,13 @@ function ServerLessonList({
         ...(lessonForm.type === 'VIDEO' && videoUrl && videoProvider
           ? { videoUrl, videoProvider }
           : {}),
-        ...(lessonForm.type === 'TEXT' && content ? { content } : {}),
+        // NAB-P0-4 — send richContent + RICH_HTML format for TEXT lessons.
+        // The backend derives a plain-text `content` fallback automatically.
+        ...(lessonForm.type === 'TEXT' && !richContentIsEmpty
+          ? { richContent, contentFormat: 'RICH_HTML' as const }
+          : lessonForm.type === 'TEXT' && content
+            ? { content }
+            : {}),
       }
       updateLessonMutation.mutate({ lessonId: editingLesson.id, payload })
     } else {
@@ -1599,7 +1891,12 @@ function ServerLessonList({
         ...(lessonForm.type === 'VIDEO' && videoUrl && videoProvider
           ? { videoUrl, videoProvider }
           : {}),
-        ...(lessonForm.type === 'TEXT' && content ? { content } : {}),
+        // NAB-P0-4 — same split as above; richContent wins for TEXT lessons.
+        ...(lessonForm.type === 'TEXT' && !richContentIsEmpty
+          ? { richContent, contentFormat: 'RICH_HTML' as const }
+          : lessonForm.type === 'TEXT' && content
+            ? { content }
+            : {}),
       }
       createLessonMutation.mutate(payload)
     }
@@ -1862,6 +2159,21 @@ function ServerLessonList({
               >
                 Content
               </label>
+              {/* NAB-P0-4 — TipTap rich-text editor. Emits HTML into
+                  `richContent`; the backend derives a plain-text `content`
+                  fallback automatically. */}
+              <RichTextEditor
+                value={lessonForm.richContent}
+                onChange={(next) =>
+                  setLessonForm({ ...lessonForm, richContent: next })
+                }
+                cohortId={cohortId}
+                maxChars={100_000}
+                placeholder="Write the lesson body. Use the toolbar for headings, code blocks, images, and links."
+              />
+              {/* Hidden textarea — retained so React Testing Library + form
+                  submission fall-back tests that still reach `#lesson-content`
+                  keep working if someone disables JS. */}
               <textarea
                 id="lesson-content"
                 value={lessonForm.content}
@@ -1871,6 +2183,7 @@ function ServerLessonList({
                 rows={6}
                 placeholder="Markdown / plain-text body for this lesson."
                 className={cn(
+                  'sr-only',
                   'w-full rounded-xl bg-white text-[var(--color-wise-text)] border',
                   'border-[var(--color-wise-ring)] px-4 py-3 text-[15px] outline-none',
                   'placeholder:text-[var(--color-wise-text-muted)]',
@@ -2839,6 +3152,13 @@ interface CourseEditorProps {
   isPublishing: boolean
   isAdmin: boolean
   addToast: (message: string, variant: 'success' | 'error') => void
+  // NAB-P0-1 — autosave state + draft-recovery plumbed from the parent.
+  autosaveState: AutosaveState
+  autosaveSavedAt: number | null
+  onAutosaveRetry: () => void
+  recoverableDraft: StoredDraftEntry | null
+  onResumeDraft: () => void
+  onDiscardDraft: () => void
 }
 
 function CourseEditor({
@@ -2850,6 +3170,12 @@ function CourseEditor({
   isPublishing,
   isAdmin,
   addToast,
+  autosaveState,
+  autosaveSavedAt,
+  onAutosaveRetry,
+  recoverableDraft,
+  onResumeDraft,
+  onDiscardDraft,
 }: CourseEditorProps) {
   const [activeTab, setActiveTab] = useState<EditorTab>('Overview')
 
@@ -2872,10 +3198,21 @@ function CourseEditor({
         >
           {draft.status.charAt(0) + draft.status.slice(1).toLowerCase()}
         </span>
+        {/* NAB-P0-1 — autosave chip sits to the right of the status pill so
+            it stays in the user's eyeline without bumping the Save/Publish
+            buttons. `aria-live=polite` is inside the component. */}
+        <SaveStateIndicator
+          state={autosaveState}
+          savedAt={autosaveSavedAt}
+          onRetry={onAutosaveRetry}
+        />
         <div className="flex gap-2.5 ml-auto">
           <button
             type="button"
             onClick={onSave}
+            // NAB-P0-1 — the Save button stays enabled even while an autosave
+            // is in flight; handleSave() flushes the autosave first. We only
+            // disable during the *manual* save request.
             disabled={isSaving}
             className="px-5 py-2 rounded-full bg-[#f0f0f0] text-[#1a2744] text-[14px] font-[700] hover:bg-[#e8ecf4] disabled:opacity-50 transition-colors"
           >
@@ -2927,7 +3264,13 @@ function CourseEditor({
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto bg-[#f8f9fb]">
         {activeTab === 'Overview' && (
-          <OverviewTab draft={draft} onChange={onChange} />
+          <OverviewTab
+            draft={draft}
+            onChange={onChange}
+            recoverableDraft={recoverableDraft}
+            onResumeDraft={onResumeDraft}
+            onDiscardDraft={onDiscardDraft}
+          />
         )}
         {activeTab === 'Curriculum' && (
           <CurriculumTab
@@ -2979,6 +3322,30 @@ function dateInputToIso(value: string): string | undefined {
   return parsed.toISOString()
 }
 
+// NAB-P0-1 — shared payload builder so autosave and the manual Save button
+// send identical shapes. Keeping it free-standing keeps the parent component
+// body small and makes the test surface straightforward (pass a draft, check
+// what would be sent).
+function buildCoursePayload(draft: CourseDraft) {
+  const maxSeatsNumber =
+    draft.maxSeats.trim() === '' ? undefined : Number(draft.maxSeats)
+  return {
+    title: draft.title,
+    type: uiTypeToApi(draft.type),
+    tagline: draft.tagline || undefined,
+    description: draft.description || undefined,
+    maxSeats:
+      Number.isFinite(maxSeatsNumber) && (maxSeatsNumber as number) > 0
+        ? (maxSeatsNumber as number)
+        : undefined,
+    liveStartDate: dateInputToIso(draft.startDate),
+    liveEndDate: dateInputToIso(draft.endDate),
+    learningOutcomes: draft.learningOutcomes,
+    requirements: draft.requirements,
+    targetAudience: draft.targetAudience,
+  }
+}
+
 export default function CourseBuilderPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -2986,6 +3353,12 @@ export default function CourseBuilderPage() {
   const [draft, setDraft] = useState<CourseDraft | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
+
+  // NAB-P0-1 — draft recovery banner state. Populated once when the page
+  // first mounts in "new course" mode and there's a stored draft in
+  // localStorage. Resume/Discard clear this to null so the banner drops.
+  const [recoverableDraft, setRecoverableDraft] = useState<StoredDraftEntry | null>(null)
+  const sessionUuid = useMemo(() => getOrCreateSessionUuid(), [])
 
   const queryClient = useQueryClient()
   const { toasts, addToast, dismissToast } = useToast()
@@ -3066,37 +3439,130 @@ export default function CourseBuilderPage() {
     setDraft((prev) => (prev ? { ...prev, ...updated } : prev))
   }
 
+  // ── NAB-P0-1 — Autosave wiring ────────────────────────────────────────
+  //
+  // The hook observes `draft` and fires `save(snapshot)` 800ms after the last
+  // edit. We only PATCH when draft.id is set — for brand-new drafts the
+  // localStorage effect below handles persistence, and the first create is
+  // intentionally left to the manual Save button (so users have explicit
+  // control over when a new cohort record is born server-side).
+  const autosaveCallback = useCallback(
+    async (snapshot: CourseDraft) => {
+      if (!snapshot.id) return
+      await updateAdminCourse(snapshot.id, buildCoursePayload(snapshot))
+      // Keep the sidebar row + detail cache in sync after a successful PATCH
+      // so a subsequent selectCourse() sees fresh data without a hard refetch.
+      queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'courses', snapshot.id] })
+    },
+    [queryClient],
+  )
+
+  const autosave = useDebouncedAutosave<CourseDraft | null>(
+    draft,
+    async (snapshot) => {
+      if (snapshot) await autosaveCallback(snapshot)
+    },
+    800,
+  )
+
+  // ── NAB-P0-1 — localStorage draft recovery ────────────────────────────
+  //
+  // When an unsaved draft (no id) is being edited we persist it to
+  // localStorage at most every 500ms. Once the draft flips to server-backed
+  // (id is set) we clear the entry — the server is now the source of truth.
+  const lastPersistRef = useRef(0)
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!draft) return
+    if (draft.id !== null) {
+      // Draft is now server-backed — the localStorage copy is redundant.
+      clearStoredDraft(sessionUuid)
+      return
+    }
+    // Throttle writes to at most one per 500ms to match the spec.
+    const now = Date.now()
+    const elapsed = now - lastPersistRef.current
+    const scheduleWrite = () => {
+      lastPersistRef.current = Date.now()
+      writeStoredDraft(sessionUuid, draft)
+    }
+    if (elapsed >= DRAFT_PERSIST_INTERVAL_MS) {
+      scheduleWrite()
+    } else {
+      if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
+      persistTimerRef.current = setTimeout(scheduleWrite, DRAFT_PERSIST_INTERVAL_MS - elapsed)
+    }
+    return () => {
+      if (persistTimerRef.current) {
+        clearTimeout(persistTimerRef.current)
+        persistTimerRef.current = null
+      }
+    }
+  }, [draft, sessionUuid])
+
+  // Whenever the draft becomes an "empty new course" (the user just clicked
+  // + New Course without typing), check localStorage for a recoverable draft
+  // and surface the banner. Typing into the form shifts the draft away from
+  // the empty shape so the banner naturally drops.
+  useEffect(() => {
+    if (!draft) {
+      setRecoverableDraft(null)
+      return
+    }
+    if (draft.id !== null) {
+      setRecoverableDraft(null)
+      return
+    }
+    if (!isEmptyNewDraft(draft)) {
+      // User has typed — don't nag with a recovery banner over their input.
+      setRecoverableDraft(null)
+      return
+    }
+    const existing = readStoredDraft(sessionUuid)
+    // Only surface the banner when the stored draft is *different* from the
+    // current blank one; otherwise there's nothing to resume.
+    if (existing && !isEmptyNewDraft(existing.draft)) {
+      setRecoverableDraft(existing)
+    } else {
+      setRecoverableDraft(null)
+    }
+  }, [draft, sessionUuid])
+
+  const handleResumeDraft = useCallback(() => {
+    if (!recoverableDraft) return
+    setDraft(recoverableDraft.draft)
+    setSelectedCourse(null)
+    setRecoverableDraft(null)
+  }, [recoverableDraft])
+
+  const handleDiscardDraft = useCallback(() => {
+    clearStoredDraft(sessionUuid)
+    setRecoverableDraft(null)
+  }, [sessionUuid])
+
   // Sprint 2 Story 11 — real handleSave.
   // Creates a cohort via POST when draft.id is empty, otherwise PATCHes the
   // existing cohort. On success we flip draft.id (or update the selected
   // course row) and invalidate the admin-courses list so the sidebar refreshes
   // without a full refetch loop.
+  //
+  // NAB-P0-1 — we now flush() the autosave hook first so any debounced save
+  // either completes or is cancelled before the manual request fires. Without
+  // this the two PATCHes could race and the later one could clobber a stale
+  // snapshot. If the autosave is in the `error` state we still push through
+  // with a fresh payload — the manual Save is the user's explicit escape
+  // hatch from a stuck autosave.
   async function handleSave() {
     if (!draft) return
     setIsSaving(true)
-
-    // Shared payload — the back-end schema expects specific key names
-    // (liveStartDate / liveEndDate, maxSeats as a number) so we normalise
-    // once here. Empty strings/NaNs are stripped rather than sent as nulls.
-    const maxSeatsNumber =
-      draft.maxSeats.trim() === '' ? undefined : Number(draft.maxSeats)
-    const payload = {
-      title: draft.title,
-      type: uiTypeToApi(draft.type),
-      tagline: draft.tagline || undefined,
-      description: draft.description || undefined,
-      maxSeats:
-        Number.isFinite(maxSeatsNumber) && (maxSeatsNumber as number) > 0
-          ? (maxSeatsNumber as number)
-          : undefined,
-      liveStartDate: dateInputToIso(draft.startDate),
-      liveEndDate: dateInputToIso(draft.endDate),
-      // NAB-P0-2 — always send the bullet arrays so clearing the last entry
-      // actually persists. Sending `[]` is valid per the Zod schema.
-      learningOutcomes: draft.learningOutcomes,
-      requirements:     draft.requirements,
-      targetAudience:   draft.targetAudience,
+    try {
+      await autosave.flush()
+    } catch {
+      // flush() never rejects — but guard anyway so we always fall through.
     }
+
+    const payload = buildCoursePayload(draft)
 
     try {
       if (!draft.id) {
@@ -3105,6 +3571,8 @@ export default function CourseBuilderPage() {
         // ServerCurriculumList / PricingTab / LiveSessionsTab data fetches.
         setDraft((prev) => (prev ? { ...prev, id: created.id } : prev))
         queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
+        // Once the draft has a real id, the localStorage copy is redundant.
+        clearStoredDraft(sessionUuid)
         addToast('Course created', 'success')
       } else {
         await updateAdminCourse(draft.id, payload)
@@ -3200,6 +3668,12 @@ export default function CourseBuilderPage() {
             isPublishing={isPublishing}
             isAdmin={isAdmin}
             addToast={addToast}
+            autosaveState={autosave.state}
+            autosaveSavedAt={autosave.savedAt}
+            onAutosaveRetry={autosave.retry}
+            recoverableDraft={recoverableDraft}
+            onResumeDraft={handleResumeDraft}
+            onDiscardDraft={handleDiscardDraft}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-[#f8f9fb]">

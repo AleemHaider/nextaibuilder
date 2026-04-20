@@ -275,6 +275,9 @@ export interface PreviewLesson {
   /** @deprecated Use videoUrl + videoProvider instead. */
   loomUrl?: string | null
   content?: string | null
+  // NAB-P0-4 — rich-text body; prefer this over `content` when present.
+  richContent?: string | null
+  contentFormat?: 'MARKDOWN' | 'RICH_HTML' | null
 }
 
 export interface CohortDetail extends CohortSummary {
@@ -596,6 +599,9 @@ export interface LessonDetail {
   loomUrl?: string
   embedUrl?: string
   content?: string
+  // NAB-P0-4 — rich HTML body; preferred over `content` when present.
+  richContent?: string | null
+  contentFormat?: 'MARKDOWN' | 'RICH_HTML' | null
   estimatedMinutes: number
 }
 
@@ -924,6 +930,10 @@ export interface AdminLesson {
   videoUrl?: string | null
   /** @deprecated Use videoUrl + videoProvider. Retained for back-compat. */
   loomUrl?: string | null
+  // NAB-P0-4 — rich-text lesson body.
+  content?: string | null
+  richContent?: string | null
+  contentFormat?: 'MARKDOWN' | 'RICH_HTML' | null
 }
 
 export interface ReorderResponse {
@@ -1154,6 +1164,7 @@ export async function deleteAdminModule(
 }
 
 export type AdminLessonType = 'VIDEO' | 'TEXT' | 'TOOL_SETUP'
+export type AdminLessonContentFormat = 'MARKDOWN' | 'RICH_HTML'
 
 export interface CreateLessonPayload {
   title: string
@@ -1164,6 +1175,9 @@ export interface CreateLessonPayload {
   /** @deprecated Use videoUrl + videoProvider. Retained for back-compat. */
   loomUrl?: string
   content?: string
+  // NAB-P0-4 — rich-text (TipTap) HTML body + format discriminator.
+  richContent?: string
+  contentFormat?: AdminLessonContentFormat
   estimatedMinutes?: number
   order?: number
 }
@@ -1177,6 +1191,9 @@ export interface UpdateLessonPayload {
   /** @deprecated Use videoUrl + videoProvider. Retained for back-compat. */
   loomUrl?: string
   content?: string
+  // NAB-P0-4
+  richContent?: string
+  contentFormat?: AdminLessonContentFormat
   estimatedMinutes?: number
   order?: number
 }
@@ -1197,6 +1214,11 @@ function normaliseLesson(raw: Record<string, unknown>): AdminLesson {
     videoProvider: videoProviderRaw ?? (loomUrlRaw ? 'LOOM' : null),
     videoUrl: videoUrlRaw ?? loomUrlRaw,
     loomUrl: loomUrlRaw,
+    // NAB-P0-4 — rich-text fields. The editor prefers `richContent`, falling
+    // back to wrapping plain `content` in <p>…</p>.
+    content:       (raw.content       as string | null | undefined) ?? null,
+    richContent:   (raw.richContent   as string | null | undefined) ?? null,
+    contentFormat: (raw.contentFormat as AdminLesson['contentFormat']) ?? null,
   }
 }
 
@@ -2080,6 +2102,36 @@ export async function uploadAdminCourseCover(
 export function cohortCoverImageUrl(coverImageKey: string | null): string | null {
   if (!coverImageKey) return null
   return `/api/uploads/${coverImageKey}`
+}
+
+/**
+ * NAB-P0-4 — Upload an inline image for the TipTap rich-text lesson editor
+ * via multipart to POST /api/v1/admin/courses/:cohortId/lesson-images.
+ *
+ * Backend accepts jpeg/png/webp up to 5 MB and stores under
+ * `lesson-images/<cohortId>/<uuid>.<ext>` in S3 (or the local `uploads/`
+ * tree in dev). Returns `{ url, key }` so the editor can insert the
+ * image immediately and stamp `data-key` for later reconciliation.
+ */
+export async function uploadAdminLessonImage(
+  cohortId: string,
+  file: File,
+): Promise<{ url: string; key: string }> {
+  const form = new FormData()
+  form.append('file', file, file.name)
+
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/lesson-images`,
+    {
+      method: 'POST',
+      body: form,
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to upload image')
+  }
+  return res.json() as Promise<{ url: string; key: string }>
 }
 
 // ---- Payment plans ----

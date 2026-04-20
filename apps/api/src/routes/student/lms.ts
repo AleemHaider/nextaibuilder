@@ -531,6 +531,10 @@ export async function studentLmsRoutes(fastify: FastifyInstance) {
           estimatedMinutes: lesson.estimatedMinutes,
           order:            lesson.order,
           content:          lesson.content ?? null,
+          // NAB-P0-4 — expose the TipTap-authored HTML so the student player
+          // prefers it over the plain-text fallback.
+          richContent:      (lesson as { richContent?: string | null }).richContent ?? null,
+          contentFormat:    (lesson as { contentFormat?: string | null }).contentFormat ?? null,
           loomUrl:          lesson.loomUrl ?? null,
           embedUrl:         toStudentEmbedUrl(lesson.loomUrl),
           transcript:       lesson.transcript ?? null,

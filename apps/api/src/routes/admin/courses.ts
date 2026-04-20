@@ -67,6 +67,33 @@ function imageExt(contentType: string): string {
   return 'jpg'
 }
 
+/**
+ * NAB-P0-4 — Reduce TipTap-authored HTML to a readable plain-text fallback.
+ *
+ * Writers that send `richContent` also get their `content` field populated
+ * from this helper so legacy readers (search, rss feeds, any pre-P0-4 render
+ * path) keep showing meaningful copy. We strip tags, decode a handful of
+ * common entities, and collapse whitespace. This is intentionally small —
+ * the rich authoritative copy always lives in `richContent`.
+ */
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<\s*br\s*\/?>/gi,    '\n')
+    .replace(/<\s*\/\s*p\s*>/gi,   '\n\n')
+    .replace(/<\s*\/\s*h[1-6]\s*>/gi, '\n\n')
+    .replace(/<\s*\/\s*li\s*>/gi,  '\n')
+    .replace(/<[^>]+>/g,           '')
+    .replace(/&nbsp;/g,            ' ')
+    .replace(/&amp;/g,             '&')
+    .replace(/&lt;/g,              '<')
+    .replace(/&gt;/g,              '>')
+    .replace(/&quot;/g,            '"')
+    .replace(/&#39;/g,             "'")
+    .replace(/\r\n/g,              '\n')
+    .replace(/\n{3,}/g,            '\n\n')
+    .trim()
+}
+
 // ── Zod schemas ────────────────────────────────────────────────────────────
 
 // FIR-59 — cohort
@@ -121,7 +148,7 @@ const reorderModulesSchema = z.array(
   }),
 ).min(1)
 
-// FIR-61 / NAB-P0-5 — lesson
+// FIR-61 / NAB-P0-5 / NAB-P0-4 — lesson
 const createLessonSchema = z.object({
   title:             z.string().min(1).max(200).trim(),
   type:              z.enum(['VIDEO', 'TEXT', 'TOOL_SETUP']),
@@ -131,6 +158,11 @@ const createLessonSchema = z.object({
   // Back-compat — legacy single-provider field (deprecated, still accepted)
   loomUrl:           z.string().url().optional(),
   content:           z.string().max(50000).optional(),
+  // NAB-P0-4 — TipTap-authored HTML + which format the caller intends to
+  // persist. Both are optional so clients that still only write `content`
+  // keep working unchanged.
+  richContent:       z.string().max(100000).optional(),
+  contentFormat:     z.enum(['MARKDOWN', 'RICH_HTML']).optional(),
   estimatedMinutes:  z.number().int().min(0).default(0),
   order:             z.number().int().min(0).default(0),
 })
@@ -648,6 +680,78 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // POST /courses/:cohortId/lesson-images — NAB-P0-4: inline image upload for
+  // the TipTap rich-text lesson editor. Mirrors the cover-upload endpoint's
+  // multipart limit (5 MB) + mime gate (jpeg/png/webp). Writes under
+  // `lesson-images/<cohortId>/<uuid>.<ext>` so a future cleanup job can
+  // reconcile uploads against rendered `<img data-key>` references.
+  fastify.post<{ Params: { cohortId: string } }>(
+    '/:cohortId/lesson-images',
+    { preHandler: requirePermission('courses:write') },
+    async (request, reply) => {
+      const { cohortId } = request.params
+
+      if (!isValidOid(cohortId)) {
+        return reply.code(400).send({ error: 'INVALID_ID', message: 'Invalid cohort ID.' })
+      }
+
+      const cohortExists = await Cohort.exists({ _id: cohortId })
+      if (!cohortExists) {
+        return reply.code(404).send({ error: 'NOT_FOUND', message: 'Course not found.' })
+      }
+
+      let file: import('@fastify/multipart').MultipartFile | undefined
+      try {
+        file = await request.file({ limits: { fileSize: 5 * 1024 * 1024 } })
+      } catch {
+        return reply.code(400).send({ error: 'UPLOAD_ERROR', message: 'Could not read uploaded file.' })
+      }
+
+      if (!file) {
+        return reply.code(400).send({ error: 'NO_FILE', message: 'No file was uploaded.' })
+      }
+
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+      if (!allowedTypes.includes(file.mimetype)) {
+        return reply.code(415).send({
+          error:   'UNSUPPORTED_MEDIA_TYPE',
+          message: 'Only JPEG, PNG, and WebP images are accepted.',
+        })
+      }
+
+      const chunks: Buffer[] = []
+      for await (const chunk of file.file) {
+        chunks.push(chunk as Buffer)
+      }
+      const body = Buffer.concat(chunks)
+
+      if (body.length > 5 * 1024 * 1024) {
+        return reply.code(413).send({ error: 'FILE_TOO_LARGE', message: 'Lesson image must be under 5 MB.' })
+      }
+
+      const ext = imageExt(file.mimetype)
+      // New ObjectId doubles as a collision-resistant uuid — avoids pulling a
+      // `uuid` dep just for this endpoint. Hex string, 24 chars.
+      const uid = new Types.ObjectId().toString()
+      const s3Key = `lesson-images/${cohortId}/${uid}.${ext}`
+
+      if (IS_S3_CONFIGURED) {
+        await uploadToS3(s3Key, body, file.mimetype)
+      } else {
+        // Dev fallback — same layout as cover uploads so the static `/api/uploads`
+        // route picks them up automatically.
+        const filePath = resolve(process.cwd(), 'uploads', s3Key)
+        await mkdir(dirname(filePath), { recursive: true })
+        await writeFile(filePath, body)
+      }
+
+      return reply.send({
+        url: `/api/uploads/${s3Key}`,
+        key: s3Key,
+      })
+    },
+  )
+
   // ══════════════════════════════════════════════════════════════════════════
   // FIR-60 — Module CRUD
   // ══════════════════════════════════════════════════════════════════════════
@@ -873,6 +977,7 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
       }
 
       const { title, type, content, estimatedMinutes, order } = parsed.data
+      const { richContent, contentFormat } = parsed.data
 
       // NAB-P0-5 — resolve multi-provider video fields (reject unknown URLs)
       const video = resolveVideoFields({
@@ -887,6 +992,21 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
         })
       }
 
+      // NAB-P0-4 — if the writer sent richContent, store it AND derive a
+      // plain-text `content` fallback so legacy render paths keep working.
+      // The caller's explicit `content` wins if provided (lets admins author
+      // a custom plain fallback).
+      let resolvedContent       = content
+      let resolvedContentFormat: 'MARKDOWN' | 'RICH_HTML' | null | undefined = contentFormat
+      if (richContent !== undefined && richContent !== '') {
+        if (resolvedContent === undefined) {
+          resolvedContent = htmlToPlainText(richContent).slice(0, 50000)
+        }
+        if (resolvedContentFormat === undefined) {
+          resolvedContentFormat = 'RICH_HTML'
+        }
+      }
+
       const lesson = await Lesson.create({
         cohortId,
         moduleId,
@@ -895,7 +1015,9 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
         videoUrl:      video.videoUrl      ?? null,
         videoProvider: video.videoProvider ?? null,
         loomUrl:       video.loomUrl,
-        content,
+        content:       resolvedContent,
+        richContent:   richContent ?? null,
+        contentFormat: resolvedContentFormat ?? null,
         estimatedMinutes,
         order,
       })
@@ -1035,6 +1157,20 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
       if (data.content          !== undefined) patch['content']          = data.content
       if (data.estimatedMinutes !== undefined) patch['estimatedMinutes'] = data.estimatedMinutes
       if (data.order            !== undefined) patch['order']            = data.order
+
+      // NAB-P0-4 — mirror richContent into a plain-text `content` fallback
+      // if the caller didn't supply one explicitly, and default the format
+      // to RICH_HTML when the caller omitted it.
+      if (data.richContent !== undefined) {
+        patch['richContent'] = data.richContent
+        if (data.content === undefined && data.richContent !== '') {
+          patch['content'] = htmlToPlainText(data.richContent).slice(0, 50000)
+        }
+        if (data.contentFormat === undefined && data.richContent !== '') {
+          patch['contentFormat'] = 'RICH_HTML'
+        }
+      }
+      if (data.contentFormat !== undefined) patch['contentFormat'] = data.contentFormat
 
       // NAB-P0-5 — resolve the video field trio when any of them is present.
       if (

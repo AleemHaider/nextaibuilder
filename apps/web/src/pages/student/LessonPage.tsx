@@ -101,14 +101,27 @@ function VideoPlayer({ lesson }: { lesson: LessonDetail }) {
 // Text lesson — prose markdown (FIR-161)
 // Sprint 1 Story 6 wrap preserved: we sanitize every incoming HTML fragment
 // before feeding it to dangerouslySetInnerHTML.
+//
+// NAB-P0-4 — prefers the TipTap-authored `richContent` (HTML) over the
+// legacy plain-text `content`. Both still flow through sanitizeLessonHtml
+// so the allow-list at render time is the authoritative XSS gate.
 // ---------------------------------------------------------------------------
 
-function TextLesson({ content }: { content: string }) {
+function TextLesson({
+  content,
+  richContent,
+}: {
+  content?: string
+  richContent?: string | null
+}) {
+  const body = (richContent && richContent.trim().length > 0)
+    ? richContent
+    : (content ?? '')
   return (
     // eslint-disable-next-line react/no-danger
     <div
       className="prose mb-8"
-      dangerouslySetInnerHTML={{ __html: sanitizeLessonHtml(content ?? '') }}
+      dangerouslySetInnerHTML={{ __html: sanitizeLessonHtml(body) }}
     />
   )
 }
@@ -622,7 +635,12 @@ export default function LessonPage() {
 
       {/* Content based on type */}
       {lesson.type === 'VIDEO' && <VideoPlayer lesson={lesson} />}
-      {lesson.type === 'TEXT' && lesson.content && <TextLesson content={lesson.content} />}
+      {lesson.type === 'TEXT' && (lesson.content || lesson.richContent) && (
+        <TextLesson
+          content={lesson.content}
+          richContent={lesson.richContent}
+        />
+      )}
       {lesson.type === 'TOOL_SETUP' && (
         <ToolSetupLesson
           lesson={lesson}

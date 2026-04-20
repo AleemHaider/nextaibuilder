@@ -297,7 +297,10 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
           moduleId: 1, title: 1, type: 1, order: 1, estimatedMinutes: 1,
           // NAB-P0-5 — include multi-provider video fields alongside the
           // legacy loomUrl so the storefront can build the right iframe.
-          videoProvider: 1, videoUrl: 1, loomUrl: 1, content: 1,
+          // NAB-P0-4 — include richContent + contentFormat so the preview
+          // pane renders the TipTap HTML when available.
+          videoProvider: 1, videoUrl: 1, loomUrl: 1,
+          content: 1, richContent: 1, contentFormat: 1,
         },
       )
         .sort({ order: 1 })
@@ -344,6 +347,9 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
           // Legacy key — kept so older clients that still read `loomUrl` work.
           loomUrl:          l.loomUrl ?? null,
           content:          l.content ?? null,
+          // NAB-P0-4 — rich body takes precedence on the storefront preview.
+          richContent:      (l as { richContent?: string | null }).richContent ?? null,
+          contentFormat:    (l as { contentFormat?: string | null }).contentFormat ?? null,
         }
       })
 

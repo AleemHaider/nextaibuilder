@@ -11,6 +11,7 @@ import {
   screen,
   fireEvent,
   waitFor,
+  act,
 } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
@@ -797,5 +798,185 @@ describe('<CourseBuilderPage> — Sprint 2 Story 11', () => {
 
     expect(screen.queryByLabelText(/video url/i)).not.toBeInTheDocument()
     expect(screen.getByLabelText(/^content$/i)).toBeInTheDocument()
+  })
+
+  // ── NAB-P0-1 — Autosave + "last saved" indicator ─────────────────────
+  //
+  // These tests run under vi.useFakeTimers() because the autosave hook
+  // debounces by 800ms. We advance timers manually and flush promises so
+  // the component settles into the next render without a real wall clock.
+
+  it('autosave: typing in the title field fires updateAdminCourse after the debounce window', async () => {
+    asMock(updateAdminCourse).mockResolvedValue({
+      id: existingCourse.id,
+      title: 'AI Builder 101 edited',
+      slug: existingCourse.slug,
+      type: 'RECORDED',
+      tagline: null,
+      isPublished: false,
+    })
+
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderPage()
+
+      // Select the existing server-backed course so autosave can PATCH.
+      const listItem = (await screen.findByText('AI Builder 101')).closest('button')!
+      await user.click(listItem)
+
+      // The editor topbar has an input with aria-label="Course title" — edit it.
+      // Two elements share "Course title" (topbar aria-label + OverviewTab
+      // <label>). The topbar input is the first rendered and is the one the
+      // editor uses as the primary title editor — pick it explicitly.
+      const titleInputs = await screen.findAllByLabelText(/^course title$/i)
+      const titleInput = titleInputs[0] as HTMLInputElement
+      await user.clear(titleInput)
+      await user.type(titleInput, 'AI Builder 101 edited')
+
+      // Before the debounce elapses no PATCH has fired.
+      expect(updateAdminCourse).not.toHaveBeenCalled()
+
+      // Advance past the 800ms debounce window. We use act-wrapped timer
+      // advancement so the hook's setState + microtask chain settle.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(900)
+      })
+
+      await waitFor(() => {
+        expect(updateAdminCourse).toHaveBeenCalled()
+      })
+      // The payload should carry the latest title, not an intermediate value.
+      const [cohortIdArg, payloadArg] = asMock(updateAdminCourse).mock.calls.at(-1) as [
+        string,
+        Record<string, unknown>,
+      ]
+      expect(cohortIdArg).toBe(existingCourse.id)
+      expect(payloadArg).toMatchObject({ title: 'AI Builder 101 edited' })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('autosave indicator: chip transitions from "Saving…" to "Saved just now"', async () => {
+    // Use a deferred promise so we can observe the "saving" state before the
+    // PATCH resolves and we fall through to "saved".
+    let resolveSave!: () => void
+    const saveDeferred = new Promise<void>((res) => {
+      resolveSave = () => res()
+    })
+    asMock(updateAdminCourse).mockImplementation(() => saveDeferred)
+
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderPage()
+
+      const listItem = (await screen.findByText('AI Builder 101')).closest('button')!
+      await user.click(listItem)
+
+      // Two elements share "Course title" (topbar aria-label + OverviewTab
+      // <label>). The topbar input is the first rendered and is the one the
+      // editor uses as the primary title editor — pick it explicitly.
+      const titleInputs = await screen.findAllByLabelText(/^course title$/i)
+      const titleInput = titleInputs[0] as HTMLInputElement
+      await user.type(titleInput, '!')
+
+      // Flush the debounce — save fires but does not resolve yet, so the
+      // chip should read "Saving…".
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(900)
+      })
+
+      const indicator = await screen.findByTestId('save-state-indicator')
+      await waitFor(() => {
+        expect(indicator).toHaveTextContent(/saving/i)
+      })
+
+      // Resolve the save — chip should flip to "Saved just now".
+      await act(async () => {
+        resolveSave()
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+      await waitFor(() => {
+        expect(indicator).toHaveTextContent(/saved just now/i)
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('manual Save still works and awaits any pending autosave before firing', async () => {
+    // The autosave PATCH resolves on demand via a deferred. If handleSave
+    // does *not* flush() it first, the manual PATCH would fire before the
+    // autosave PATCH — we verify the ordering below.
+    let resolveAutosave!: () => void
+    const autosavePromise = new Promise<void>((res) => {
+      resolveAutosave = () => res()
+    })
+    const callOrder: string[] = []
+    asMock(updateAdminCourse).mockImplementation(() => {
+      callOrder.push('updateAdminCourse')
+      // The first call is the autosave — pause. Subsequent calls resolve
+      // immediately (the manual Save).
+      if (callOrder.length === 1) return autosavePromise
+      return Promise.resolve({
+        id: existingCourse.id,
+        title: 'whatever',
+        slug: existingCourse.slug,
+        type: 'RECORDED',
+        tagline: null,
+        isPublished: false,
+      })
+    })
+
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderPage()
+
+      const listItem = (await screen.findByText('AI Builder 101')).closest('button')!
+      await user.click(listItem)
+
+      // Type to kick off autosave.
+      // Two elements share "Course title" (topbar aria-label + OverviewTab
+      // <label>). The topbar input is the first rendered and is the one the
+      // editor uses as the primary title editor — pick it explicitly.
+      const titleInputs = await screen.findAllByLabelText(/^course title$/i)
+      const titleInput = titleInputs[0] as HTMLInputElement
+      await user.type(titleInput, 'Z')
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(900)
+      })
+
+      // At this point the autosave is in flight (pending on our deferred).
+      expect(updateAdminCourse).toHaveBeenCalledTimes(1)
+
+      // Kick off the manual Save — it should await the autosave flush first.
+      const saveBtn = screen.getByRole('button', { name: /^save$|^saving…$/i })
+      const clickPromise = user.click(saveBtn)
+
+      // Before we resolve the autosave, the manual Save must still be waiting.
+      // Allow a tick for React to settle but no more.
+      await act(async () => {
+        await Promise.resolve()
+      })
+      expect(updateAdminCourse).toHaveBeenCalledTimes(1)
+
+      // Resolve the autosave — now the manual Save should proceed and fire
+      // a second PATCH.
+      await act(async () => {
+        resolveAutosave()
+      })
+      await clickPromise
+
+      await waitFor(() => {
+        expect(updateAdminCourse).toHaveBeenCalledTimes(2)
+      })
+      expect(callOrder).toEqual(['updateAdminCourse', 'updateAdminCourse'])
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

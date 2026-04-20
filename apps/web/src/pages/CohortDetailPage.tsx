@@ -96,14 +96,30 @@ function PreviewPlayerBody({ lesson }: { lesson: PreviewLesson }) {
     }
   }
 
-  if (lesson.type === 'TEXT' && lesson.content) {
-    return (
-      <div
-        className="max-h-[480px] overflow-y-auto whitespace-pre-wrap px-7 py-6 text-[15px] leading-[1.8] text-[var(--color-wise-text-warm)]"
-      >
-        {lesson.content}
-      </div>
-    )
+  if (lesson.type === 'TEXT') {
+    // NAB-P0-4 — prefer the TipTap-authored HTML; fall back to the legacy
+    // plain-text `content`. The HTML is piped through sanitizeHtml before
+    // hitting the DOM, same allow-list the rest of the admin-authored HTML
+    // uses.
+    const richHtml = lesson.richContent?.trim()
+    if (richHtml) {
+      return (
+        <div
+          className="prose max-h-[480px] overflow-y-auto px-7 py-6"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(richHtml) }}
+        />
+      )
+    }
+    if (lesson.content) {
+      return (
+        <div
+          className="max-h-[480px] overflow-y-auto whitespace-pre-wrap px-7 py-6 text-[15px] leading-[1.8] text-[var(--color-wise-text-warm)]"
+        >
+          {lesson.content}
+        </div>
+      )
+    }
   }
 
   return (
