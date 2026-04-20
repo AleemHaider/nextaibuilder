@@ -22,22 +22,22 @@ export function AdminLeftPanel({ tagline }: AdminLeftPanelProps) {
       className={cn(
         'relative flex w-[500px] shrink-0 flex-col items-start justify-center',
         'overflow-hidden px-20 py-20 min-h-screen',
-        'bg-[#0e0f0c] text-white',
+        'bg-[#1a2744] text-white',
       )}
     >
-      {/* Lime-tinted blob — replaces navy decorative circles */}
+      {/* Navy-tinted blob — decorative background accents */}
       <div
         aria-hidden="true"
         className={cn(
           'pointer-events-none absolute -bottom-24 -right-24 h-[420px] w-[420px] rounded-full',
-          'bg-[#9fe870]/15 blur-3xl',
+          'bg-[#4a9ad4]/15 blur-3xl',
         )}
       />
       <div
         aria-hidden="true"
         className={cn(
           'pointer-events-none absolute -top-20 -left-20 h-[240px] w-[240px] rounded-full',
-          'bg-[#9fe870]/5 blur-2xl',
+          'bg-[#4a9ad4]/5 blur-2xl',
         )}
       />
 
@@ -49,8 +49,8 @@ export function AdminLeftPanel({ tagline }: AdminLeftPanelProps) {
         <div
           className={cn(
             'mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5',
-            'bg-[#9fe870]/15 text-[#9fe870] text-[13px] font-semibold',
-            'ring-1 ring-[#9fe870]/25',
+            'bg-[#4a9ad4]/15 text-[#4a9ad4] text-[13px] font-semibold',
+            'ring-1 ring-[#4a9ad4]/25',
           )}
         >
           <Lock className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -79,9 +79,9 @@ export function AdminLeftPanel({ tagline }: AdminLeftPanelProps) {
 // ---------------------------------------------------------------------------
 const inputBase = cn(
   'w-full h-12 rounded-xl px-4 text-[15px] font-medium',
-  'bg-white text-[#0e0f0c] placeholder:text-[#868685]',
+  'bg-white text-[#1a2744] placeholder:text-[#717182]',
   'border outline-none transition-[border-color,box-shadow,background]',
-  'focus:bg-white focus:ring-4 focus:ring-[#9fe870]/25',
+  'focus:bg-white focus:ring-4 focus:ring-[#4a9ad4]/25',
 )
 
 // ---------------------------------------------------------------------------
@@ -138,7 +138,7 @@ export default function AdminLoginPage() {
   const hasError = error !== null
 
   return (
-    <div className="flex min-h-screen w-full bg-[#fafaf8]">
+    <div className="flex min-h-screen w-full bg-[#f8f9fb]">
       <AdminLeftPanel tagline="Course administration made simple." />
 
       {/* Right panel */}
@@ -148,17 +148,17 @@ export default function AdminLoginPage() {
           noValidate
           className={cn(
             'w-full max-w-[460px] rounded-[30px] bg-white p-10',
-            'shadow-[0_0_0_1px_rgba(14,15,12,0.08),0_24px_60px_-24px_rgba(14,15,12,0.18)]',
+            'shadow-[0_0_0_1px_rgba(26,39,68,0.08),0_24px_60px_-24px_rgba(26,39,68,0.18)]',
           )}
           aria-label="Admin sign in form"
         >
           <h1
-            className="text-[36px] font-black text-[#0e0f0c] tracking-[-1px] mb-1.5"
+            className="text-[36px] font-black text-[#1a2744] tracking-[-1px] mb-1.5"
             style={{ fontFeatureSettings: '"calt"' }}
           >
             Admin Sign In
           </h1>
-          <p className="text-[16px] text-[#868685] mb-9">
+          <p className="text-[16px] text-[#717182] mb-9">
             Access the nextaibuilder admin portal
           </p>
 
@@ -167,23 +167,23 @@ export default function AdminLoginPage() {
               role="alert"
               className={cn(
                 'mb-6 flex items-start gap-2.5 rounded-2xl px-4 py-3.5',
-                'bg-[#fdeaeb] ring-1 ring-[#d03238]/25',
+                'bg-[#fef2f2] ring-1 ring-[#d4183d]/25',
               )}
             >
-              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-[#d03238]" strokeWidth={2.5} />
-              <p className="text-[14px] font-semibold leading-snug text-[#d03238]">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-[#d4183d]" strokeWidth={2.5} />
+              <p className="text-[14px] font-semibold leading-snug text-[#d4183d]">
                 {error}
               </p>
             </div>
           )}
 
           {/* Email */}
-          <label htmlFor="admin-email" className="block mb-1.5 text-[14px] font-semibold text-[#0e0f0c]">
+          <label htmlFor="admin-email" className="block mb-1.5 text-[14px] font-semibold text-[#1a2744]">
             Email address
           </label>
           <div className="relative mb-5">
             <Mail
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#868685]"
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#717182]"
               strokeWidth={2.25}
               aria-hidden="true"
             />
@@ -195,17 +195,17 @@ export default function AdminLoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className={cn(inputBase, 'pl-11', hasError ? 'border-[#d03238] bg-[#fef2f2]' : 'border-[rgba(14,15,12,0.12)]')}
+              className={cn(inputBase, 'pl-11', hasError ? 'border-[#d4183d] bg-[#fef2f2]' : 'border-[rgba(26,39,68,0.12)]')}
             />
           </div>
 
           {/* Password */}
-          <label htmlFor="admin-password" className="block mb-1.5 text-[14px] font-semibold text-[#0e0f0c]">
+          <label htmlFor="admin-password" className="block mb-1.5 text-[14px] font-semibold text-[#1a2744]">
             Password
           </label>
           <div className="relative mb-2">
             <Lock
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#868685]"
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#717182]"
               strokeWidth={2.25}
               aria-hidden="true"
             />
@@ -217,31 +217,31 @@ export default function AdminLoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className={cn(inputBase, 'pl-11', hasError ? 'border-[#d03238] bg-[#fef2f2]' : 'border-[rgba(14,15,12,0.12)]')}
+              className={cn(inputBase, 'pl-11', hasError ? 'border-[#d4183d] bg-[#fef2f2]' : 'border-[rgba(26,39,68,0.12)]')}
             />
           </div>
 
           <div className="flex justify-end mb-6">
             <Link
               to="/admin/forgot-password"
-              className="text-[13px] font-semibold text-[#163300] hover:underline"
+              className="text-[13px] font-semibold text-[#0d1a3a] hover:underline"
             >
               Forgot password?
             </Link>
           </div>
 
-          {/* Submit — Wise Green pill */}
+          {/* Submit — navy blue pill */}
           <button
             type="submit"
             disabled={isPending}
             className={cn(
               'w-full h-[52px] rounded-full',
-              'bg-[#9fe870] text-[#163300] text-[16px] font-bold',
+              'bg-[#4a9ad4] text-white text-[16px] font-bold',
               'border-none cursor-pointer',
               'transition-transform duration-150 ease-out',
               'hover:enabled:scale-[1.02] active:enabled:scale-[0.98]',
               'disabled:opacity-50 disabled:cursor-not-allowed',
-              'focus-visible:outline-2 focus-visible:outline-[#163300] focus-visible:outline-offset-2',
+              'focus-visible:outline-2 focus-visible:outline-[#0d1a3a] focus-visible:outline-offset-2',
             )}
           >
             {isPending ? 'Signing in…' : 'Sign In'}

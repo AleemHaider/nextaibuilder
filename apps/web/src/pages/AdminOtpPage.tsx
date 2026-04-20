@@ -57,16 +57,16 @@ function OtpBox({
       onPaste={onPaste}
       className={cn(
         'w-[62px] h-[72px] rounded-2xl text-center bg-white',
-        'text-[28px] font-black text-[#0e0f0c]',
+        'text-[28px] font-black text-[#1a2744]',
         'border outline-none caret-transparent',
         'transition-[border-color,background,box-shadow] duration-150',
         hasError
-          ? 'border-[#d03238] bg-[#fef2f2]'
+          ? 'border-[#d4183d] bg-[#fef2f2]'
           : value
-            ? 'border-[#163300] shadow-[0_0_0_3px_rgba(159,232,112,0.35)]'
+            ? 'border-[#0d1a3a] shadow-[0_0_0_3px_rgba(74,154,212,0.35)]'
             : isFocused
-              ? 'border-[#0e0f0c] shadow-[0_0_0_3px_rgba(159,232,112,0.35)]'
-              : 'border-[rgba(14,15,12,0.12)]',
+              ? 'border-[#1a2744] shadow-[0_0_0_3px_rgba(74,154,212,0.35)]'
+              : 'border-[rgba(26,39,68,0.12)]',
       )}
       style={{ fontFeatureSettings: '"calt"' }}
     />
@@ -225,7 +225,7 @@ export default function AdminOtpPage() {
   if (!preAuthToken) return null
 
   return (
-    <div className="flex min-h-screen w-full bg-[#fafaf8]">
+    <div className="flex min-h-screen w-full bg-[#f8f9fb]">
       <AdminLeftPanel tagline="Two-factor authentication keeps your admin account secure." />
 
       <div className="flex flex-1 items-center justify-center px-6 py-16">
@@ -234,15 +234,15 @@ export default function AdminOtpPage() {
           noValidate
           className={cn(
             'w-full max-w-[460px] rounded-[30px] bg-white p-10',
-            'shadow-[0_0_0_1px_rgba(14,15,12,0.08),0_24px_60px_-24px_rgba(14,15,12,0.18)]',
+            'shadow-[0_0_0_1px_rgba(26,39,68,0.08),0_24px_60px_-24px_rgba(26,39,68,0.18)]',
           )}
           aria-label="OTP verification form"
         >
-          {/* Email icon — Wise green chip */}
+          {/* Email icon — navy blue chip */}
           <div
             className={cn(
               'mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl',
-              'bg-[#e2f6d5] text-[#163300]',
+              'bg-[#e8f4fd] text-[#0d1a3a]',
             )}
             aria-hidden="true"
           >
@@ -250,15 +250,15 @@ export default function AdminOtpPage() {
           </div>
 
           <h1
-            className="text-[36px] font-black text-[#0e0f0c] tracking-[-1px] mb-2"
+            className="text-[36px] font-black text-[#1a2744] tracking-[-1px] mb-2"
             style={{ fontFeatureSettings: '"calt"' }}
           >
             Check your email
           </h1>
-          <p className="text-[16px] text-[#868685] mb-1">
+          <p className="text-[16px] text-[#717182] mb-1">
             We sent a 6-digit code to
           </p>
-          <p className="text-[16px] font-bold text-[#0e0f0c] mb-8">{email}</p>
+          <p className="text-[16px] font-bold text-[#1a2744] mb-8">{email}</p>
 
           {/* OTP boxes */}
           <div
@@ -288,28 +288,28 @@ export default function AdminOtpPage() {
               role="alert"
               className={cn(
                 'mb-5 flex items-start gap-2.5 rounded-2xl px-4 py-3.5',
-                'bg-[#fdeaeb] ring-1 ring-[#d03238]/25',
+                'bg-[#fef2f2] ring-1 ring-[#d4183d]/25',
               )}
             >
-              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-[#d03238]" strokeWidth={2.5} />
-              <p className="text-[14px] font-semibold leading-snug text-[#d03238]">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-[#d4183d]" strokeWidth={2.5} />
+              <p className="text-[14px] font-semibold leading-snug text-[#d4183d]">
                 {error}
               </p>
             </div>
           )}
 
-          {/* Verify — Wise Green pill */}
+          {/* Verify — navy blue pill */}
           <button
             type="submit"
             disabled={isPending || isLockedOut || !allFilled}
             className={cn(
               'w-full h-[52px] rounded-full mb-5',
-              'bg-[#9fe870] text-[#163300] text-[16px] font-bold',
+              'bg-[#4a9ad4] text-white text-[16px] font-bold',
               'border-none cursor-pointer',
               'transition-transform duration-150 ease-out',
               'hover:enabled:scale-[1.02] active:enabled:scale-[0.98]',
               'disabled:opacity-50 disabled:cursor-not-allowed',
-              'focus-visible:outline-2 focus-visible:outline-[#163300] focus-visible:outline-offset-2',
+              'focus-visible:outline-2 focus-visible:outline-[#0d1a3a] focus-visible:outline-offset-2',
             )}
           >
             {isPending ? 'Verifying…' : 'Verify Code'}
@@ -317,7 +317,7 @@ export default function AdminOtpPage() {
 
           {/* Resend row */}
           <div className="text-center">
-            <span className="text-[14px] text-[#868685]">
+            <span className="text-[14px] text-[#717182]">
               Didn't receive it?{' '}
               {cooldown > 0 ? (
                 <span className="text-[#a3a3a3] font-semibold">
@@ -330,7 +330,7 @@ export default function AdminOtpPage() {
                   onClick={handleResend}
                   disabled={isLockedOut}
                   className={cn(
-                    'text-[#163300] font-semibold bg-transparent border-none',
+                    'text-[#0d1a3a] font-semibold bg-transparent border-none',
                     'cursor-pointer p-0 hover:underline',
                     'disabled:opacity-50 disabled:cursor-not-allowed',
                   )}
@@ -347,7 +347,7 @@ export default function AdminOtpPage() {
             <button
               type="button"
               onClick={() => navigate('/admin/login', { replace: true })}
-              className="text-[#163300] bg-transparent border-none cursor-pointer p-0 text-[12px] hover:underline"
+              className="text-[#0d1a3a] bg-transparent border-none cursor-pointer p-0 text-[12px] hover:underline"
             >
               Sign out
             </button>
