@@ -7,143 +7,38 @@
 // tints that use rgba tints without a dedicated token) remain inline since
 // they cannot be expressed as static classes.
 import { useState, useEffect, useRef } from 'react'
-import { Search, ChevronLeft, ChevronRight, X, MoreVertical } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Search, ChevronLeft, ChevronRight, X, MoreVertical, GraduationCap, AlertCircle } from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
-import { authFetch } from '../../lib/api'
+import {
+  fetchAdminEnrollments,
+  fetchAdminCohortsList,
+  cancelAdminEnrollment,
+  transferAdminEnrollment,
+  type AdminEnrollmentRow,
+} from '../../lib/api'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { TableRowSkeleton } from '../../components/ui/LoadingSkeleton'
+import { Button } from '../../components/ui/Button'
 
 // ---------------------------------------------------------------------------
 // Types
+//
+// Sprint X: EnrollmentStatus/PaymentMethod/Enrollment used to be defined in
+// this file. They now live in lib/api.ts (AdminEnrollmentRow) alongside the
+// helper that fetches them. We keep a thin alias here so the rest of this
+// page reads naturally.
 // ---------------------------------------------------------------------------
 
 type EnrollmentStatus = 'ACTIVE' | 'PENDING' | 'COMPLETED' | 'REVOKED'
-type PaymentMethod = 'STRIPE' | 'MANUAL' | 'FREE'
-
-interface Enrollment {
-  id: string
-  studentName: string
-  studentEmail: string
-  gi: number
-  course: string
-  cohortTitle: string
-  cohortId?: string
-  status: EnrollmentStatus
-  paymentStatus: 'PAID' | 'PENDING' | 'FAILED' | 'FREE'
-  paymentMethod: PaymentMethod
-  progress: number
-  enrolledAt: string
-}
+type Enrollment = AdminEnrollmentRow
 
 interface Cohort {
-  id: string
-  title: string
+  id:          string
+  title:       string
   courseTitle: string
 }
-
-// ---------------------------------------------------------------------------
-// Mock data (used when API is unavailable)
-// ---------------------------------------------------------------------------
-
-const MOCK_ENROLLMENTS: Enrollment[] = [
-  {
-    id: '1',
-    studentName: 'Sara Ahmed',
-    studentEmail: 'sara@example.com',
-    gi: 0,
-    course: 'AI Product Bootcamp',
-    cohortTitle: 'Jan 2025 Cohort',
-    status: 'ACTIVE',
-    paymentStatus: 'PAID',
-    paymentMethod: 'STRIPE',
-    progress: 42,
-    enrolledAt: '2025-01-08',
-  },
-  {
-    id: '2',
-    studentName: 'Aleem Haider',
-    studentEmail: 'aleem@nextai.com',
-    gi: 1,
-    course: 'Claude API Mastery',
-    cohortTitle: 'Dec 2024 Cohort',
-    status: 'ACTIVE',
-    paymentStatus: 'PAID',
-    paymentMethod: 'STRIPE',
-    progress: 78,
-    enrolledAt: '2024-12-10',
-  },
-  {
-    id: '3',
-    studentName: 'Jordan Lee',
-    studentEmail: 'jordan@gmail.com',
-    gi: 2,
-    course: 'AI Product Bootcamp',
-    cohortTitle: 'Jan 2025 Cohort',
-    status: 'PENDING',
-    paymentStatus: 'PENDING',
-    paymentMethod: 'MANUAL',
-    progress: 0,
-    enrolledAt: '2025-01-08',
-  },
-  {
-    id: '4',
-    studentName: 'Priya Sharma',
-    studentEmail: 'priya@outlook.com',
-    gi: 3,
-    course: 'Prompt Engineering Pro',
-    cohortTitle: 'Oct 2024 Cohort',
-    status: 'COMPLETED',
-    paymentStatus: 'PAID',
-    paymentMethod: 'STRIPE',
-    progress: 100,
-    enrolledAt: '2024-10-03',
-  },
-  {
-    id: '5',
-    studentName: 'Marcus Webb',
-    studentEmail: 'marcus@dev.io',
-    gi: 4,
-    course: 'Full-Stack AI Dev',
-    cohortTitle: 'Jan 2025 Cohort',
-    status: 'ACTIVE',
-    paymentStatus: 'PAID',
-    paymentMethod: 'STRIPE',
-    progress: 15,
-    enrolledAt: '2025-01-12',
-  },
-  {
-    id: '6',
-    studentName: 'Fatima Hassan',
-    studentEmail: 'fatima@example.com',
-    gi: 0,
-    course: 'Claude API Mastery',
-    cohortTitle: 'Feb 2025 Cohort',
-    status: 'PENDING',
-    paymentStatus: 'PENDING',
-    paymentMethod: 'MANUAL',
-    progress: 0,
-    enrolledAt: '2025-02-01',
-  },
-  {
-    id: '7',
-    studentName: 'David Kim',
-    studentEmail: 'david.kim@example.com',
-    gi: 2,
-    course: 'AI Product Bootcamp',
-    cohortTitle: 'Mar 2025 Cohort',
-    status: 'REVOKED',
-    paymentStatus: 'FAILED',
-    paymentMethod: 'STRIPE',
-    progress: 5,
-    enrolledAt: '2025-03-01',
-  },
-]
-
-const MOCK_COHORTS: Cohort[] = [
-  { id: 'c1', title: 'Jan 2025 Cohort',  courseTitle: 'AI Product Bootcamp'  },
-  { id: 'c2', title: 'Feb 2025 Cohort',  courseTitle: 'Claude API Mastery'   },
-  { id: 'c3', title: 'Mar 2025 Cohort',  courseTitle: 'AI Product Bootcamp'  },
-  { id: 'c4', title: 'Apr 2025 Cohort',  courseTitle: 'Full-Stack AI Dev'    },
-]
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -178,8 +73,10 @@ const PAYMENT_CFG: Record<
 > = {
   PAID:    { bg: 'rgba(5,150,105,0.1)',   color: 'var(--color-wise-success)' },
   PENDING: { bg: 'rgba(245,158,11,0.1)',  color: 'var(--color-wise-text-warm)' },
+  PARTIAL: { bg: 'rgba(245,158,11,0.1)',  color: 'var(--color-wise-text-warm)' },
   FAILED:  { bg: 'rgba(239,68,68,0.1)',   color: 'var(--color-wise-danger)' },
   FREE:    { bg: 'rgba(100,116,139,0.1)', color: 'var(--color-wise-text-muted)' },
+  WAIVED:  { bg: 'rgba(100,116,139,0.1)', color: 'var(--color-wise-text-muted)' },
 }
 
 const PAGE_SIZE = 10
@@ -509,10 +406,7 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
 // ---------------------------------------------------------------------------
 
 export default function EnrollmentManagementPage() {
-  // ---- Data state ----
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [cohorts, setCohorts] = useState<Cohort[]>(MOCK_COHORTS)
+  const queryClient = useQueryClient()
 
   // ---- Filter state ----
   const [filterStatus, setFilterStatus] = useState<EnrollmentStatus | 'ALL'>('ALL')
@@ -534,40 +428,76 @@ export default function EnrollmentManagementPage() {
 
   // ---- Transfer modal ----
   const [transferTarget, setTransferTarget] = useState<Enrollment | null>(null)
-  const [transferLoading, setTransferLoading] = useState(false)
-
-  // ---- Action loading ----
-  const [cancellingId, setCancellingId] = useState<string | null>(null)
 
   // ---- Confirm cancel dialog ----
   const [cancelTarget, setCancelTarget] = useState<Enrollment | null>(null)
 
   // ---------------------------------------------------------------------------
-  // Fetch enrollments
+  // Fetch enrollments via TanStack Query.
+  //
+  // Sprint X: the previous implementation fell back to MOCK_ENROLLMENTS when
+  // the API was unreachable, which masked real integration failures and
+  // shipped fake students (Sara Ahmed, etc.) to production. We now surface
+  // the error branch directly and let <EmptyState> / <ErrorAlert> render.
   // ---------------------------------------------------------------------------
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      try {
-        const params = new URLSearchParams()
-        if (appliedFilters.status !== 'ALL') params.set('status', appliedFilters.status)
-        if (appliedFilters.search) params.set('search', appliedFilters.search)
-        if (appliedFilters.dateFrom) params.set('from', appliedFilters.dateFrom)
-        if (appliedFilters.dateTo) params.set('to', appliedFilters.dateTo)
+  const enrollmentsQuery = useQuery({
+    queryKey: [
+      'admin', 'enrollments',
+      {
+        status:   appliedFilters.status,
+        search:   appliedFilters.search,
+        dateFrom: appliedFilters.dateFrom,
+        dateTo:   appliedFilters.dateTo,
+      },
+    ],
+    queryFn: () => fetchAdminEnrollments({
+      limit:  100,
+      status: appliedFilters.status !== 'ALL' ? appliedFilters.status : undefined,
+      search: appliedFilters.search || undefined,
+    }),
+  })
 
-        const res = await authFetch(`/api/v1/admin/enrollments-v2?${params.toString()}`)
-        if (!res.ok) throw new Error('API error')
-        const data = await res.json()
-        const rows: Enrollment[] = data.enrollments ?? data ?? []
-        setEnrollments(rows.length > 0 ? rows : MOCK_ENROLLMENTS)
-      } catch {
-        setEnrollments(MOCK_ENROLLMENTS)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-  }, [appliedFilters])
+  const enrollments: Enrollment[] = enrollmentsQuery.data?.enrollments ?? []
+  const loading = enrollmentsQuery.isLoading
+
+  // Cohorts for the transfer select (and status dropdown context).
+  const cohortsQuery = useQuery({
+    queryKey: ['admin', 'cohorts', 'all'],
+    queryFn:  fetchAdminCohortsList,
+  })
+
+  const cohorts: Cohort[] = (cohortsQuery.data?.cohorts ?? []).map((c) => ({
+    id:          c.id,
+    title:       c.title,
+    courseTitle: c.title,
+  }))
+
+  // Cancel / transfer mutations — use mutations so query-cache invalidation
+  // refreshes the table automatically.
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => cancelAdminEnrollment(id),
+    onSuccess:  () => {
+      setToast({ message: 'Enrollment cancelled successfully.', type: 'success' })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'enrollments'] })
+    },
+    onError:    (err: Error) => {
+      setToast({ message: err.message || 'Failed to cancel enrollment.', type: 'error' })
+    },
+    onSettled:  () => { setCancelTarget(null) },
+  })
+
+  const transferMutation = useMutation({
+    mutationFn: (vars: { enrollmentId: string; cohortId: string }) =>
+      transferAdminEnrollment(vars.enrollmentId, vars.cohortId),
+    onSuccess:  () => {
+      setToast({ message: 'Student transferred to new cohort.', type: 'success' })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'enrollments'] })
+    },
+    onError:    (err: Error) => {
+      setToast({ message: err.message || 'Failed to transfer student.', type: 'error' })
+    },
+    onSettled:  () => { setTransferTarget(null) },
+  })
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -585,18 +515,9 @@ export default function EnrollmentManagementPage() {
   const statsCompleted = enrollments.filter((e) => e.status === 'COMPLETED').length
 
   // ---------------------------------------------------------------------------
-  // Client-side filtering (secondary, for instant UX while API may lag)
+  // Client-side filtering (date range — status & search are server-side)
   // ---------------------------------------------------------------------------
   const filtered = enrollments.filter((e) => {
-    if (appliedFilters.status !== 'ALL' && e.status !== appliedFilters.status) return false
-    if (appliedFilters.search) {
-      const q = appliedFilters.search.toLowerCase()
-      if (
-        !e.studentName.toLowerCase().includes(q) &&
-        !e.studentEmail.toLowerCase().includes(q)
-      )
-        return false
-    }
     if (appliedFilters.dateFrom && e.enrolledAt < appliedFilters.dateFrom) return false
     if (appliedFilters.dateTo && e.enrolledAt > appliedFilters.dateTo) return false
     return true
@@ -635,81 +556,17 @@ export default function EnrollmentManagementPage() {
     setCancelTarget(target)
   }
 
-  async function handleCancelConfirmed() {
-    const target = cancelTarget
-    if (!target) return
-    const id = target.id
-
-    setCancellingId(id)
-    try {
-      const res = await authFetch(`/api/v1/admin/enrollments-v2/${id}/cancel`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-      })
-      if (!res.ok) throw new Error('Failed')
-      setEnrollments((prev) =>
-        prev.map((e) => (e.id === id ? { ...e, status: 'REVOKED' as const } : e)),
-      )
-      setToast({ message: 'Enrollment cancelled successfully.', type: 'success' })
-    } catch {
-      // Optimistic update for mock data
-      setEnrollments((prev) =>
-        prev.map((e) => (e.id === id ? { ...e, status: 'REVOKED' as const } : e)),
-      )
-      setToast({ message: 'Enrollment cancelled.', type: 'success' })
-    } finally {
-      setCancellingId(null)
-      setCancelTarget(null)
-    }
+  function handleCancelConfirmed() {
+    if (!cancelTarget) return
+    cancelMutation.mutate(cancelTarget.id)
   }
 
-  // ---------------------------------------------------------------------------
-  // Transfer cohort
-  // ---------------------------------------------------------------------------
-  async function handleTransfer(enrollmentId: string, cohortId: string) {
-    setTransferLoading(true)
-    try {
-      const res = await authFetch(`/api/v1/admin/enrollments-v2/${enrollmentId}/transfer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cohortId }),
-      })
-      if (!res.ok) throw new Error('Failed')
-      const newCohort = cohorts.find((c) => c.id === cohortId)
-      setEnrollments((prev) =>
-        prev.map((e) =>
-          e.id === enrollmentId
-            ? { ...e, cohortTitle: newCohort?.title ?? e.cohortTitle }
-            : e,
-        ),
-      )
-      setToast({ message: 'Student transferred to new cohort.', type: 'success' })
-    } catch {
-      // Optimistic update for mock
-      const newCohort = cohorts.find((c) => c.id === cohortId)
-      setEnrollments((prev) =>
-        prev.map((e) =>
-          e.id === enrollmentId
-            ? { ...e, cohortTitle: newCohort?.title ?? e.cohortTitle }
-            : e,
-        ),
-      )
-      setToast({ message: 'Student transferred to new cohort.', type: 'success' })
-    } finally {
-      setTransferLoading(false)
-      setTransferTarget(null)
-    }
+  function handleTransfer(enrollmentId: string, cohortId: string) {
+    transferMutation.mutate({ enrollmentId, cohortId })
   }
 
-  // Keep cohorts list fresh; silently fall back to mock
-  useEffect(() => {
-    authFetch('/api/v1/admin/cohorts')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data && Array.isArray(data) && data.length > 0) setCohorts(data)
-      })
-      .catch(() => {/* keep mock */})
-  }, [])
+  const cancellingId = cancelMutation.isPending ? cancelMutation.variables ?? null : null
+  const transferLoading = transferMutation.isPending
 
   const hasActiveFilters =
     appliedFilters.status !== 'ALL' ||
@@ -846,13 +703,36 @@ export default function EnrollmentManagementPage() {
             )}
           </div>
 
-          {/* Table */}
-          {pageRows.length === 0 && !loading ? (
-            <div className="px-6 py-12 text-center text-[var(--color-wise-text-muted)] text-[13px]">
-              {hasActiveFilters
-                ? 'No enrollments match your filters.'
-                : 'No enrollments found.'}
+          {/* Table / loading / empty / error branches */}
+          {enrollmentsQuery.isError ? (
+            <div
+              role="alert"
+              className="m-5 flex items-center justify-between gap-4 bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] rounded-[14px] px-4 py-3 text-[13px] font-semibold"
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle size={16} aria-hidden="true" />
+                <span>Couldn't load enrollments.</span>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => { void enrollmentsQuery.refetch() }}>
+                Retry
+              </Button>
             </div>
+          ) : loading ? (
+            <div className="px-6 py-5 space-y-3" aria-label="Loading enrollments">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <TableRowSkeleton key={i} columns={6} />
+              ))}
+            </div>
+          ) : pageRows.length === 0 ? (
+            <EmptyState
+              icon={GraduationCap}
+              title={hasActiveFilters ? 'No enrollments match your filters' : 'No enrollments yet'}
+              description={
+                hasActiveFilters
+                  ? 'Try removing a filter or broadening your search.'
+                  : 'Your first students will appear here once they register for a cohort.'
+              }
+            />
           ) : (
             <div className="overflow-x-auto">
               <table
@@ -872,10 +752,16 @@ export default function EnrollmentManagementPage() {
                 </thead>
                 <tbody>
                   {pageRows.map((row, i) => {
-                    const sc = STATUS_CFG[row.status]
-                    const pc = PAYMENT_CFG[row.paymentStatus]
-                    const gradient =
-                      AVATAR_GRADIENTS[row.gi % AVATAR_GRADIENTS.length]
+                    const sc = STATUS_CFG[row.status as EnrollmentStatus]
+                      ?? STATUS_CFG['ACTIVE']
+                    const pc = PAYMENT_CFG[row.paymentStatus as keyof typeof PAYMENT_CFG]
+                      ?? PAYMENT_CFG.PENDING
+                    // Previously each row carried a hardcoded `gi` index for
+                    // the gradient. Now we derive it from the student name so
+                    // the same student keeps a stable avatar colour across
+                    // refreshes.
+                    const gi = (row.studentName.charCodeAt(0) || 0) % AVATAR_GRADIENTS.length
+                    const gradient = AVATAR_GRADIENTS[gi]
                     const isCancelling = cancellingId === row.id
                     const isLast = i >= pageRows.length - 1
 

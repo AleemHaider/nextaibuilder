@@ -1504,14 +1504,25 @@ export interface AdminCohortsListResponse {
   cohorts: Array<{ id: string; title: string }>
 }
 
-// FIR-167 — Fetch admin cohorts for audience selector
+// FIR-167 — Fetch admin cohorts for audience selector.
+// Normalises the `/api/admin/cohorts` response (`{ cohorts: [{id, name, ...}] }`)
+// into the `{ id, title }` shape the UI consumes. The legacy `/cohorts/list`
+// endpoint never existed — every caller previously hit a 404 and fell through
+// to hardcoded fallbacks.
 export async function fetchAdminCohortsList(): Promise<AdminCohortsListResponse> {
-  const res = await authFetch(`${BASE}/admin/cohorts/list`)
+  const res = await authFetch(`/api/admin/cohorts`)
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { message?: string }
     throw new Error(body.message ?? 'Failed to fetch cohorts')
   }
-  return res.json() as Promise<AdminCohortsListResponse>
+  const json = (await res.json()) as {
+    cohorts?: Array<{ id?: string; _id?: string; name?: string; title?: string; code?: string }>
+  }
+  const cohorts = (json.cohorts ?? []).map((c) => ({
+    id:    (c.id ?? c._id ?? '') as string,
+    title: (c.name ?? c.title ?? c.code ?? '') as string,
+  }))
+  return { cohorts }
 }
 
 // FIR-167 — Send broadcast email
@@ -1981,5 +1992,328 @@ export async function deleteAdminLiveSession(
   if (!res.ok && res.status !== 204) {
     const body = (await res.json().catch(() => ({}))) as { message?: string }
     throw new Error(body.message ?? 'Failed to delete live session')
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Admin Dashboard / Enrollment / Payment helpers
+//
+// Sprint X — replaces the hardcoded MOCK_* constants that the three admin
+// surfaces (AdminDashboardPage, EnrollmentManagementPage, TransactionLedgerPage)
+// were falling through to when the API layer didn't yet have first-class
+// typed helpers. Each helper wraps an endpoint that already exists on the
+// Fastify side — the backend is intentionally not changed here.
+// ---------------------------------------------------------------------------
+
+// ── Dashboard stats ──────────────────────────────────────────────────────
+
+export interface AdminDashboardStats {
+  activeStudents:   number
+  activeCohorts:    number
+  pendingReviews:   number
+  completionRate:   number
+}
+
+export async function fetchAdminDashboardStats(): Promise<AdminDashboardStats> {
+  const res = await authFetch(`/api/admin/stats`)
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to fetch dashboard stats')
+  }
+  return res.json() as Promise<AdminDashboardStats>
+}
+
+// ── Admin Enrollments (FIR-213) ──────────────────────────────────────────
+
+export type AdminEnrollmentStatus = 'ACTIVE' | 'SUSPENDED' | 'COMPLETED' | 'REVOKED' | 'PENDING'
+
+export interface AdminEnrollmentRow {
+  id:             string
+  studentName:    string
+  studentEmail:   string
+  course:         string
+  cohortId:       string
+  cohortTitle:    string
+  status:         AdminEnrollmentStatus
+  paymentStatus:  'PAID' | 'PENDING' | 'FAILED' | 'FREE' | 'PARTIAL' | 'WAIVED'
+  paymentMethod:  'STRIPE' | 'MANUAL' | 'FREE'
+  progress:       number
+  enrolledAt:     string
+}
+
+export interface AdminEnrollmentsListResponse {
+  enrollments: AdminEnrollmentRow[]
+  total:       number
+  page:        number
+  totalPages:  number
+}
+
+export interface FetchAdminEnrollmentsParams {
+  page?:          number
+  limit?:         number
+  status?:        string
+  cohortId?:      string
+  paymentStatus?: string
+  search?:        string
+}
+
+interface RawAdminEnrollment {
+  _id?:           string
+  id?:            string
+  status?:        string
+  paymentStatus?: string
+  paymentMethod?: string
+  completionPercentage?: number
+  createdAt?:     string
+  accessGrantedAt?: string
+  student?: {
+    _id?:       string
+    firstName?: string
+    lastName?:  string
+    email?:     string
+  }
+  cohort?: {
+    _id?:  string
+    name?: string
+    code?: string
+  }
+}
+
+function normaliseAdminEnrollment(r: RawAdminEnrollment): AdminEnrollmentRow {
+  const student = r.student ?? {}
+  const cohort  = r.cohort ?? {}
+  const first   = (student.firstName ?? '').trim()
+  const last    = (student.lastName ?? '').trim()
+  // Map the backend "SUSPENDED" status to the UI's "PENDING" bucket — the
+  // ledger doesn't have a separate pending concept, and SUSPENDED is how
+  // unapproved manual payments surface.
+  const rawStatus = (r.status ?? 'ACTIVE').toUpperCase()
+  const uiStatus: AdminEnrollmentStatus =
+    rawStatus === 'SUSPENDED' ? 'PENDING' : (rawStatus as AdminEnrollmentStatus)
+  return {
+    id:            (r._id ?? r.id ?? '') as string,
+    studentName:   `${first} ${last}`.trim() || (student.email ?? 'Unknown'),
+    studentEmail:  student.email ?? '',
+    course:        cohort.name ?? cohort.code ?? 'Unknown course',
+    cohortId:      (cohort._id ?? '') as string,
+    cohortTitle:   cohort.name ?? cohort.code ?? 'Unknown cohort',
+    status:        uiStatus,
+    paymentStatus: (r.paymentStatus ?? 'PENDING') as AdminEnrollmentRow['paymentStatus'],
+    paymentMethod: (r.paymentMethod ?? 'MANUAL') as AdminEnrollmentRow['paymentMethod'],
+    progress:      Math.round(r.completionPercentage ?? 0),
+    enrolledAt:    (r.accessGrantedAt ?? r.createdAt ?? new Date().toISOString()),
+  }
+}
+
+export async function fetchAdminEnrollments(
+  params: FetchAdminEnrollmentsParams = {},
+): Promise<AdminEnrollmentsListResponse> {
+  const qs = new URLSearchParams()
+  if (params.page)          qs.set('page',          String(params.page))
+  if (params.limit)         qs.set('limit',         String(params.limit))
+  // UI uses "PENDING" to mean SUSPENDED (see normalisation above) — translate.
+  if (params.status && params.status !== 'ALL') {
+    const mapped = params.status === 'PENDING' ? 'SUSPENDED' : params.status
+    qs.set('status', mapped)
+  }
+  if (params.cohortId)      qs.set('cohortId',      params.cohortId)
+  if (params.paymentStatus) qs.set('paymentStatus', params.paymentStatus)
+  if (params.search)        qs.set('search',        params.search)
+
+  const res = await authFetch(`${BASE}/admin/enrollments-v2?${qs.toString()}`)
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to fetch enrollments')
+  }
+  const json = (await res.json()) as {
+    enrollments?: RawAdminEnrollment[]
+    total?:       number
+    page?:        number
+    totalPages?:  number
+  }
+  return {
+    enrollments: (json.enrollments ?? []).map(normaliseAdminEnrollment),
+    total:       json.total      ?? 0,
+    page:        json.page       ?? 1,
+    totalPages:  json.totalPages ?? 1,
+  }
+}
+
+export async function cancelAdminEnrollment(id: string): Promise<void> {
+  const res = await authFetch(`${BASE}/admin/enrollments-v2/${id}/cancel`, {
+    method:  'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to cancel enrollment')
+  }
+}
+
+export async function transferAdminEnrollment(
+  enrollmentId: string,
+  targetCohortId: string,
+): Promise<void> {
+  const res = await authFetch(`${BASE}/admin/enrollments-v2/${enrollmentId}/transfer`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ targetCohortId }),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to transfer enrollment')
+  }
+}
+
+// ── Admin Payments (FIR-216) ─────────────────────────────────────────────
+
+export interface AdminPaymentRow {
+  id:           string
+  type:         'stripe' | 'manual'
+  studentName:  string
+  studentEmail: string
+  course:       string
+  amount:       number
+  currency:     string
+  status:       'SUCCEEDED' | 'PAID' | 'PENDING' | 'REFUNDED' | 'FAILED' | 'APPROVED' | 'REJECTED'
+  date:         string
+}
+
+export interface AdminPaymentsSummary {
+  totalRevenue:  number
+  stripeRevenue: number
+  manualRevenue: number
+  pendingAmount: number
+}
+
+export interface AdminPaymentsResponse {
+  payments:   AdminPaymentRow[]
+  total:      number
+  page:       number
+  totalPages: number
+  summary:    AdminPaymentsSummary
+}
+
+export interface FetchAdminPaymentsParams {
+  page?:     number
+  limit?:    number
+  method?:   string
+  status?:   string
+  search?:   string
+  dateFrom?: string
+  dateTo?:   string
+}
+
+interface RawAdminPayment {
+  id?:            string
+  _id?:           string
+  type?:          'stripe' | 'manual'
+  method?:        string
+  studentName?:   string
+  studentEmail?:  string
+  cohortTitle?:   string
+  course?:        string
+  amount?:        number
+  currency?:      string
+  status?:        string
+  date?:          string
+}
+
+function normaliseAdminPayment(r: RawAdminPayment): AdminPaymentRow {
+  const type: AdminPaymentRow['type'] =
+    r.type === 'manual' || r.method === 'MANUAL' ? 'manual' : 'stripe'
+  return {
+    id:           (r.id ?? r._id ?? '') as string,
+    type,
+    studentName:  r.studentName  ?? 'Unknown',
+    studentEmail: r.studentEmail ?? '',
+    course:       r.cohortTitle  ?? r.course ?? 'Unknown',
+    amount:       r.amount ?? 0,
+    currency:     (r.currency ?? 'usd'),
+    status:       (r.status ?? 'PENDING') as AdminPaymentRow['status'],
+    date:         r.date ?? new Date().toISOString(),
+  }
+}
+
+export async function fetchAdminPayments(
+  params: FetchAdminPaymentsParams = {},
+): Promise<AdminPaymentsResponse> {
+  const qs = new URLSearchParams()
+  qs.set('page',  String(params.page  ?? 1))
+  qs.set('limit', String(params.limit ?? 20))
+  if (params.method)   qs.set('method', params.method.toUpperCase())
+  if (params.status)   qs.set('status', params.status)
+  if (params.dateFrom) qs.set('from',   new Date(params.dateFrom).toISOString())
+  if (params.dateTo)   qs.set('to',     new Date(params.dateTo).toISOString())
+
+  const res = await authFetch(`${BASE}/admin/payments?${qs.toString()}`)
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to fetch payments')
+  }
+  const json = (await res.json()) as {
+    payments?:   RawAdminPayment[]
+    total?:      number
+    page?:       number
+    totalPages?: number
+    summary?: {
+      totalRevenue?:   number
+      stripeRevenue?:  number
+      manualRevenue?:  number
+      pendingAmount?:  number
+    }
+  }
+  const payments = (json.payments ?? []).map(normaliseAdminPayment)
+
+  // Client-side search (the fir-payments endpoint doesn't take a `q` param).
+  const filtered = params.search
+    ? payments.filter((p) => {
+        const q = params.search!.toLowerCase()
+        return (
+          p.studentName.toLowerCase().includes(q) ||
+          p.studentEmail.toLowerCase().includes(q) ||
+          p.course.toLowerCase().includes(q)
+        )
+      })
+    : payments
+
+  // The backend `summary` doesn't split stripe/manual — derive those splits
+  // from the returned page for the ledger cards.
+  const serverSummary = json.summary ?? {}
+  const stripeRevenue = serverSummary.stripeRevenue ?? payments
+    .filter((p) => p.type === 'stripe' && (p.status === 'SUCCEEDED' || p.status === 'PAID'))
+    .reduce((s, p) => s + p.amount, 0)
+  const manualRevenue = serverSummary.manualRevenue ?? payments
+    .filter((p) => p.type === 'manual' && (p.status === 'APPROVED' || p.status === 'PAID'))
+    .reduce((s, p) => s + p.amount, 0)
+
+  return {
+    payments:   filtered,
+    total:      json.total      ?? filtered.length,
+    page:       json.page       ?? 1,
+    totalPages: json.totalPages ?? 1,
+    summary: {
+      totalRevenue:  serverSummary.totalRevenue  ?? (stripeRevenue + manualRevenue),
+      stripeRevenue,
+      manualRevenue,
+      pendingAmount: serverSummary.pendingAmount ?? 0,
+    },
+  }
+}
+
+export async function refundAdminPayment(
+  paymentId: string,
+  type: 'stripe' | 'manual',
+  amount: number,
+  reason: string,
+): Promise<void> {
+  const res = await authFetch(`${BASE}/admin/payments/${paymentId}/refund`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ type, amount, reason }),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Refund failed')
   }
 }

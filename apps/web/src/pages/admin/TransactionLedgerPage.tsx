@@ -1,24 +1,22 @@
 // FIR-216/217/218 — Unified payment ledger with refund and CSV export
+//
+// Sprint X: MOCK_PAYMENTS was removed and replaced with a TanStack Query
+// wrapper around the real `/api/v1/admin/payments` endpoint. Loading / empty /
+// error states now use the Wave 6 primitives (LoadingSkeleton, EmptyState,
+// Button) rather than faux rows.
 import { useState, useEffect, useRef } from 'react'
-import { Download, Search, X, Check, Receipt } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Download, Search, X, Check, Receipt, AlertCircle } from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
-import { authFetch } from '../../lib/api'
+import { authFetch, fetchAdminPayments, refundAdminPayment, type AdminPaymentRow } from '../../lib/api'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { Button } from '../../components/ui/Button'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-interface Payment {
-  id: string
-  type: 'stripe' | 'manual'
-  studentName: string
-  studentEmail: string
-  course: string
-  amount: number
-  currency: string
-  status: 'SUCCEEDED' | 'PAID' | 'PENDING' | 'REFUNDED' | 'FAILED'
-  date: string
-}
+type Payment = AdminPaymentRow
 
 interface LedgerSummary {
   totalRevenue: number
@@ -34,18 +32,6 @@ interface Filters {
   dateFrom: string
   dateTo: string
 }
-
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-const MOCK_PAYMENTS: Payment[] = [
-  { id: '1', type: 'stripe', studentName: 'Sara Ahmed', studentEmail: 'sara@example.com', course: 'AI Product Bootcamp', amount: 999, currency: 'usd', status: 'SUCCEEDED', date: '2025-01-08' },
-  { id: '2', type: 'manual', studentName: 'Jordan Lee', studentEmail: 'jordan@gmail.com', course: 'Claude API Mastery', amount: 499, currency: 'usd', status: 'PENDING', date: '2025-01-05' },
-  { id: '3', type: 'stripe', studentName: 'Priya Sharma', studentEmail: 'priya@outlook.com', course: 'Prompt Engineering Pro', amount: 299, currency: 'usd', status: 'REFUNDED', date: '2024-10-03' },
-  { id: '4', type: 'manual', studentName: 'Marcus Webb', studentEmail: 'marcus@dev.io', course: 'Full-Stack AI Dev', amount: 799, currency: 'usd', status: 'SUCCEEDED', date: '2025-01-12' },
-  { id: '5', type: 'stripe', studentName: 'Aleem Haider', studentEmail: 'aleem@nextai.com', course: 'AI Product Bootcamp', amount: 999, currency: 'usd', status: 'SUCCEEDED', date: '2024-12-10' },
-]
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -147,13 +133,15 @@ function TypeBadge({ type }: { type: Payment['type'] }) {
 
 function StatusPill({ status }: { status: Payment['status'] }) {
   const cfg: Record<Payment['status'], { bg: string; color: string; label: string }> = {
-    SUCCEEDED: { bg: 'rgba(5,150,105,0.1)',  color: 'var(--color-wise-success)', label: 'Succeeded' },
-    PAID:      { bg: 'rgba(5,150,105,0.1)',  color: 'var(--color-wise-success)', label: 'Paid'      },
+    SUCCEEDED: { bg: 'rgba(5,150,105,0.1)',  color: 'var(--color-wise-success)',   label: 'Succeeded' },
+    PAID:      { bg: 'rgba(5,150,105,0.1)',  color: 'var(--color-wise-success)',   label: 'Paid'      },
+    APPROVED:  { bg: 'rgba(5,150,105,0.1)',  color: 'var(--color-wise-success)',   label: 'Approved'  },
     PENDING:   { bg: 'rgba(245,158,11,0.1)', color: 'var(--color-wise-text-warm)', label: 'Pending'   },
-    REFUNDED:  { bg: 'rgba(239,68,68,0.1)',  color: 'var(--color-wise-danger)', label: 'Refunded'  },
-    FAILED:    { bg: 'rgba(239,68,68,0.1)',  color: 'var(--color-wise-danger)', label: 'Failed'    },
+    REFUNDED:  { bg: 'rgba(239,68,68,0.1)',  color: 'var(--color-wise-danger)',    label: 'Refunded'  },
+    REJECTED:  { bg: 'rgba(239,68,68,0.1)',  color: 'var(--color-wise-danger)',    label: 'Rejected'  },
+    FAILED:    { bg: 'rgba(239,68,68,0.1)',  color: 'var(--color-wise-danger)',    label: 'Failed'    },
   }
-  const { bg, color, label } = cfg[status]
+  const { bg, color, label } = cfg[status] ?? cfg.PENDING
   return (
     <span style={{
       display: 'inline-flex',
@@ -396,11 +384,8 @@ const inputStyle: React.CSSProperties = {
 }
 
 export default function TransactionLedgerPage() {
-  const [payments, setPayments] = useState<Payment[]>([])
-  const [summary, setSummary] = useState<LedgerSummary>({ totalRevenue: 0, stripeRevenue: 0, manualRevenue: 0, pendingAmount: 0 })
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
-  const [total, setTotal] = useState(0)
   const [refundTarget, setRefundTarget] = useState<Payment | null>(null)
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
 
@@ -414,61 +399,38 @@ export default function TransactionLedgerPage() {
     return () => clearTimeout(t)
   }, [toast])
 
-  // Fetch payments
-  useEffect(() => {
-    let cancelled = false
-    setLoading(true)
+  // Fetch payments via TanStack Query — the previous MOCK_PAYMENTS fallback
+  // shipped fake Sara Ahmed / Aleem Haider rows to production when the API
+  // layer failed. We now surface the error branch directly.
+  const paymentsQuery = useQuery({
+    queryKey: [
+      'admin', 'payments',
+      {
+        page,
+        method:   appliedFilters.method,
+        status:   appliedFilters.status,
+        search:   appliedFilters.search,
+        dateFrom: appliedFilters.dateFrom,
+        dateTo:   appliedFilters.dateTo,
+      },
+    ],
+    queryFn: () => fetchAdminPayments({
+      page,
+      limit:    ITEMS_PER_PAGE,
+      method:   appliedFilters.method || undefined,
+      status:   appliedFilters.status || undefined,
+      search:   appliedFilters.search || undefined,
+      dateFrom: appliedFilters.dateFrom || undefined,
+      dateTo:   appliedFilters.dateTo || undefined,
+    }),
+  })
 
-    async function load() {
-      try {
-        const params = new URLSearchParams()
-        params.set('page', String(page))
-        params.set('limit', String(ITEMS_PER_PAGE))
-        if (appliedFilters.method) params.set('method', appliedFilters.method)
-        if (appliedFilters.status) params.set('status', appliedFilters.status)
-        if (appliedFilters.search) params.set('q', appliedFilters.search)
-        if (appliedFilters.dateFrom) params.set('dateFrom', appliedFilters.dateFrom)
-        if (appliedFilters.dateTo) params.set('dateTo', appliedFilters.dateTo)
-
-        const res = await authFetch(`/api/v1/admin/payments?${params}`)
-        if (!res.ok) throw new Error('API error')
-        const json = await res.json()
-        if (cancelled) return
-        setPayments(json.payments ?? [])
-        setTotal(json.total ?? 0)
-        setSummary(json.summary ?? { totalRevenue: 0, stripeRevenue: 0, manualRevenue: 0, pendingAmount: 0 })
-      } catch {
-        if (cancelled) return
-        // Fall back to mock data
-        let filtered = MOCK_PAYMENTS
-        if (appliedFilters.method) filtered = filtered.filter((p) => p.type === appliedFilters.method)
-        if (appliedFilters.status) filtered = filtered.filter((p) => p.status === appliedFilters.status)
-        if (appliedFilters.search) {
-          const q = appliedFilters.search.toLowerCase()
-          filtered = filtered.filter((p) =>
-            p.studentName.toLowerCase().includes(q) ||
-            p.studentEmail.toLowerCase().includes(q) ||
-            p.course.toLowerCase().includes(q),
-          )
-        }
-        const start = (page - 1) * ITEMS_PER_PAGE
-        setPayments(filtered.slice(start, start + ITEMS_PER_PAGE))
-        setTotal(filtered.length)
-        const succeeded = filtered.filter((p) => p.status === 'SUCCEEDED' || p.status === 'PAID')
-        setSummary({
-          totalRevenue: succeeded.reduce((s, p) => s + p.amount, 0),
-          stripeRevenue: succeeded.filter((p) => p.type === 'stripe').reduce((s, p) => s + p.amount, 0),
-          manualRevenue: succeeded.filter((p) => p.type === 'manual').reduce((s, p) => s + p.amount, 0),
-          pendingAmount: filtered.filter((p) => p.status === 'PENDING').reduce((s, p) => s + p.amount, 0),
-        })
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    load()
-    return () => { cancelled = true }
-  }, [page, appliedFilters])
+  const payments: Payment[] = paymentsQuery.data?.payments ?? []
+  const total = paymentsQuery.data?.total ?? 0
+  const summary: LedgerSummary = paymentsQuery.data?.summary ?? {
+    totalRevenue: 0, stripeRevenue: 0, manualRevenue: 0, pendingAmount: 0,
+  }
+  const loading = paymentsQuery.isLoading
 
   function applyFilters() {
     setPage(1)
@@ -485,11 +447,10 @@ export default function TransactionLedgerPage() {
   async function handleExportCSV() {
     try {
       const params = new URLSearchParams()
-      if (appliedFilters.method) params.set('method', appliedFilters.method)
+      if (appliedFilters.method) params.set('method', appliedFilters.method.toUpperCase())
       if (appliedFilters.status) params.set('status', appliedFilters.status)
-      if (appliedFilters.search) params.set('q', appliedFilters.search)
-      if (appliedFilters.dateFrom) params.set('dateFrom', appliedFilters.dateFrom)
-      if (appliedFilters.dateTo) params.set('dateTo', appliedFilters.dateTo)
+      if (appliedFilters.dateFrom) params.set('from', new Date(appliedFilters.dateFrom).toISOString())
+      if (appliedFilters.dateTo) params.set('to', new Date(appliedFilters.dateTo).toISOString())
 
       const res = await authFetch(`/api/v1/admin/payments/export?${params}`)
       if (!res.ok) throw new Error('Export failed')
@@ -501,37 +462,15 @@ export default function TransactionLedgerPage() {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      // Fallback: generate CSV from current mock data
-      const headers = 'Date,Type,Student,Email,Course,Amount,Status'
-      const rows = payments.map((p) =>
-        [p.date, p.type, p.studentName, p.studentEmail, `"${p.course}"`, p.amount, p.status].join(','),
-      )
-      const csv = [headers, ...rows].join('\n')
-      const blob = new Blob([csv], { type: 'text/csv' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `payments-${new Date().toISOString().slice(0, 10)}.csv`
-      a.click()
-      URL.revokeObjectURL(url)
-      setToast({ msg: 'CSV exported (demo data)', ok: true })
+      setToast({ msg: 'Export failed. Try again.', ok: false })
     }
   }
 
   async function handleRefund(payment: Payment, amount: number, reason: string) {
-    const res = await authFetch(`/api/v1/admin/payments/${payment.id}/refund`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount, reason }),
-    })
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
-      throw new Error(json.message || 'Refund failed')
-    }
+    await refundAdminPayment(payment.id, payment.type, amount, reason)
     setRefundTarget(null)
     setToast({ msg: `Refund of ${formatMoney(amount)} issued for ${payment.studentName}`, ok: true })
-    // Re-apply filters to refresh the list
-    setAppliedFilters((prev) => ({ ...prev }))
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'payments'] })
   }
 
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE)
@@ -736,6 +675,30 @@ export default function TransactionLedgerPage() {
           boxShadow: '0 1px 3px var(--color-wise-ring), 0 4px 16px var(--color-wise-ring)',
           overflow: 'hidden',
         }}>
+          {paymentsQuery.isError ? (
+            <div
+              role="alert"
+              className="m-5 flex items-center justify-between gap-4 bg-[var(--color-wise-danger-soft)] text-[var(--color-wise-danger)] rounded-[14px] px-4 py-3 text-[13px] font-semibold"
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle size={16} aria-hidden="true" />
+                <span>Couldn't load payments.</span>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => { void paymentsQuery.refetch() }}>
+                Retry
+              </Button>
+            </div>
+          ) : !loading && payments.length === 0 ? (
+            <EmptyState
+              icon={Receipt}
+              title="No transactions found"
+              description={
+                hasActiveFilters
+                  ? 'Try adjusting your filters or date range.'
+                  : 'No payment records yet. Once a student checks out, transactions will appear here.'
+              }
+            />
+          ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }} aria-label="Payment transactions">
               <thead>
@@ -763,20 +726,6 @@ export default function TransactionLedgerPage() {
               </thead>
               <tbody>
                 {loading && <SkeletonRows />}
-
-                {!loading && payments.length === 0 && (
-                  <tr>
-                    <td colSpan={7} style={{ padding: '60px 24px', textAlign: 'center' }}>
-                      <div className="flex justify-center mb-3" aria-hidden="true">
-                        <Receipt size={40} className="text-[var(--color-wise-text-muted)]" />
-                      </div>
-                      <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-wise-text)', margin: 0 }}>No transactions found</p>
-                      <p style={{ fontSize: 13, color: 'var(--color-wise-text-muted)', marginTop: 4 }}>
-                        {hasActiveFilters ? 'Try adjusting your filters.' : 'No payment records yet.'}
-                      </p>
-                    </td>
-                  </tr>
-                )}
 
                 {!loading && payments.map((payment, i) => {
                   const canRefund = payment.status === 'SUCCEEDED' || payment.status === 'PAID'
@@ -851,6 +800,7 @@ export default function TransactionLedgerPage() {
               </tbody>
             </table>
           </div>
+          )}
 
           {/* Pagination footer */}
           {!loading && total > 0 && (
