@@ -2,16 +2,19 @@
 
 @theme inline {
   /*
-   * CANONICAL DESIGN TOKENS — Wise-inspired palette (Sprint 1, Wave 6).
-   * The `--color-wise-*`, `--radius-*`, and `--shadow-*` tokens below are the
-   * single source of truth every new component should consume. Navy/blue/orange
-   * tokens remain for legacy pages that have not been migrated yet; do not
-   * reference them in new work. Older aliases (`--color-wise-green`,
-   * `--color-wise-dark-green`, etc.) point at the canonical names so admin
-   * auth surfaces continue to render until rewritten.
+   * CANONICAL DESIGN TOKENS — Navy/blue/orange palette (Sprint 5, Story 23).
+   * These `--color-wise-*` tokens now hold the project's original PBA-inspired
+   * navy/blue/orange brand values. An earlier wave misinterpreted a request as
+   * a full-app Wise-green migration; Story 23 rolls that back by flipping only
+   * the token VALUES (names stay `--color-wise-*` so every migrated component
+   * keeps resolving — no component edits needed). Legacy navy tokens below are
+   * kept as convenience aliases (still the brand). Older aliases
+   * (`--color-wise-green`, `--color-wise-dark-green`, etc.) now mirror the
+   * canonical navy values so admin auth surfaces render coherently until
+   * Story 24 cleans up their hardcoded hex.
    */
 
-  /* Legacy navy palette — DO NOT USE for new components */
+  /* Legacy navy palette — convenience aliases, still canonical brand */
   --color-navy: #1a2744;
   --color-navy-dark: #0d1a3a;
   --color-blue: #4a9ad4;
@@ -25,39 +28,39 @@
   --color-border-subtle: rgba(26, 39, 68, 0.08);
   --font-sans: 'Inter', sans-serif;
 
-  /* Wise palette — canonical */
-  --color-wise-primary: #9fe870;
-  --color-wise-primary-hover: #cdffad;
-  --color-wise-primary-text: #163300;
+  /* Wise token names — canonical navy/blue/orange values (post Story 23 revert) */
+  --color-wise-primary: #4a9ad4;
+  --color-wise-primary-hover: #6fb4dc;
+  --color-wise-primary-text: #0d1a3a;
 
-  --color-wise-text: #0e0f0c;
-  --color-wise-text-warm: #454745;
-  --color-wise-text-muted: #868685;
+  --color-wise-text: #1a2744;
+  --color-wise-text-warm: #3a4556;
+  --color-wise-text-muted: #717182;
 
-  --color-wise-canvas: #fafaf8;
+  --color-wise-canvas: #f8f9fb;
   --color-wise-surface: #ffffff;
-  --color-wise-surface-soft: #e8ebe6;
-  --color-wise-mint: #e2f6d5;
-  --color-wise-dark: #0e0f0c;
+  --color-wise-surface-soft: #eef2f7;
+  --color-wise-mint: #e8f4fd;
+  --color-wise-dark: #0d1a3a;
 
-  --color-wise-ring: rgba(14, 15, 12, 0.12);
-  --color-wise-ring-strong: rgba(14, 15, 12, 0.2);
+  --color-wise-ring: rgba(26, 39, 68, 0.12);
+  --color-wise-ring-strong: rgba(26, 39, 68, 0.2);
 
-  --color-wise-danger: #d03238;
-  --color-wise-danger-soft: #fdeaeb;
-  --color-wise-warning: #ffd11a;
-  --color-wise-warning-soft: rgba(255, 209, 26, 0.12);
-  --color-wise-success: #054d28;
+  --color-wise-danger: #d4183d;
+  --color-wise-danger-soft: #fef2f2;
+  --color-wise-warning: #ff8c5a;
+  --color-wise-warning-soft: rgba(255, 140, 90, 0.12);
+  --color-wise-success: #2a7b3f;
 
-  /* Legacy Wise aliases — kept so AdminLoginPage/AdminOtpPage keep rendering.
-     Resolve to the same literal values as their canonical counterparts so
+  /* Legacy Wise-green aliases — kept so AdminLoginPage/AdminOtpPage keep
+     rendering through Story 24. Mirror the canonical navy values above so
      Tailwind 4's static @theme parser picks them up. */
-  --color-wise-green: #9fe870;
-  --color-wise-green-hover: #cdffad;
-  --color-wise-dark-green: #163300;
-  --color-wise-black: #0e0f0c;
-  --color-wise-warm-dark: #454745;
-  --color-wise-gray: #868685;
+  --color-wise-green: #4a9ad4;
+  --color-wise-green-hover: #6fb4dc;
+  --color-wise-dark-green: #0d1a3a;
+  --color-wise-black: #1a2744;
+  --color-wise-warm-dark: #3a4556;
+  --color-wise-gray: #717182;
 
   /* Radii — Wise scale */
   --radius-sm: 16px;
@@ -70,7 +73,7 @@
   --shadow-ring: 0 0 0 1px rgba(14, 15, 12, 0.12);
   --shadow-ring-strong: 0 0 0 1px rgba(14, 15, 12, 0.18);
   --shadow-card: 0 0 0 1px rgba(14, 15, 12, 0.08), 0 24px 60px -24px rgba(14, 15, 12, 0.18);
-  --shadow-focus: 0 0 0 3px rgba(159, 232, 112, 0.35);
+  --shadow-focus: 0 0 0 3px rgba(74, 154, 212, 0.35);
 }
 
 /*
