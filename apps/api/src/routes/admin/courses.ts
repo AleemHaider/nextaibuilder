@@ -20,6 +20,8 @@ import { Lesson } from '../../models/Lesson.js'
 import { LiveSession } from '../../models/LiveSession.js'
 import { PaymentPlan } from '../../models/PaymentPlan.js'
 import { Enrollment } from '../../models/Enrollment.js'
+// NAB-P0-3 — populate assigned instructor profiles on the admin course detail.
+import { InstructorProfile } from '../../models/InstructorProfile.js'
 import { uploadToS3, IS_S3_CONFIGURED } from '../../lib/s3.js'
 import { bullMQConnection } from '../../lib/redis.js'
 import { detectVideoProvider, type VideoProvider } from '../../lib/detectVideoProvider.js'
@@ -101,6 +103,12 @@ function htmlToPlainText(html: string): string {
 // in total-length caps (outcomes 12 / requirements 10 / audience 8).
 const bulletEntry = z.string().trim().min(1).max(140)
 
+// NAB-P0-3 — ObjectId-string guard for instructor refs. We validate in Zod
+// so the route handler can trust the strings without re-checking in-line.
+const objectIdString = z
+  .string()
+  .refine((v) => Types.ObjectId.isValid(v), { message: 'Invalid ObjectId.' })
+
 const createCourseSchema = z.object({
   title:            z.string().min(1).max(200).trim(),
   slug:             z.string().min(1).max(200).trim().optional(),
@@ -113,6 +121,9 @@ const createCourseSchema = z.object({
   learningOutcomes: z.array(bulletEntry).max(12).optional(),
   requirements:     z.array(bulletEntry).max(10).optional(),
   targetAudience:   z.array(bulletEntry).max(8).optional(),
+  // NAB-P0-3 — ordered list of assigned instructor profile IDs. First entry
+  // is the "primary" instructor rendered on the storefront hero card.
+  instructorIds:    z.array(objectIdString).optional(),
 })
 
 const updateCourseSchema = createCourseSchema.partial()
@@ -348,6 +359,8 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
         learningOutcomes: data.learningOutcomes ?? [],
         requirements:     data.requirements     ?? [],
         targetAudience:   data.targetAudience   ?? [],
+        // NAB-P0-3 — assigned instructor profiles (optional; default to []).
+        instructorIds:    (data.instructorIds ?? []).map((id) => new Types.ObjectId(id)),
       })
 
       return reply.code(201).send({ cohort: cohort.toJSON() })
@@ -417,11 +430,23 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
         return reply.code(404).send({ error: 'NOT_FOUND', message: 'Course not found.' })
       }
 
-      // Fetch modules, live sessions count, and enrollment count in parallel
-      const [modules, sessionCount, enrollmentCount] = await Promise.all([
+      // Fetch modules, live sessions count, enrollment count, and assigned
+      // instructor profiles in parallel.
+      const instructorIds = (cohort.instructorIds ?? []) as Types.ObjectId[]
+      const [modules, sessionCount, enrollmentCount, instructorDocs] = await Promise.all([
         Module.find({ cohortId: id }).sort({ order: 1 }).lean({ virtuals: true }),
         LiveSession.countDocuments({ cohortId: id }),
         Enrollment.countDocuments({ cohortId: id }),
+        // NAB-P0-3 — populate name/title/avatarKey only (the admin builder's
+        // instructor chip only needs the summary, not the full bio/socials).
+        instructorIds.length > 0
+          ? InstructorProfile
+              .find(
+                { _id: { $in: instructorIds } },
+                { name: 1, title: 1, avatarKey: 1 },
+              )
+              .lean({ virtuals: true })
+          : Promise.resolve([]),
       ])
 
       // Annotate modules with their lesson counts
@@ -448,6 +473,25 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
 
       const cid = (cohort as unknown as { _id: Types.ObjectId })._id.toString()
 
+      // Preserve the order defined by cohort.instructorIds so the first entry
+      // stays the "primary" instructor; the find() above returns docs in
+      // insertion order, not the caller-supplied order.
+      const instructorMap = new Map(
+        instructorDocs.map((p) => [
+          (p as unknown as { _id: Types.ObjectId })._id.toString(),
+          p,
+        ]),
+      )
+      const instructorsPopulated = instructorIds
+        .map((oid) => instructorMap.get(oid.toString()))
+        .filter(Boolean)
+        .map((p) => ({
+          id:        (p as unknown as { _id: Types.ObjectId })._id.toString(),
+          name:      (p as unknown as { name: string }).name,
+          title:     ((p as unknown as { title?: string | null }).title ?? '') as string,
+          avatarKey: ((p as unknown as { avatarKey?: string | null }).avatarKey ?? null) as string | null,
+        }))
+
       return reply.send({
         cohort: {
           id:             cid,
@@ -469,6 +513,9 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
           learningOutcomes: cohort.learningOutcomes ?? [],
           requirements:     cohort.requirements     ?? [],
           targetAudience:   cohort.targetAudience   ?? [],
+          // NAB-P0-3 — assigned-instructor ids + populated summaries.
+          instructorIds:    instructorIds.map((oid) => oid.toString()),
+          instructors:      instructorsPopulated,
           modules:          modulesWithCount,
           createdAt:        cohort.createdAt,
           updatedAt:        cohort.updatedAt,
@@ -539,6 +586,10 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
       if (data.learningOutcomes !== undefined) patch['learningOutcomes'] = data.learningOutcomes
       if (data.requirements     !== undefined) patch['requirements']     = data.requirements
       if (data.targetAudience   !== undefined) patch['targetAudience']   = data.targetAudience
+      // NAB-P0-3 — instructor assignments. Empty array is a valid clear.
+      if (data.instructorIds !== undefined) {
+        patch['instructorIds'] = data.instructorIds.map((id) => new Types.ObjectId(id))
+      }
 
       if (Object.keys(patch).length === 0) {
         return reply.code(400).send({ error: 'NO_CHANGES', message: 'No updateable fields provided.' })

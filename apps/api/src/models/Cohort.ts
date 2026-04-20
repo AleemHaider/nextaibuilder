@@ -30,6 +30,9 @@ export interface ICohort extends Document {
   learningOutcomes?: string[]
   requirements?: string[]
   targetAudience?: string[]
+  // NAB-P0-3 — assigned instructor profiles. The first entry is the
+  // "primary" instructor rendered on the storefront hero card.
+  instructorIds?: Types.ObjectId[]
 }
 
 const cohortSchema = new Schema<ICohort>(
@@ -88,6 +91,13 @@ const cohortSchema = new Schema<ICohort>(
         validator: (v: string[]) => !Array.isArray(v) || v.length <= 8,
         message: 'targetAudience supports at most 8 entries.',
       },
+    },
+    // NAB-P0-3 — instructor profile refs. Default [] so existing cohorts
+    // load cleanly without a backfill; order is preserved (first = primary).
+    instructorIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'InstructorProfile' }],
+      default: [],
+      index: true,
     },
   },
   { timestamps: true },

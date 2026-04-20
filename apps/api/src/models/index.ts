@@ -28,3 +28,5 @@ export * from './StudentLesson.js'
 export * from './SlackInvite.js'
 // Sprint 2 Story 10 — upstream Stripe webhook idempotency guard
 export * from './ProcessedStripeEvent.js'
+// NAB-P0-3 — instructor profile
+export * from './InstructorProfile.js'

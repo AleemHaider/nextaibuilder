@@ -50,6 +50,13 @@ vi.mock('../models/Cohort.js', () => ({
   },
 }))
 
+// NAB-P0-3 — admin course GET detail populates InstructorProfile refs.
+vi.mock('../models/InstructorProfile.js', () => ({
+  InstructorProfile: {
+    find: vi.fn(),
+  },
+}))
+
 vi.mock('../models/Module.js',       () => ({ Module:       {} }))
 vi.mock('../models/Lesson.js',       () => ({ Lesson:       {} }))
 vi.mock('../models/LiveSession.js',  () => ({ LiveSession:  {} }))
@@ -325,6 +332,98 @@ describe('NAB-P0-2 — PATCH /:id marketing bullets', () => {
     const longEntry = 'x'.repeat(141)
     const req = makeRequest(
       { learningOutcomes: [longEntry] },
+      { id: COHORT_ID },
+    )
+    const reply = makeReply()
+    await runRoute(route, req, reply)
+
+    expect(reply._status).toBe(400)
+    expect((reply._body as { error: string }).error).toBe('VALIDATION_ERROR')
+    expect(Cohort.findByIdAndUpdate).not.toHaveBeenCalled()
+  })
+})
+
+// ──────────────────────────────────────────────────────────────────────────
+// NAB-P0-3 — Cohort.instructorIds plumbing on POST / + PATCH /:id
+// ──────────────────────────────────────────────────────────────────────────
+
+async function getPostRoute() {
+  const { routes } = await buildFastify()
+  const route = routes['POST /']
+  if (!route) throw new Error('POST / route not registered')
+  return route
+}
+
+describe('NAB-P0-3 — instructorIds on create + update', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('persists instructorIds on POST / create', async () => {
+    vi.mocked(User.findById).mockReturnValueOnce({
+      select: () => ({ lean: () => Promise.resolve(activeAdmin()) }),
+    } as ReturnType<typeof User.findById>)
+    vi.mocked(Cohort.exists).mockResolvedValueOnce(null as never)
+    vi.mocked(Cohort.create).mockResolvedValueOnce({
+      toJSON: () => ({
+        id:    'new-course-id',
+        name:  'Test',
+        slug:  'test',
+        instructorIds: ['bbbbbbbbbbbbbbbbbbbbbbbb'],
+      }),
+    } as never)
+
+    const route = await getPostRoute()
+    const req = makeRequest(
+      {
+        title:         'Test',
+        instructorIds: ['bbbbbbbbbbbbbbbbbbbbbbbb'],
+      },
+      {},
+    )
+    const reply = makeReply()
+    await runRoute(route, req, reply)
+
+    expect(reply._status).toBe(201)
+    const createArg = vi.mocked(Cohort.create).mock.calls[0]?.[0] as {
+      instructorIds: Array<{ toString: () => string }>
+    }
+    expect(createArg.instructorIds).toHaveLength(1)
+    expect(createArg.instructorIds[0].toString()).toBe('bbbbbbbbbbbbbbbbbbbbbbbb')
+  })
+
+  it('persists instructorIds on PATCH /:id update', async () => {
+    vi.mocked(User.findById).mockReturnValueOnce({
+      select: () => ({ lean: () => Promise.resolve(activeAdmin()) }),
+    } as ReturnType<typeof User.findById>)
+    vi.mocked(Cohort.findByIdAndUpdate).mockReturnValueOnce({
+      lean: () => Promise.resolve({ _id: COHORT_ID, name: 'Test', slug: 'test' }),
+    } as unknown as ReturnType<typeof Cohort.findByIdAndUpdate>)
+
+    const route = await getPatchRoute()
+    const req = makeRequest(
+      { instructorIds: ['bbbbbbbbbbbbbbbbbbbbbbbb'] },
+      { id: COHORT_ID },
+    )
+    const reply = makeReply()
+    await runRoute(route, req, reply)
+
+    expect(reply._status).toBeNull()
+    const patchArg = vi.mocked(Cohort.findByIdAndUpdate).mock.calls[0]?.[1] as {
+      $set: { instructorIds: Array<{ toString: () => string }> }
+    }
+    expect(patchArg.$set.instructorIds).toHaveLength(1)
+    expect(patchArg.$set.instructorIds[0].toString()).toBe('bbbbbbbbbbbbbbbbbbbbbbbb')
+  })
+
+  it('rejects an invalid ObjectId string in instructorIds', async () => {
+    vi.mocked(User.findById).mockReturnValueOnce({
+      select: () => ({ lean: () => Promise.resolve(activeAdmin()) }),
+    } as ReturnType<typeof User.findById>)
+
+    const route = await getPatchRoute()
+    const req = makeRequest(
+      { instructorIds: ['not-an-oid'] },
       { id: COHORT_ID },
     )
     const reply = makeReply()

@@ -11,6 +11,8 @@ import { Lesson } from '../models/Lesson.js'
 import { PaymentPlan } from '../models/PaymentPlan.js'
 import { Certificate } from '../models/Certificate.js'
 import { User } from '../models/User.js'
+// NAB-P0-3 — populate the primary instructor profile on the cohort detail.
+import { InstructorProfile } from '../models/InstructorProfile.js'
 
 // ── Route plugin ───────────────────────────────────────────────────────────
 
@@ -142,8 +144,17 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
 
       const cohortId = (cohort as typeof cohort & { _id: Types.ObjectId })._id
 
-      // Fetch payment plans, modules, lesson counts, and lesson list in parallel
-      const [plans, modules, lessonCountAgg, allLessons] = await Promise.all([
+      // NAB-P0-3 — the storefront cohort card renders the "primary"
+      // instructor (first of `cohort.instructorIds`) only. We fetch that
+      // single profile alongside the other detail queries so the hero
+      // assembles in one round-trip. Older cohorts with empty instructorIds
+      // surface `instructor: null` so the UI can hide the card entirely.
+      const primaryInstructorId =
+        ((cohort.instructorIds ?? []) as Types.ObjectId[])[0] ?? null
+
+      // Fetch payment plans, modules, lesson counts, lesson list, and the
+      // primary instructor profile in parallel.
+      const [plans, modules, lessonCountAgg, allLessons, primaryInstructor] = await Promise.all([
         (cohort.paymentPlanIds ?? []).length > 0
           ? PaymentPlan.find(
               { _id: { $in: cohort.paymentPlanIds }, isActive: true },
@@ -164,6 +175,14 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
           { cohortId, isPublished: true },
           { moduleId: 1, title: 1, type: 1, order: 1, estimatedMinutes: 1, freePreview: 1 },
         ).sort({ order: 1 }).lean({ virtuals: true }),
+        primaryInstructorId
+          ? InstructorProfile
+              .findById(
+                primaryInstructorId,
+                { name: 1, title: 1, bio: 1, avatarKey: 1, socialLinks: 1 },
+              )
+              .lean({ virtuals: true })
+          : Promise.resolve(null),
       ])
 
       const paymentPlans = plans.map((p) => ({
@@ -265,9 +284,29 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         learningOutcomes: cohort.learningOutcomes ?? [],
         requirements:     cohort.requirements     ?? [],
         targetAudience:   cohort.targetAudience   ?? [],
-        instructorName:   'nextaibuilder Instructor',
-        instructorTitle:  'Instructor',
-        instructorBio:    '',
+        // NAB-P0-3 — real instructor block populated from the primary
+        // instructor profile. When `instructorIds` is empty the field is
+        // null and the storefront hides the card entirely.
+        instructor: primaryInstructor
+          ? {
+              id:         (primaryInstructor as typeof primaryInstructor & { _id: Types.ObjectId })._id.toString(),
+              name:       (primaryInstructor.name ?? '') as string,
+              title:      (primaryInstructor.title ?? '') as string,
+              bio:        (primaryInstructor.bio ?? '') as string,
+              avatarUrl:  primaryInstructor.avatarKey
+                ? `/api/uploads/${primaryInstructor.avatarKey}`
+                : null,
+              socialLinks:
+                ((primaryInstructor.socialLinks ?? []) as Array<{ platform: string; url: string }>)
+                  .map((l) => ({ platform: l.platform, url: l.url })),
+            }
+          : null,
+        // Legacy flat keys — kept until the front-end migrates off them so
+        // old storefront builds don't crash on a missing key. New code should
+        // read `instructor` above.
+        instructorName:   primaryInstructor?.name  ?? '',
+        instructorTitle:  primaryInstructor?.title ?? '',
+        instructorBio:    primaryInstructor?.bio   ?? '',
         paymentPlans,
       })
     },

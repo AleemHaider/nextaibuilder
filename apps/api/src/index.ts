@@ -44,6 +44,7 @@ import { studentManualPaymentRoutes } from './routes/student/manual-payment.js' 
 import { adminManualPaymentsRoutes } from './routes/admin/manual-payments.js'             // FIR-47/48/49
 import { studentLmsRoutes } from './routes/student/lms.js'                                // FIR-51–58
 import { adminCoursesRoutes, adminEnrollmentsRoutes } from './routes/admin/courses.js'   // FIR-59–65/159/175
+import { adminInstructorProfilesRoutes } from './routes/admin/instructor-profiles.js'    // NAB-P0-3
 import { adminEnrollmentResetRoutes } from './routes/admin/enrollment-reset.js'          // FIR-168
 import { adminAnalyticsRoutes } from './routes/admin/analytics.js'                       // FIR-76–79/174
 import { firAdminStudentsRoutes } from './routes/admin/fir-students.js'                  // FIR-209–212
@@ -198,6 +199,7 @@ async function start() {
 
   // ── Admin CMS routes (FIR-59–65/159/175) ─────────────────────────────────
   await server.register(adminCoursesRoutes,         { prefix: '/api/v1/admin/courses' })             // FIR-59–65
+  await server.register(adminInstructorProfilesRoutes, { prefix: '/api/v1/admin/instructor-profiles' }) // NAB-P0-3
   await server.register(adminEnrollmentsRoutes,     { prefix: '/api/v1/admin/enrollments' })         // FIR-159/175
   await server.register(adminEnrollmentResetRoutes, { prefix: '/api/v1/admin/enrollments' })         // FIR-168
   await server.register(adminAnalyticsRoutes,       { prefix: '/api/v1/admin/analytics' })           // FIR-76–79/174
