@@ -242,6 +242,9 @@ export interface CohortSummary {
   learningOutcomes?: string[]
   requirements?: string[]
   targetAudience?: string[]
+  // NAB-P0-3 — optional populated instructor summaries. Present on detail
+  // responses that return the full instructor list; list-card endpoints omit.
+  instructors?: InstructorSummary[]
 }
 
 export interface CohortLesson {
@@ -280,6 +283,50 @@ export interface PreviewLesson {
   contentFormat?: 'MARKDOWN' | 'RICH_HTML' | null
 }
 
+// NAB-P0-3 — Instructor profile types. The storefront consumes the rich
+// instructor block; the admin builder works with a lighter summary.
+export type InstructorSocialPlatform =
+  | 'TWITTER'
+  | 'LINKEDIN'
+  | 'GITHUB'
+  | 'YOUTUBE'
+  | 'WEBSITE'
+  | 'X'
+
+export interface InstructorSocialLink {
+  platform: InstructorSocialPlatform
+  url: string
+}
+
+export interface InstructorProfile {
+  id: string
+  userId: string
+  name: string
+  title: string
+  bio: string
+  avatarKey: string | null
+  socialLinks: InstructorSocialLink[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface InstructorSummary {
+  id: string
+  name: string
+  title: string
+  avatarKey?: string | null
+  avatarUrl?: string | null
+}
+
+export interface StorefrontInstructor {
+  id: string
+  name: string
+  title: string
+  bio: string
+  avatarUrl: string | null
+  socialLinks: InstructorSocialLink[]
+}
+
 export interface CohortDetail extends CohortSummary {
   description: string
   lessonCount: number
@@ -295,6 +342,11 @@ export interface CohortDetail extends CohortSummary {
   learningOutcomes: string[]
   requirements: string[]
   targetAudience: string[]
+  // NAB-P0-3 — primary instructor populated from InstructorProfile.
+  // `null` means no instructor is assigned; the storefront hides the card.
+  instructor: StorefrontInstructor | null
+  // Legacy flat fields — kept for callers that haven't migrated. New code
+  // should read `instructor` above.
   instructorName: string
   instructorTitle: string
   instructorBio: string
@@ -958,6 +1010,9 @@ export interface AdminCourseDetail {
   learningOutcomes: string[]
   requirements: string[]
   targetAudience: string[]
+  // NAB-P0-3 — assigned instructors, ordered (first = primary).
+  instructorIds: string[]
+  instructors: InstructorSummary[]
 }
 
 export async function fetchAdminCourseDetail(
@@ -986,6 +1041,17 @@ export async function fetchAdminCourseDetail(
     learningOutcomes: (c.learningOutcomes as string[] | undefined) ?? [],
     requirements:     (c.requirements     as string[] | undefined) ?? [],
     targetAudience:   (c.targetAudience   as string[] | undefined) ?? [],
+    // NAB-P0-3 — instructor assignments + populated summaries. The server
+    // returns avatarKey; we also derive a browser-usable avatarUrl so the
+    // builder chip can render an <img> without round-tripping the helper.
+    instructorIds:    (c.instructorIds as string[] | undefined) ?? [],
+    instructors:      ((c.instructors as Array<Record<string, unknown>> | undefined) ?? []).map((i) => ({
+      id:        (i.id as string),
+      name:      (i.name as string),
+      title:     (i.title as string | null | undefined) ?? '',
+      avatarKey: (i.avatarKey as string | null | undefined) ?? null,
+      avatarUrl: instructorAvatarUrl((i.avatarKey as string | null | undefined) ?? null),
+    })),
   }
 }
 
@@ -1988,6 +2054,9 @@ export interface CreateCoursePayload {
   learningOutcomes?: string[]
   requirements?: string[]
   targetAudience?: string[]
+  // NAB-P0-3 — ordered list of InstructorProfile ids. First id is the
+  // "primary" instructor rendered on the storefront hero card.
+  instructorIds?: string[]
 }
 
 export type UpdateCoursePayload = Partial<CreateCoursePayload>
@@ -2695,4 +2764,131 @@ export async function refundAdminPayment(
     const body = (await res.json().catch(() => ({}))) as { message?: string }
     throw new Error(body.message ?? 'Refund failed')
   }
+}
+
+// ---------------------------------------------------------------------------
+// NAB-P0-3 — Admin InstructorProfile API
+//
+// The builder Overview tab reads profiles via the typeahead + detail helpers
+// below, and creates new profiles through the inline modal. Avatar uploads
+// reuse the same multipart pattern as cover uploads.
+// ---------------------------------------------------------------------------
+
+export interface AdminInstructorProfilesListResponse {
+  profiles: InstructorProfile[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+export interface CreateInstructorProfilePayload {
+  userId: string
+  name: string
+  title?: string
+  bio?: string
+  socialLinks?: InstructorSocialLink[]
+}
+
+export type UpdateInstructorProfilePayload = Partial<
+  Omit<CreateInstructorProfilePayload, 'userId'>
+>
+
+export async function fetchAdminInstructorProfiles(
+  q?: string,
+): Promise<AdminInstructorProfilesListResponse> {
+  const params = new URLSearchParams()
+  if (q && q.trim()) params.set('q', q.trim())
+  const qs = params.toString()
+  const res = await authFetch(
+    `${BASE}/admin/instructor-profiles${qs ? `?${qs}` : ''}`,
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to fetch instructor profiles')
+  }
+  return res.json() as Promise<AdminInstructorProfilesListResponse>
+}
+
+export async function fetchAdminInstructorProfile(
+  id: string,
+): Promise<InstructorProfile> {
+  const res = await authFetch(`${BASE}/admin/instructor-profiles/${id}`)
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to fetch instructor profile')
+  }
+  const json = (await res.json()) as { profile: InstructorProfile }
+  return json.profile
+}
+
+export async function createAdminInstructorProfile(
+  payload: CreateInstructorProfilePayload,
+): Promise<InstructorProfile> {
+  const res = await authFetch(`${BASE}/admin/instructor-profiles`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to create instructor profile')
+  }
+  const json = (await res.json()) as { profile: InstructorProfile }
+  return json.profile
+}
+
+export async function updateAdminInstructorProfile(
+  id: string,
+  payload: UpdateInstructorProfilePayload,
+): Promise<InstructorProfile> {
+  const res = await authFetch(`${BASE}/admin/instructor-profiles/${id}`, {
+    method:  'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to update instructor profile')
+  }
+  const json = (await res.json()) as { profile: InstructorProfile }
+  return json.profile
+}
+
+export async function deleteAdminInstructorProfile(id: string): Promise<void> {
+  const res = await authFetch(`${BASE}/admin/instructor-profiles/${id}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to delete instructor profile')
+  }
+}
+
+export async function uploadAdminInstructorAvatar(
+  id: string,
+  file: File,
+): Promise<{ avatarKey: string }> {
+  const form = new FormData()
+  form.append('file', file, file.name)
+  const res = await authFetch(`${BASE}/admin/instructor-profiles/${id}/avatar`, {
+    method: 'POST',
+    body:   form,
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to upload instructor avatar')
+  }
+  return res.json() as Promise<{ avatarKey: string }>
+}
+
+/**
+ * Derive a browser-usable URL for a stored instructor avatar. Mirrors the
+ * `cohortCoverImageUrl` pattern — in dev the backend writes files to
+ * `apps/api/uploads/` and serves them via `/api/uploads/*`. Returns `null`
+ * when no avatar is set so callers can fall back to a placeholder.
+ */
+export function instructorAvatarUrl(avatarKey: string | null | undefined): string | null {
+  if (!avatarKey) return null
+  return `/api/uploads/${avatarKey}`
 }

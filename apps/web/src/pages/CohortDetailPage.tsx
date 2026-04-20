@@ -25,14 +25,25 @@ import {
   Wrench,
   ChevronRight,
   X,
+  // NAB-P0-3 — social-link icons on the instructor card.
+  Twitter,
+  Linkedin,
+  Github,
+  Youtube,
+  Link as LinkIcon,
   type LucideIcon,
 } from 'lucide-react'
 import { TopNav } from '../components/TopNav'
 import { Footer } from '../components/Footer'
 import { Button } from '../components/ui/Button'
 import { usePageMeta } from '../hooks/usePageMeta'
-import { fetchCohortBySlug, fetchPreviewLessons } from '../lib/api'
-import type { CohortDetail, CohortLesson, PreviewLesson } from '../lib/api'
+import { fetchCohortBySlug, fetchPreviewLessons, instructorAvatarUrl } from '../lib/api'
+import type {
+  CohortDetail,
+  CohortLesson,
+  PreviewLesson,
+  InstructorSocialPlatform,
+} from '../lib/api'
 import { sanitizeHtml } from '../lib/sanitize'
 import { toEmbedUrl } from '../lib/detectVideoProvider'
 import { cn } from '../lib/utils'
@@ -392,6 +403,114 @@ function StatPill({ Icon, label }: { Icon: LucideIcon; label: string }) {
       <Icon size={16} aria-hidden="true" />
       <span className="text-[13px] font-semibold">{label}</span>
     </div>
+  )
+}
+
+// ─── Instructor card ─────────────────────────────────────────────────────────
+//
+// NAB-P0-3 — Rendered only when `cohort.instructor` is non-null. Avatars fall
+// back to the instructor's initial when `avatarKey` is missing. Bio HTML is
+// piped through the shared DOMPurify sanitizer before entering the DOM.
+
+const INSTRUCTOR_SOCIAL_ICON: Record<InstructorSocialPlatform, LucideIcon> = {
+  TWITTER:  Twitter,
+  X:        Twitter,
+  LINKEDIN: Linkedin,
+  GITHUB:   Github,
+  YOUTUBE:  Youtube,
+  WEBSITE:  LinkIcon,
+}
+
+const INSTRUCTOR_SOCIAL_LABEL: Record<InstructorSocialPlatform, string> = {
+  TWITTER:  'Twitter profile',
+  X:        'X profile',
+  LINKEDIN: 'LinkedIn profile',
+  GITHUB:   'GitHub profile',
+  YOUTUBE:  'YouTube channel',
+  WEBSITE:  'Website',
+}
+
+function InstructorCard({ instructor }: { instructor: NonNullable<CohortDetail['instructor']> }) {
+  // The server hands us an avatarUrl relative path when set, but consumers
+  // that talk directly to the admin API only have avatarKey — we normalise
+  // here to handle both shapes without special-casing at the call site.
+  const avatarSrc =
+    instructor.avatarUrl ??
+    instructorAvatarUrl((instructor as { avatarKey?: string | null }).avatarKey ?? null)
+  const bioHtml = sanitizeHtml(instructor.bio || '')
+
+  return (
+    <section
+      className={cn(
+        'rounded-[var(--radius-md)] bg-[var(--color-wise-surface)] p-8',
+        'shadow-[var(--shadow-ring)]',
+      )}
+    >
+      <p className="mb-5 text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-wise-primary-text)]">
+        Your instructor
+      </p>
+      <div className="flex items-start gap-5">
+        {avatarSrc ? (
+          <img
+            src={avatarSrc}
+            alt={instructor.name}
+            className="h-[72px] w-[72px] flex-shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <div
+            className={cn(
+              'h-[72px] w-[72px] flex-shrink-0 rounded-full',
+              'flex items-center justify-center text-2xl font-black',
+              'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+            )}
+            aria-hidden="true"
+          >
+            {(instructor.name || 'I').charAt(0)}
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <h3 className="mb-1 text-xl font-extrabold text-[var(--color-wise-text)]">
+            {instructor.name}
+          </h3>
+          {instructor.title ? (
+            <p className="mb-2.5 text-sm font-semibold text-[var(--color-wise-primary-text)]">
+              {instructor.title}
+            </p>
+          ) : null}
+          {bioHtml ? (
+            <div
+              className="text-[15px] leading-[1.65] text-[var(--color-wise-text-muted)]"
+              // Sanitized above — still lands inside the DOMPurify allow-list.
+              dangerouslySetInnerHTML={{ __html: bioHtml }}
+            />
+          ) : null}
+          {instructor.socialLinks.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2" data-testid="instructor-social-links">
+              {instructor.socialLinks.map((link) => {
+                const Icon = INSTRUCTOR_SOCIAL_ICON[link.platform as InstructorSocialPlatform] ?? LinkIcon
+                const label = INSTRUCTOR_SOCIAL_LABEL[link.platform as InstructorSocialPlatform] ?? 'External link'
+                return (
+                  <a
+                    key={`${link.platform}-${link.url}`}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    className={cn(
+                      'inline-flex items-center justify-center h-9 w-9 rounded-full',
+                      'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text)]',
+                      'hover:bg-[var(--color-wise-mint)] transition-colors',
+                    )}
+                  >
+                    <Icon size={16} aria-hidden="true" />
+                  </a>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -878,40 +997,12 @@ export default function CohortDetailPage() {
             ))}
           </section>
 
-          {/* Instructor */}
-          <section
-            className={cn(
-              'rounded-[var(--radius-md)] bg-[var(--color-wise-surface)] p-8',
-              'shadow-[var(--shadow-ring)]',
-            )}
-          >
-            <p className="mb-5 text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-wise-primary-text)]">
-              Your instructor
-            </p>
-            <div className="flex items-start gap-5">
-              <div
-                className={cn(
-                  'h-[72px] w-[72px] flex-shrink-0 rounded-full',
-                  'flex items-center justify-center text-2xl font-black',
-                  'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
-                )}
-                aria-hidden="true"
-              >
-                {(cohort.instructorName ?? 'I').charAt(0)}
-              </div>
-              <div>
-                <h3 className="mb-1 text-xl font-extrabold text-[var(--color-wise-text)]">
-                  {cohort.instructorName}
-                </h3>
-                <p className="mb-2.5 text-sm font-semibold text-[var(--color-wise-primary-text)]">
-                  {cohort.instructorTitle}
-                </p>
-                <p className="text-[15px] leading-[1.65] text-[var(--color-wise-text-muted)]">
-                  {cohort.instructorBio}
-                </p>
-              </div>
-            </div>
-          </section>
+          {/* NAB-P0-3 — Instructor card driven by the populated primary
+              instructor profile. When `cohort.instructor` is null we skip the
+              whole section instead of rendering an empty placeholder. */}
+          {cohort.instructor && (
+            <InstructorCard instructor={cohort.instructor} />
+          )}
 
           {/* Live sessions */}
           {cohort.liveSessions != null && cohort.liveSessions.length > 0 && (

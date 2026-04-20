@@ -44,6 +44,9 @@ vi.mock('../../../lib/api', () => ({
     learningOutcomes: [],
     requirements: [],
     targetAudience: [],
+    // NAB-P0-3 — instructor helpers hydrate these on the admin detail.
+    instructorIds: [],
+    instructors: [],
   }),
   fetchAdminCourseModules: vi.fn(),
   fetchAdminModuleLessons: vi.fn(),
@@ -54,6 +57,15 @@ vi.mock('../../../lib/api', () => ({
   publishAdminCourse: vi.fn(),
   uploadAdminCourseCover: vi.fn(),
   cohortCoverImageUrl: (key: string | null) => (key ? `/api/uploads/${key}` : null),
+  // NAB-P0-3 — Instructor helpers. Default list response is empty; tests
+  // that exercise the typeahead wire in a specific resolved value.
+  fetchAdminInstructorProfiles: vi.fn().mockResolvedValue({
+    profiles: [], total: 0, page: 1, limit: 20, totalPages: 0,
+  }),
+  createAdminInstructorProfile: vi.fn(),
+  uploadAdminInstructorAvatar: vi.fn(),
+  instructorAvatarUrl: (key: string | null | undefined) =>
+    (key ? `/api/uploads/${key}` : null),
   fetchAdminPaymentPlans: vi.fn(),
   createAdminPaymentPlan: vi.fn(),
   updateAdminPaymentPlan: vi.fn(),
@@ -121,6 +133,8 @@ import {
   deleteAdminLiveSession,
   createAdminModule,
   createAdminLesson,
+  // NAB-P0-3 — instructor typeahead + create-profile modal helpers.
+  fetchAdminInstructorProfiles,
 } from '../../../lib/api'
 import { useAuth } from '../../../context/AuthContext'
 
@@ -978,5 +992,98 @@ describe('<CourseBuilderPage> — Sprint 2 Story 11', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  // ── NAB-P0-3 — Instructor picker (Overview tab) ────────────────────────
+
+  it('NAB-P0-3 instructor typeahead: typing "Sa" fires fetchAdminInstructorProfiles and renders results', async () => {
+    asMock(fetchAdminInstructorProfiles).mockResolvedValue({
+      profiles: [
+        {
+          id: 'prof-1',
+          userId: 'uuuuuuuuuuuuuuuuuuuuuuuu',
+          name: 'Sally Builder',
+          title: 'Senior AI Engineer',
+          bio: '',
+          avatarKey: null,
+          socialLinks: [],
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    // Enter an existing course to surface the Overview tab with a real id.
+    const listItem = (await screen.findByText('AI Builder 101')).closest('button')!
+    await user.click(listItem)
+
+    // The Instructor search input lives inside the Overview section the page
+    // lands on by default.
+    const search = await screen.findByTestId('instructor-search-input')
+    await user.type(search, 'Sa')
+
+    // Debounce window is 300ms — wait for the helper + the result to land.
+    await waitFor(() => {
+      expect(fetchAdminInstructorProfiles).toHaveBeenCalled()
+    })
+    const lastCall = asMock(fetchAdminInstructorProfiles).mock.calls.at(-1)!
+    expect(lastCall[0]).toBe('Sa')
+    expect(await screen.findByText('Sally Builder')).toBeInTheDocument()
+  })
+
+  it('NAB-P0-3 attaching an instructor adds a chip and includes instructorIds in the save payload', async () => {
+    asMock(fetchAdminInstructorProfiles).mockResolvedValue({
+      profiles: [
+        {
+          id: 'prof-1',
+          userId: 'uuuuuuuuuuuuuuuuuuuuuuuu',
+          name: 'Sally Builder',
+          title: 'Senior AI Engineer',
+          bio: '',
+          avatarKey: null,
+          socialLinks: [],
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    })
+    asMock(updateAdminCourse).mockResolvedValue({
+      id: existingCourse.id,
+      title: existingCourse.title,
+      slug: existingCourse.slug,
+      type: 'RECORDED',
+      tagline: existingCourse.tagline,
+      isPublished: false,
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    const listItem = (await screen.findByText('AI Builder 101')).closest('button')!
+    await user.click(listItem)
+
+    const search = await screen.findByTestId('instructor-search-input')
+    await user.type(search, 'Sa')
+
+    // Click the first search result.
+    const result = await screen.findByTestId('instructor-result-prof-1')
+    await user.click(result)
+
+    // Chip for the attached instructor appears.
+    expect(await screen.findByTestId('instructor-chip-prof-1')).toBeInTheDocument()
+
+    // Manual Save → payload must include instructorIds: ['prof-1'].
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    await waitFor(() => {
+      expect(updateAdminCourse).toHaveBeenCalledTimes(1)
+    })
+    const [, payload] = asMock(updateAdminCourse).mock.calls[0]
+    expect(payload.instructorIds).toEqual(['prof-1'])
   })
 })
