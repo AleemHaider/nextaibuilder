@@ -24,6 +24,6 @@
   <rect x="210" y="210" width="92" height="92" fill="rgba(74,154,212,0.18)"/>
   <rect x="220" y="220" width="72" height="72" fill="#4a9ad4"/>
   <rect x="232" y="232" width="48" height="48" fill="#7dcbff"/>
-  <!-- center pixel -->
-  <rect x="240" y="240" width="32" height="32" fill="#ffffff"/>
+  <!-- center pixel — warm orange energy accent -->
+  <rect x="240" y="240" width="32" height="32" fill="#ff8c5a"/>
 </svg>

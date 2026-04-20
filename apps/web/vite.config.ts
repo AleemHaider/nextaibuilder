@@ -19,8 +19,8 @@ export default defineConfig({
         short_name: 'nextaibuilder',
         description:
           'Live and recorded cohorts that teach you to ship production AI products with the Anthropic Claude API.',
-        theme_color: '#0e0f0c',
-        background_color: '#0e0f0c',
+        theme_color: '#0d1a3a',
+        background_color: '#f8f9fb',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
