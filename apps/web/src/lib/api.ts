@@ -1755,6 +1755,47 @@ export async function publishAdminCourse(
   return res.json() as Promise<{ isPublished: boolean }>
 }
 
+/**
+ * Upload a cohort cover image via multipart to
+ * POST /api/v1/admin/courses/:id/cover — matches the backend at
+ * apps/api/src/routes/admin/courses.ts. Backend accepts jpeg/png/webp up to
+ * 5 MB and stores under `cohort-covers/{id}/{ts}.{ext}` in S3 (or locally
+ * under /uploads in dev). Returns the stored `coverImageKey`.
+ */
+export async function uploadAdminCourseCover(
+  cohortId: string,
+  file: File,
+): Promise<{ coverImageKey: string }> {
+  const form = new FormData()
+  form.append('file', file, file.name)
+
+  // Note: do NOT set Content-Type — the browser generates the multipart
+  // boundary automatically. authFetch passes through any RequestInit so
+  // this works.
+  const res = await authFetch(`${BASE}/admin/courses/${cohortId}/cover`, {
+    method: 'POST',
+    body: form,
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to upload cover image')
+  }
+  return res.json() as Promise<{ coverImageKey: string }>
+}
+
+/**
+ * Derive a browser-usable URL for a stored cover image. In dev (S3 not
+ * configured) the backend writes files to `apps/api/uploads/` and serves
+ * them via `/api/uploads/*`. In prod the backend will eventually sign
+ * presigned GET URLs, but for now we return the same path since the dev
+ * route is also mounted in prod; production can swap this for a presign
+ * helper without touching callers.
+ */
+export function cohortCoverImageUrl(coverImageKey: string | null): string | null {
+  if (!coverImageKey) return null
+  return `/api/uploads/${coverImageKey}`
+}
+
 // ---- Payment plans ----
 
 export type AdminPaymentPlanType = 'ONE_TIME' | 'INSTALLMENT'

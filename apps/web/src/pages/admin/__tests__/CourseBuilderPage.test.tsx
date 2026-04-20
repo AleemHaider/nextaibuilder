@@ -30,6 +30,8 @@ vi.mock('../../../lib/api', () => ({
   createAdminCourse: vi.fn(),
   updateAdminCourse: vi.fn(),
   publishAdminCourse: vi.fn(),
+  uploadAdminCourseCover: vi.fn(),
+  cohortCoverImageUrl: (key: string | null) => (key ? `/api/uploads/${key}` : null),
   fetchAdminPaymentPlans: vi.fn(),
   createAdminPaymentPlan: vi.fn(),
   updateAdminPaymentPlan: vi.fn(),
