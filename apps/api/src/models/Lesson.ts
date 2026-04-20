@@ -1,7 +1,12 @@
 // FIR-14 — Lesson model
+// NAB-P0-5 — Multi-provider video support: added videoProvider / videoUrl /
+// videoDurationSeconds. The legacy `loomUrl` field is kept for back-compat
+// (marked @deprecated); a pre-save hook mirrors it into the new fields when
+// older writers only populate `loomUrl`.
 import { Schema, model, Document, Model, Types } from 'mongoose'
 
 export type LessonType = 'VIDEO' | 'TEXT' | 'TOOL_SETUP'
+export type VideoProvider = 'LOOM' | 'YOUTUBE' | 'VIMEO'
 
 export interface ILesson extends Document {
   moduleId: Types.ObjectId
@@ -12,7 +17,11 @@ export interface ILesson extends Document {
   isPublished: boolean
   freePreview: boolean
   estimatedMinutes: number
-  // VIDEO
+  // VIDEO — generic, multi-provider (NAB-P0-5)
+  videoProvider?: VideoProvider | null
+  videoUrl?: string | null
+  videoDurationSeconds?: number | null
+  /** @deprecated Use `videoUrl` + `videoProvider` instead. Retained for back-compat only. */
   loomUrl?: string
   transcript?: string
   // TEXT
@@ -37,7 +46,16 @@ const lessonSchema = new Schema<ILesson>(
     isPublished: { type: Boolean, default: false },
     freePreview: { type: Boolean, default: false },
     estimatedMinutes: { type: Number, default: 0 },
-    // VIDEO fields
+    // VIDEO fields — new multi-provider shape (NAB-P0-5)
+    videoProvider: {
+      type: String,
+      enum: ['LOOM', 'YOUTUBE', 'VIMEO', null],
+      default: null,
+    },
+    videoUrl:             { type: String, trim: true, default: null },
+    videoDurationSeconds: { type: Number, default: null },
+    // VIDEO — legacy
+    /** @deprecated */
     loomUrl: { type: String, trim: true },
     transcript: { type: String },
     // TEXT fields
@@ -50,6 +68,20 @@ const lessonSchema = new Schema<ILesson>(
 
 lessonSchema.index({ moduleId: 1, order: 1 })
 lessonSchema.index({ cohortId: 1 })
+
+// ── Back-compat migration (writer-side) ──────────────────────────────────
+// If a document is saved with only the legacy `loomUrl` field populated and
+// no `videoUrl`, mirror the URL into `videoUrl` and mark the provider as
+// LOOM. This keeps historic data usable without a one-off batch script —
+// documents migrate lazily as they are edited.
+lessonSchema.pre('save', function migrateLoomUrl(next) {
+  const doc = this as ILesson
+  if (!doc.videoUrl && doc.loomUrl) {
+    doc.videoUrl = doc.loomUrl
+    if (!doc.videoProvider) doc.videoProvider = 'LOOM'
+  }
+  next()
+})
 
 lessonSchema.set('toJSON', {
   virtuals: true,
