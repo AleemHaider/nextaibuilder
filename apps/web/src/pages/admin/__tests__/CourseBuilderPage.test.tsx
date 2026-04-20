@@ -23,6 +23,27 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 // returning empty arrays so the tab bodies don't race while other flows run.
 vi.mock('../../../lib/api', () => ({
   fetchAdminCourses: vi.fn(),
+  // NAB-P0-2 — the builder now hydrates description + marketing bullets from
+  // the admin detail endpoint when a course is selected. Default the mock to
+  // a resolved empty-detail response so existing tests that don't care about
+  // the Overview tab continue to pass.
+  fetchAdminCourseDetail: vi.fn().mockResolvedValue({
+    id: 'course-1',
+    title: 'AI Builder 101',
+    slug: 'ai-builder-101',
+    type: 'RECORDED',
+    tagline: null,
+    description: null,
+    coverImageKey: null,
+    maxSeats: null,
+    isPublished: false,
+    status: 'DRAFT',
+    liveStartDate: null,
+    liveEndDate: null,
+    learningOutcomes: [],
+    requirements: [],
+    targetAudience: [],
+  }),
   fetchAdminCourseModules: vi.fn(),
   fetchAdminModuleLessons: vi.fn(),
   reorderModules: vi.fn(),
@@ -617,7 +638,7 @@ describe('<CourseBuilderPage> — Sprint 2 Story 11', () => {
     ).toBeInTheDocument()
   })
 
-  it('Add Lesson (VIDEO) flow: submits createAdminLesson with loomUrl', async () => {
+  it('Add Lesson (VIDEO) flow: submits createAdminLesson with videoUrl + videoProvider (Loom)', async () => {
     asMock(fetchAdminCourseModules).mockResolvedValue([
       { id: 'mod-1', title: 'Module 1', order: 0, lessonCount: 0 },
     ])
@@ -646,9 +667,12 @@ describe('<CourseBuilderPage> — Sprint 2 Story 11', () => {
     )
     const titleInput = document.getElementById('lesson-title') as HTMLInputElement
     await user.type(titleInput, 'Intro')
-    // Default type is VIDEO, so the Loom URL field is rendered.
-    const loomInput = document.getElementById('lesson-loom-url') as HTMLInputElement
-    await user.type(loomInput, 'https://www.loom.com/share/abc')
+    // Default type is VIDEO, so the generic Video URL field is rendered.
+    const videoInput = document.getElementById('lesson-video-url') as HTMLInputElement
+    await user.type(videoInput, 'https://www.loom.com/share/abc123')
+
+    // NAB-P0-5 — Provider detection hint renders live.
+    expect(await screen.findByText(/loom detected/i)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /create lesson/i }))
 
@@ -662,11 +686,61 @@ describe('<CourseBuilderPage> — Sprint 2 Story 11', () => {
     expect(payloadArg).toMatchObject({
       title: 'Intro',
       type: 'VIDEO',
-      loomUrl: 'https://www.loom.com/share/abc',
+      videoUrl: 'https://www.loom.com/share/abc123',
+      videoProvider: 'LOOM',
     })
   })
 
-  it('Add Lesson (TEXT) flow: switching type swaps Loom URL for Content field', async () => {
+  it('Add Lesson (VIDEO) flow: YouTube URL shows "YouTube detected" and submits videoProvider=YOUTUBE', async () => {
+    asMock(fetchAdminCourseModules).mockResolvedValue([
+      { id: 'mod-1', title: 'Module 1', order: 0, lessonCount: 0 },
+    ])
+    asMock(fetchAdminModuleLessons).mockResolvedValue([])
+    asMock(createAdminLesson).mockResolvedValue({
+      id: 'lesson-yt',
+      title: 'YT intro',
+      order: 0,
+      type: 'VIDEO',
+      estimatedMinutes: 0,
+      published: false,
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    const listItem = (await screen.findByText('AI Builder 101')).closest('button')!
+    await user.click(listItem)
+    await user.click(screen.getByRole('tab', { name: 'Curriculum' }))
+
+    await user.click(await screen.findByRole('button', { name: /expand module 1/i }))
+    await user.click(await screen.findByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() =>
+      expect(document.getElementById('lesson-title')).toBeTruthy(),
+    )
+    const titleInput = document.getElementById('lesson-title') as HTMLInputElement
+    await user.type(titleInput, 'YT intro')
+
+    const videoInput = document.getElementById('lesson-video-url') as HTMLInputElement
+    await user.type(videoInput, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+
+    // NAB-P0-5 — Detection indicator flips to "YouTube detected".
+    expect(await screen.findByText(/youtube detected/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /create lesson/i }))
+
+    await waitFor(() => {
+      expect(createAdminLesson).toHaveBeenCalledTimes(1)
+    })
+    const [, , payloadArg] = asMock(createAdminLesson).mock.calls[0]
+    expect(payloadArg).toMatchObject({
+      title: 'YT intro',
+      type: 'VIDEO',
+      videoProvider: 'YOUTUBE',
+      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    })
+  })
+
+  it('Add Lesson (VIDEO): unsupported URL surfaces a red hint and blocks save', async () => {
     asMock(fetchAdminCourseModules).mockResolvedValue([
       { id: 'mod-1', title: 'Module 1', order: 0, lessonCount: 0 },
     ])
@@ -681,15 +755,47 @@ describe('<CourseBuilderPage> — Sprint 2 Story 11', () => {
     await user.click(await screen.findByRole('button', { name: /expand module 1/i }))
     await user.click(await screen.findByRole('button', { name: /add lesson/i }))
 
-    // Default is VIDEO → Loom URL is shown.
-    expect(await screen.findByLabelText(/loom url/i)).toBeInTheDocument()
+    await waitFor(() =>
+      expect(document.getElementById('lesson-title')).toBeTruthy(),
+    )
+    const titleInput = document.getElementById('lesson-title') as HTMLInputElement
+    await user.type(titleInput, 'Wistia?')
+    const videoInput = document.getElementById('lesson-video-url') as HTMLInputElement
+    await user.type(videoInput, 'https://wistia.com/medias/abc')
+
+    // Unsupported hint renders under the field.
+    expect(await screen.findByText(/unsupported url/i)).toBeInTheDocument()
+
+    // Clicking Create does not fire the API call — client-side validation
+    // blocks submission.
+    await user.click(screen.getByRole('button', { name: /create lesson/i }))
+    expect(createAdminLesson).not.toHaveBeenCalled()
+  })
+
+  it('Add Lesson (TEXT) flow: switching type swaps Video URL for Content field', async () => {
+    asMock(fetchAdminCourseModules).mockResolvedValue([
+      { id: 'mod-1', title: 'Module 1', order: 0, lessonCount: 0 },
+    ])
+    asMock(fetchAdminModuleLessons).mockResolvedValue([])
+    const user = userEvent.setup()
+    renderPage()
+
+    const listItem = (await screen.findByText('AI Builder 101')).closest('button')!
+    await user.click(listItem)
+    await user.click(screen.getByRole('tab', { name: 'Curriculum' }))
+
+    await user.click(await screen.findByRole('button', { name: /expand module 1/i }))
+    await user.click(await screen.findByRole('button', { name: /add lesson/i }))
+
+    // Default is VIDEO → generic Video URL is shown.
+    expect(await screen.findByLabelText(/video url/i)).toBeInTheDocument()
     expect(screen.queryByLabelText(/^content$/i)).not.toBeInTheDocument()
 
-    // Switching to TEXT replaces the Loom URL field with the Content textarea.
+    // Switching to TEXT replaces the Video URL field with the Content textarea.
     const typeSelect = screen.getByLabelText(/^type/i)
     await user.selectOptions(typeSelect, 'TEXT')
 
-    expect(screen.queryByLabelText(/loom url/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/video url/i)).not.toBeInTheDocument()
     expect(screen.getByLabelText(/^content$/i)).toBeInTheDocument()
   })
 })

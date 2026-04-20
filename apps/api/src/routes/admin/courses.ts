@@ -22,6 +22,7 @@ import { PaymentPlan } from '../../models/PaymentPlan.js'
 import { Enrollment } from '../../models/Enrollment.js'
 import { uploadToS3, IS_S3_CONFIGURED } from '../../lib/s3.js'
 import { bullMQConnection } from '../../lib/redis.js'
+import { detectVideoProvider, type VideoProvider } from '../../lib/detectVideoProvider.js'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 
@@ -69,15 +70,22 @@ function imageExt(contentType: string): string {
 // ── Zod schemas ────────────────────────────────────────────────────────────
 
 // FIR-59 — cohort
+// NAB-P0-2 — bullet arrays share the same 140-char entry cap and differ only
+// in total-length caps (outcomes 12 / requirements 10 / audience 8).
+const bulletEntry = z.string().trim().min(1).max(140)
+
 const createCourseSchema = z.object({
-  title:         z.string().min(1).max(200).trim(),
-  slug:          z.string().min(1).max(200).trim().optional(),
-  type:          z.enum(['RECORDED', 'LIVE', 'COMBINED']).optional(),
-  tagline:       z.string().max(500).trim().optional(),
-  description:   z.string().max(10000).optional(),
-  maxSeats:      z.number().int().min(1).optional(),
-  liveStartDate: z.string().datetime().optional(),
-  liveEndDate:   z.string().datetime().optional(),
+  title:            z.string().min(1).max(200).trim(),
+  slug:             z.string().min(1).max(200).trim().optional(),
+  type:             z.enum(['RECORDED', 'LIVE', 'COMBINED']).optional(),
+  tagline:          z.string().max(500).trim().optional(),
+  description:      z.string().max(10000).optional(),
+  maxSeats:         z.number().int().min(1).optional(),
+  liveStartDate:    z.string().datetime().optional(),
+  liveEndDate:      z.string().datetime().optional(),
+  learningOutcomes: z.array(bulletEntry).max(12).optional(),
+  requirements:     z.array(bulletEntry).max(10).optional(),
+  targetAudience:   z.array(bulletEntry).max(8).optional(),
 })
 
 const updateCourseSchema = createCourseSchema.partial()
@@ -113,10 +121,14 @@ const reorderModulesSchema = z.array(
   }),
 ).min(1)
 
-// FIR-61 — lesson
+// FIR-61 / NAB-P0-5 — lesson
 const createLessonSchema = z.object({
   title:             z.string().min(1).max(200).trim(),
   type:              z.enum(['VIDEO', 'TEXT', 'TOOL_SETUP']),
+  // NAB-P0-5 — new multi-provider fields
+  videoUrl:          z.string().url().optional(),
+  videoProvider:     z.enum(['LOOM', 'YOUTUBE', 'VIMEO']).optional(),
+  // Back-compat — legacy single-provider field (deprecated, still accepted)
   loomUrl:           z.string().url().optional(),
   content:           z.string().max(50000).optional(),
   estimatedMinutes:  z.number().int().min(0).default(0),
@@ -124,6 +136,58 @@ const createLessonSchema = z.object({
 })
 
 const updateLessonSchema = createLessonSchema.partial()
+
+/**
+ * NAB-P0-5 — Resolve video-related inputs for a lesson write.
+ *
+ * Rules:
+ * - If `videoUrl` is provided and non-empty, require a detectable provider.
+ *   If the caller also supplied `videoProvider`, trust it; otherwise run the
+ *   detector. If neither yields a provider → reject caller-side.
+ * - If only `loomUrl` is provided (legacy writer), mirror it into
+ *   `videoUrl` + mark provider LOOM so new rows use the new shape.
+ * - Empty `videoUrl` (explicit "") clears both fields.
+ */
+type VideoResolve =
+  | { ok: true; videoUrl?: string | null; videoProvider?: VideoProvider | null; loomUrl?: string }
+  | { ok: false; message: string }
+
+function resolveVideoFields(input: {
+  videoUrl?: string
+  videoProvider?: VideoProvider
+  loomUrl?: string
+}): VideoResolve {
+  const videoUrl = input.videoUrl?.trim()
+  const loomUrl  = input.loomUrl?.trim()
+
+  if (videoUrl) {
+    const provider = input.videoProvider ?? detectVideoProvider(videoUrl)
+    if (!provider) {
+      return { ok: false, message: 'Enter a Loom, YouTube, or Vimeo URL.' }
+    }
+    return {
+      ok: true,
+      videoUrl,
+      videoProvider: provider,
+      // Mirror back into the legacy field only if it's Loom and caller didn't
+      // send a separate loomUrl. Keeps old readers working without surprise.
+      ...(provider === 'LOOM' && !loomUrl ? { loomUrl: videoUrl } : {}),
+    }
+  }
+
+  if (loomUrl) {
+    // Legacy-only payload → auto-populate the new fields.
+    return {
+      ok: true,
+      videoUrl: loomUrl,
+      videoProvider: 'LOOM',
+      loomUrl,
+    }
+  }
+
+  // Nothing to write — field absent from payload.
+  return { ok: true }
+}
 
 const publishLessonSchema = z.object({
   isPublished: z.boolean(),
@@ -248,6 +312,10 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
         liveStartDate: data.liveStartDate ? new Date(data.liveStartDate) : null,
         liveEndDate:   data.liveEndDate   ? new Date(data.liveEndDate)   : null,
         isPublished:   false,
+        // NAB-P0-2 — marketing bullets (optional; default to []).
+        learningOutcomes: data.learningOutcomes ?? [],
+        requirements:     data.requirements     ?? [],
+        targetAudience:   data.targetAudience   ?? [],
       })
 
       return reply.code(201).send({ cohort: cohort.toJSON() })
@@ -364,9 +432,14 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
           liveEndDate:    cohort.liveEndDate,
           enrollmentCount,
           sessionCount,
-          modules:        modulesWithCount,
-          createdAt:      cohort.createdAt,
-          updatedAt:      cohort.updatedAt,
+          // NAB-P0-2 — surface marketing bullets. `?? []` keeps the contract
+          // stable for pre-existing docs that never wrote the field.
+          learningOutcomes: cohort.learningOutcomes ?? [],
+          requirements:     cohort.requirements     ?? [],
+          targetAudience:   cohort.targetAudience   ?? [],
+          modules:          modulesWithCount,
+          createdAt:        cohort.createdAt,
+          updatedAt:        cohort.updatedAt,
         },
       })
     },
@@ -430,6 +503,10 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
       if (data.liveEndDate   !== undefined) patch['liveEndDate']   = new Date(data.liveEndDate)
       if (data.liveStartDate !== undefined) patch['startDate']   = new Date(data.liveStartDate)
       if (data.liveEndDate   !== undefined) patch['endDate']     = new Date(data.liveEndDate)
+      // NAB-P0-2 — bullet arrays. Passing an empty array is a valid clear.
+      if (data.learningOutcomes !== undefined) patch['learningOutcomes'] = data.learningOutcomes
+      if (data.requirements     !== undefined) patch['requirements']     = data.requirements
+      if (data.targetAudience   !== undefined) patch['targetAudience']   = data.targetAudience
 
       if (Object.keys(patch).length === 0) {
         return reply.code(400).send({ error: 'NO_CHANGES', message: 'No updateable fields provided.' })
@@ -795,14 +872,29 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
         })
       }
 
-      const { title, type, loomUrl, content, estimatedMinutes, order } = parsed.data
+      const { title, type, content, estimatedMinutes, order } = parsed.data
+
+      // NAB-P0-5 — resolve multi-provider video fields (reject unknown URLs)
+      const video = resolveVideoFields({
+        videoUrl:      parsed.data.videoUrl,
+        videoProvider: parsed.data.videoProvider,
+        loomUrl:       parsed.data.loomUrl,
+      })
+      if (!video.ok) {
+        return reply.code(400).send({
+          error:   'VALIDATION_ERROR',
+          message: video.message,
+        })
+      }
 
       const lesson = await Lesson.create({
         cohortId,
         moduleId,
         title,
         type,
-        loomUrl,
+        videoUrl:      video.videoUrl      ?? null,
+        videoProvider: video.videoProvider ?? null,
+        loomUrl:       video.loomUrl,
         content,
         estimatedMinutes,
         order,
@@ -940,10 +1032,31 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
       const patch: Record<string, unknown> = {}
       if (data.title            !== undefined) patch['title']            = data.title
       if (data.type             !== undefined) patch['type']             = data.type
-      if (data.loomUrl          !== undefined) patch['loomUrl']          = data.loomUrl
       if (data.content          !== undefined) patch['content']          = data.content
       if (data.estimatedMinutes !== undefined) patch['estimatedMinutes'] = data.estimatedMinutes
       if (data.order            !== undefined) patch['order']            = data.order
+
+      // NAB-P0-5 — resolve the video field trio when any of them is present.
+      if (
+        data.videoUrl      !== undefined ||
+        data.videoProvider !== undefined ||
+        data.loomUrl       !== undefined
+      ) {
+        const video = resolveVideoFields({
+          videoUrl:      data.videoUrl,
+          videoProvider: data.videoProvider,
+          loomUrl:       data.loomUrl,
+        })
+        if (!video.ok) {
+          return reply.code(400).send({
+            error:   'VALIDATION_ERROR',
+            message: video.message,
+          })
+        }
+        if (video.videoUrl      !== undefined) patch['videoUrl']      = video.videoUrl
+        if (video.videoProvider !== undefined) patch['videoProvider'] = video.videoProvider
+        if (video.loomUrl       !== undefined) patch['loomUrl']       = video.loomUrl
+      }
 
       if (Object.keys(patch).length === 0) {
         return reply.code(400).send({ error: 'NO_CHANGES', message: 'No updateable fields provided.' })

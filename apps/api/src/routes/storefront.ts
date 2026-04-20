@@ -21,17 +21,22 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
     const cohorts = await Cohort.find(
       { isPublished: true },
       {
-        name:            1,
-        slug:            1,
-        tagline:         1,
-        type:            1,
-        coverImageKey:   1,
-        paymentPlanIds:  1,
-        liveStartDate:   1,
-        liveEndDate:     1,
-        enrollmentCount: 1,
-        maxSeats:        1,
-        createdAt:       1,
+        name:             1,
+        slug:             1,
+        tagline:          1,
+        type:             1,
+        coverImageKey:    1,
+        paymentPlanIds:   1,
+        liveStartDate:    1,
+        liveEndDate:      1,
+        enrollmentCount:  1,
+        maxSeats:         1,
+        createdAt:        1,
+        // NAB-P0-2 — project the marketing bullets onto the list as well so
+        // card surfaces can preview "What you'll learn" without an extra fetch.
+        learningOutcomes: 1,
+        requirements:     1,
+        targetAudience:   1,
       },
     )
       .sort({ liveStartDate: 1, createdAt: -1 })
@@ -107,6 +112,11 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         meta,
         soldOut,
         published:        true,
+        // NAB-P0-2 — bullet arrays (default to [] for docs that predate
+        // the fields so consumers can safely render `.map()` without guards).
+        learningOutcomes: c.learningOutcomes ?? [],
+        requirements:     c.requirements     ?? [],
+        targetAudience:   c.targetAudience   ?? [],
       }
     })
 
@@ -248,7 +258,13 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
           : undefined,
         enrolledCount:    cohort.enrollmentCount ?? 0,
         modules:          modulesResult,
-        includes:         [],
+        // NAB-P0-2 — `includes` was hardcoded to [] before this story. The
+        // legacy alias is kept so consumers that haven't migrated yet still
+        // render "What's included". New code should prefer `learningOutcomes`.
+        includes:         cohort.learningOutcomes ?? [],
+        learningOutcomes: cohort.learningOutcomes ?? [],
+        requirements:     cohort.requirements     ?? [],
+        targetAudience:   cohort.targetAudience   ?? [],
         instructorName:   'nextaibuilder Instructor',
         instructorTitle:  'Instructor',
         instructorBio:    '',
@@ -277,7 +293,12 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
 
       const previewLessons = await Lesson.find(
         { cohortId, isPublished: true, freePreview: true },
-        { moduleId: 1, title: 1, type: 1, order: 1, estimatedMinutes: 1, loomUrl: 1, content: 1 },
+        {
+          moduleId: 1, title: 1, type: 1, order: 1, estimatedMinutes: 1,
+          // NAB-P0-5 — include multi-provider video fields alongside the
+          // legacy loomUrl so the storefront can build the right iframe.
+          videoProvider: 1, videoUrl: 1, loomUrl: 1, content: 1,
+        },
       )
         .sort({ order: 1 })
         .lean({ virtuals: true })
@@ -300,7 +321,16 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
       )
 
       const result = previewLessons.map((l) => {
-        const lessonWithId = l as typeof l & { _id: Types.ObjectId; moduleId: Types.ObjectId }
+        const lessonWithId = l as typeof l & {
+          _id: Types.ObjectId
+          moduleId: Types.ObjectId
+          videoProvider?: 'LOOM' | 'YOUTUBE' | 'VIMEO' | null
+          videoUrl?: string | null
+        }
+        // NAB-P0-5 — Back-compat: prefer the new fields, fall back to loomUrl.
+        const videoUrl      = lessonWithId.videoUrl ?? l.loomUrl ?? null
+        const videoProvider =
+          lessonWithId.videoProvider ?? (l.loomUrl ? 'LOOM' : null)
         return {
           id:               lessonWithId._id.toString(),
           moduleId:         lessonWithId.moduleId.toString(),
@@ -309,6 +339,9 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
           type:             l.type,
           order:            l.order,
           estimatedMinutes: l.estimatedMinutes,
+          videoProvider,
+          videoUrl,
+          // Legacy key — kept so older clients that still read `loomUrl` work.
           loomUrl:          l.loomUrl ?? null,
           content:          l.content ?? null,
         }

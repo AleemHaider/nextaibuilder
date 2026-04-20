@@ -237,6 +237,11 @@ export interface CohortSummary {
   meta: string
   soldOut?: boolean
   published: boolean
+  // NAB-P0-2 — surfaced on the list endpoint so card previews can render
+  // "What you'll learn" bullets without fetching the full detail payload.
+  learningOutcomes?: string[]
+  requirements?: string[]
+  targetAudience?: string[]
 }
 
 export interface CohortLesson {
@@ -264,6 +269,10 @@ export interface PreviewLesson {
   type: 'VIDEO' | 'TEXT' | 'TOOL_SETUP'
   order: number
   estimatedMinutes: number
+  // NAB-P0-5 — Multi-provider video fields.
+  videoProvider?: 'LOOM' | 'YOUTUBE' | 'VIMEO' | null
+  videoUrl?: string | null
+  /** @deprecated Use videoUrl + videoProvider instead. */
   loomUrl?: string | null
   content?: string | null
 }
@@ -276,7 +285,13 @@ export interface CohortDetail extends CohortSummary {
   seatsRemaining?: number
   enrolledCount?: number
   modules: CohortModule[]
+  // NAB-P0-2 — `includes` is the legacy alias for `learningOutcomes`.
+  // New code should consume `learningOutcomes` directly; `includes` is kept
+  // for back-compat with surfaces that read it today.
   includes: string[]
+  learningOutcomes: string[]
+  requirements: string[]
+  targetAudience: string[]
   instructorName: string
   instructorTitle: string
   instructorBio: string
@@ -904,10 +919,64 @@ export interface AdminLesson {
   type: 'VIDEO' | 'TEXT' | 'TOOL_SETUP'
   estimatedMinutes: number
   published: boolean
+  // NAB-P0-5 — Multi-provider video support.
+  videoProvider?: 'LOOM' | 'YOUTUBE' | 'VIMEO' | null
+  videoUrl?: string | null
+  /** @deprecated Use videoUrl + videoProvider. Retained for back-compat. */
+  loomUrl?: string | null
 }
 
 export interface ReorderResponse {
   updated: number
+}
+
+// NAB-P0-2 — Full admin course detail, used by the builder's Overview tab to
+// hydrate description + marketing bullet arrays after a course is selected.
+export interface AdminCourseDetail {
+  id: string
+  title: string
+  slug: string
+  type: 'RECORDED' | 'LIVE' | 'COMBINED' | null
+  tagline: string | null
+  description: string | null
+  coverImageKey: string | null
+  maxSeats: number | null
+  isPublished: boolean
+  status?: string
+  liveStartDate?: string | null
+  liveEndDate?: string | null
+  learningOutcomes: string[]
+  requirements: string[]
+  targetAudience: string[]
+}
+
+export async function fetchAdminCourseDetail(
+  cohortId: string,
+): Promise<AdminCourseDetail> {
+  const res = await authFetch(`${BASE}/admin/courses/${cohortId}`)
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to fetch course detail')
+  }
+  const json = (await res.json()) as { cohort: Record<string, unknown> }
+  const c = json.cohort
+  return {
+    id:               (c.id ?? c._id) as string,
+    title:            (c.title ?? c.name) as string,
+    slug:             (c.slug as string) ?? '',
+    type:             (c.type as AdminCourseDetail['type']) ?? null,
+    tagline:          (c.tagline as string | null) ?? null,
+    description:      (c.description as string | null) ?? null,
+    coverImageKey:    (c.coverImageKey as string | null) ?? null,
+    maxSeats:         (c.maxSeats as number | null) ?? null,
+    isPublished:      Boolean(c.isPublished),
+    status:           c.status as string | undefined,
+    liveStartDate:    (c.liveStartDate as string | null) ?? null,
+    liveEndDate:      (c.liveEndDate as string | null) ?? null,
+    learningOutcomes: (c.learningOutcomes as string[] | undefined) ?? [],
+    requirements:     (c.requirements     as string[] | undefined) ?? [],
+    targetAudience:   (c.targetAudience   as string[] | undefined) ?? [],
+  }
 }
 
 // Fetch the modules for a cohort (via the admin course detail endpoint).
@@ -1089,6 +1158,10 @@ export type AdminLessonType = 'VIDEO' | 'TEXT' | 'TOOL_SETUP'
 export interface CreateLessonPayload {
   title: string
   type: AdminLessonType
+  // NAB-P0-5 — new multi-provider fields.
+  videoUrl?: string
+  videoProvider?: 'LOOM' | 'YOUTUBE' | 'VIMEO'
+  /** @deprecated Use videoUrl + videoProvider. Retained for back-compat. */
   loomUrl?: string
   content?: string
   estimatedMinutes?: number
@@ -1098,6 +1171,10 @@ export interface CreateLessonPayload {
 export interface UpdateLessonPayload {
   title?: string
   type?: AdminLessonType
+  // NAB-P0-5
+  videoUrl?: string
+  videoProvider?: 'LOOM' | 'YOUTUBE' | 'VIMEO'
+  /** @deprecated Use videoUrl + videoProvider. Retained for back-compat. */
   loomUrl?: string
   content?: string
   estimatedMinutes?: number
@@ -1105,6 +1182,9 @@ export interface UpdateLessonPayload {
 }
 
 function normaliseLesson(raw: Record<string, unknown>): AdminLesson {
+  const videoProviderRaw = raw.videoProvider as AdminLesson['videoProvider']
+  const videoUrlRaw      = (raw.videoUrl as string | null | undefined) ?? null
+  const loomUrlRaw       = (raw.loomUrl  as string | null | undefined) ?? null
   return {
     id: (raw.id ?? raw._id) as string,
     title: raw.title as string,
@@ -1112,6 +1192,11 @@ function normaliseLesson(raw: Record<string, unknown>): AdminLesson {
     type: (raw.type as AdminLessonType) ?? 'VIDEO',
     estimatedMinutes: (raw.estimatedMinutes as number) ?? 0,
     published: Boolean(raw.published ?? raw.isPublished),
+    // NAB-P0-5 — Back-compat: fall back to loomUrl if the server hasn't been
+    // migrated yet.
+    videoProvider: videoProviderRaw ?? (loomUrlRaw ? 'LOOM' : null),
+    videoUrl: videoUrlRaw ?? loomUrlRaw,
+    loomUrl: loomUrlRaw,
   }
 }
 
@@ -1876,6 +1961,11 @@ export interface CreateCoursePayload {
   maxSeats?: number
   liveStartDate?: string
   liveEndDate?: string
+  // NAB-P0-2 — marketing bullet arrays. Backend enforces the same caps on
+  // write (outcomes ≤12, requirements ≤10, audience ≤8, each entry ≤140 chars).
+  learningOutcomes?: string[]
+  requirements?: string[]
+  targetAudience?: string[]
 }
 
 export type UpdateCoursePayload = Partial<CreateCoursePayload>

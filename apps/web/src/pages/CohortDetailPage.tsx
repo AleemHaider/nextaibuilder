@@ -34,6 +34,7 @@ import { usePageMeta } from '../hooks/usePageMeta'
 import { fetchCohortBySlug, fetchPreviewLessons } from '../lib/api'
 import type { CohortDetail, CohortLesson, PreviewLesson } from '../lib/api'
 import { sanitizeHtml } from '../lib/sanitize'
+import { toEmbedUrl } from '../lib/detectVideoProvider'
 import { cn } from '../lib/utils'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -71,6 +72,46 @@ function fmt(n: number) {
 }
 
 // ─── Preview player modal ──────────────────────────────────────────────────────
+
+/**
+ * NAB-P0-5 — Body for the preview-player modal: picks the right iframe
+ * source (Loom / YouTube / Vimeo) via `toEmbedUrl`, falling back to the
+ * deprecated `loomUrl` field for lessons the server hasn't migrated yet.
+ */
+function PreviewPlayerBody({ lesson }: { lesson: PreviewLesson }) {
+  if (lesson.type === 'VIDEO') {
+    const rawUrl  = lesson.videoUrl ?? lesson.loomUrl ?? null
+    const embedUrl = toEmbedUrl(lesson.videoProvider ?? null, rawUrl)
+    if (embedUrl) {
+      return (
+        <div className="relative h-0 pb-[56.25%]">
+          <iframe
+            src={embedUrl}
+            title={lesson.title}
+            allowFullScreen
+            className="absolute inset-0 h-full w-full border-0"
+          />
+        </div>
+      )
+    }
+  }
+
+  if (lesson.type === 'TEXT' && lesson.content) {
+    return (
+      <div
+        className="max-h-[480px] overflow-y-auto whitespace-pre-wrap px-7 py-6 text-[15px] leading-[1.8] text-[var(--color-wise-text-warm)]"
+      >
+        {lesson.content}
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-12 text-center text-sm text-[var(--color-wise-text-muted)]">
+      No preview available.
+    </div>
+  )
+}
 
 function PreviewPlayer({
   lesson,
@@ -131,26 +172,9 @@ function PreviewPlayer({
         </div>
 
         {/* content */}
-        {lesson.type === 'VIDEO' && lesson.loomUrl ? (
-          <div className="relative h-0 pb-[56.25%]">
-            <iframe
-              src={lesson.loomUrl.replace('share/', 'embed/')}
-              title={lesson.title}
-              allowFullScreen
-              className="absolute inset-0 h-full w-full border-0"
-            />
-          </div>
-        ) : lesson.type === 'TEXT' && lesson.content ? (
-          <div
-            className="max-h-[480px] overflow-y-auto whitespace-pre-wrap px-7 py-6 text-[15px] leading-[1.8] text-[var(--color-wise-text-warm)]"
-          >
-            {lesson.content}
-          </div>
-        ) : (
-          <div className="p-12 text-center text-sm text-[var(--color-wise-text-muted)]">
-            No preview available.
-          </div>
-        )}
+        {/* NAB-P0-5 — Resolve the embed URL from the multi-provider fields,
+            falling back to the legacy loomUrl for back-compat. */}
+        <PreviewPlayerBody lesson={lesson} />
 
         {/* footer cta */}
         <div className="flex items-center justify-between gap-3 border-t border-[var(--color-wise-ring)] bg-[var(--color-wise-canvas)] px-5 py-3.5">
@@ -691,8 +715,11 @@ export default function CohortDetailPage() {
             />
           </section>
 
-          {/* What's included */}
-          {cohort.includes.length > 0 && (
+          {/* NAB-P0-2 — What you'll learn (formerly "What's included").
+              Still reads `cohort.learningOutcomes` — the legacy `includes`
+              alias is kept on the payload for back-compat but the dark-card
+              hero now pulls exclusively from the new field. */}
+          {cohort.learningOutcomes.length > 0 && (
             <section
               className={cn(
                 'rounded-[var(--radius-md)] p-8',
@@ -701,13 +728,13 @@ export default function CohortDetailPage() {
               )}
             >
               <p className="mb-3 text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-wise-primary)]">
-                What's included
+                What you'll learn
               </p>
               <h2 className="mb-5 text-2xl font-extrabold tracking-[-0.5px]">
-                Everything you need to ship
+                Outcomes you'll walk away with
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
-                {cohort.includes.map((item) => (
+                {cohort.learningOutcomes.map((item) => (
                   <div
                     key={item}
                     className={cn(
@@ -727,6 +754,75 @@ export default function CohortDetailPage() {
                   </div>
                 ))}
               </div>
+            </section>
+          )}
+
+          {/* NAB-P0-2 — Requirements. Rendered only when non-empty. Uses the
+              light surface-card style to sit alongside the curriculum rather
+              than competing with the dark outcomes hero above. */}
+          {cohort.requirements.length > 0 && (
+            <section
+              className={cn(
+                'rounded-[var(--radius-md)] bg-[var(--color-wise-surface)] p-8',
+                'shadow-[var(--shadow-ring)]',
+              )}
+            >
+              <p className="mb-3 text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-wise-primary-text)]">
+                Requirements
+              </p>
+              <h2 className="mb-5 text-[22px] font-extrabold tracking-[-0.5px] text-[var(--color-wise-text)]">
+                Before you start
+              </h2>
+              <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
+                {cohort.requirements.map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-2.5 text-[15px] leading-snug text-[var(--color-wise-text-warm)]"
+                  >
+                    <Check
+                      size={14}
+                      strokeWidth={3}
+                      aria-hidden="true"
+                      className="mt-1 flex-shrink-0 text-[var(--color-wise-primary-text)]"
+                    />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* NAB-P0-2 — Who this course is for. Same light-card style as
+              Requirements; hidden when empty. */}
+          {cohort.targetAudience.length > 0 && (
+            <section
+              className={cn(
+                'rounded-[var(--radius-md)] bg-[var(--color-wise-surface)] p-8',
+                'shadow-[var(--shadow-ring)]',
+              )}
+            >
+              <p className="mb-3 text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-wise-primary-text)]">
+                Who this course is for
+              </p>
+              <h2 className="mb-5 text-[22px] font-extrabold tracking-[-0.5px] text-[var(--color-wise-text)]">
+                Built for builders like you
+              </h2>
+              <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
+                {cohort.targetAudience.map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-2.5 text-[15px] leading-snug text-[var(--color-wise-text-warm)]"
+                  >
+                    <Check
+                      size={14}
+                      strokeWidth={3}
+                      aria-hidden="true"
+                      className="mt-1 flex-shrink-0 text-[var(--color-wise-primary-text)]"
+                    />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
 

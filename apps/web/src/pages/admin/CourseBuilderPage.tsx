@@ -7,6 +7,7 @@ import { Search, Plus, GripVertical, ChevronDown, ChevronUp, Video, FileText, Wr
 import AdminShell from '../../components/admin/AdminShell'
 import {
   fetchAdminCourses,
+  fetchAdminCourseDetail,
   fetchAdminCourseModules,
   fetchAdminModuleLessons,
   reorderModules,
@@ -45,10 +46,12 @@ import {
   type UpdateLessonPayload,
 } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
+import { detectVideoProvider, type VideoProvider } from '../../lib/detectVideoProvider'
 import { SortableList } from '../../components/common/SortableList'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { FormField } from '../../components/ui/FormField'
+import { TagInput } from '../../components/ui/TagInput'
 import { Modal } from '../../components/ui/Modal'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
@@ -92,7 +95,19 @@ interface CourseDraft {
   maxSeats: string
   coverImageKey: string | null
   modules: ModuleDraft[]
+  // NAB-P0-2 — marketing bullets edited in the Overview tab and persisted
+  // via the same PATCH /admin/courses/:id call as the rest of the draft.
+  learningOutcomes: string[]
+  requirements: string[]
+  targetAudience: string[]
 }
+
+// NAB-P0-2 — caps match the backend Zod schema
+// (apps/api/src/routes/admin/courses.ts) and the Cohort schema validators.
+const MAX_LEARNING_OUTCOMES = 12
+const MAX_REQUIREMENTS = 10
+const MAX_TARGET_AUDIENCE = 8
+const BULLET_ENTRY_MAX_LENGTH = 140
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -130,6 +145,9 @@ function newCourse(): CourseDraft {
     maxSeats: '',
     coverImageKey: null,
     modules: [],
+    learningOutcomes: [],
+    requirements: [],
+    targetAudience: [],
   }
 }
 
@@ -413,6 +431,54 @@ function OverviewTab({
               )}
             />
           </div>
+
+          {/* NAB-P0-2 — Marketing bullets. Three lists share the TagInput
+              shape; caps vary per spec. Storefront cohort page renders these
+              as "What you'll learn / Requirements / Who this course is for". */}
+          <FormField
+            id="course-learning-outcomes"
+            label="What you'll learn"
+            helperText="Bullets shown on the public cohort page. Press Enter or comma to add."
+          >
+            <TagInput
+              id="course-learning-outcomes"
+              value={draft.learningOutcomes}
+              onChange={(next) => onChange({ learningOutcomes: next })}
+              maxTags={MAX_LEARNING_OUTCOMES}
+              maxLength={BULLET_ENTRY_MAX_LENGTH}
+              placeholder="e.g. Ship a full-stack AI app end-to-end"
+            />
+          </FormField>
+
+          <FormField
+            id="course-requirements"
+            label="Requirements"
+            helperText="Prerequisites students need before enrolling."
+          >
+            <TagInput
+              id="course-requirements"
+              value={draft.requirements}
+              onChange={(next) => onChange({ requirements: next })}
+              maxTags={MAX_REQUIREMENTS}
+              maxLength={BULLET_ENTRY_MAX_LENGTH}
+              placeholder="e.g. Basic JavaScript or Python"
+            />
+          </FormField>
+
+          <FormField
+            id="course-target-audience"
+            label="Who this course is for"
+            helperText="Short bullets that describe the ideal student."
+          >
+            <TagInput
+              id="course-target-audience"
+              value={draft.targetAudience}
+              onChange={(next) => onChange({ targetAudience: next })}
+              maxTags={MAX_TARGET_AUDIENCE}
+              maxLength={BULLET_ENTRY_MAX_LENGTH}
+              placeholder="e.g. Founders ready to ship their first AI product"
+            />
+          </FormField>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
@@ -1298,7 +1364,8 @@ function ServerCurriculumList({
 interface LessonFormState {
   title: string
   type: AdminLessonType
-  loomUrl: string
+  /** NAB-P0-5 — replaces the old loom-only URL field. */
+  videoUrl: string
   content: string
   estimatedMinutes: string
 }
@@ -1307,10 +1374,18 @@ function blankLessonForm(): LessonFormState {
   return {
     title: '',
     type: 'VIDEO',
-    loomUrl: '',
+    videoUrl: '',
     content: '',
     estimatedMinutes: '0',
   }
+}
+
+// NAB-P0-5 — Human-readable label for the provider pill / detection hint.
+function providerLabel(provider: VideoProvider | null): string {
+  if (provider === 'LOOM')    return 'Loom'
+  if (provider === 'YOUTUBE') return 'YouTube'
+  if (provider === 'VIMEO')   return 'Vimeo'
+  return ''
 }
 
 function ServerLessonList({
@@ -1463,7 +1538,9 @@ function ServerLessonList({
     setLessonForm({
       title: lesson.title,
       type: lesson.type,
-      loomUrl: '',
+      // NAB-P0-5 — Seed the field from the new videoUrl, falling back to the
+      // legacy loomUrl so existing lessons render the value on edit.
+      videoUrl: lesson.videoUrl ?? lesson.loomUrl ?? '',
       content: '',
       estimatedMinutes: String(lesson.estimatedMinutes),
     })
@@ -1479,11 +1556,21 @@ function ServerLessonList({
       setLessonFormError('Title is required')
       return
     }
-    const loomUrl = lessonForm.loomUrl.trim()
+    const videoUrl = lessonForm.videoUrl.trim()
     const content = lessonForm.content.trim()
-    if (lessonForm.type === 'VIDEO' && !editingLesson && !loomUrl) {
-      setLessonFormError('Loom URL is required for video lessons')
-      return
+    // NAB-P0-5 — Client-side validation: VIDEO lessons require a recognised
+    // multi-provider URL. Block save on empty or unsupported input.
+    let videoProvider: VideoProvider | null = null
+    if (lessonForm.type === 'VIDEO') {
+      if (!videoUrl) {
+        setLessonFormError('Video URL is required for video lessons')
+        return
+      }
+      videoProvider = detectVideoProvider(videoUrl)
+      if (!videoProvider) {
+        setLessonFormError('Unsupported URL — use Loom, YouTube, or Vimeo')
+        return
+      }
     }
     const estimatedMinutesRaw = Number(lessonForm.estimatedMinutes)
     const estimatedMinutes = Number.isFinite(estimatedMinutesRaw)
@@ -1491,13 +1578,15 @@ function ServerLessonList({
       : 0
 
     // Strip empty optional fields before dispatching so the backend zod
-    // schemas don't choke on `loomUrl: ''` (which fails url().optional()).
+    // schemas don't choke on `videoUrl: ''` (which fails url().optional()).
     if (editingLesson) {
       const payload: UpdateLessonPayload = {
         title,
         type: lessonForm.type,
         estimatedMinutes,
-        ...(lessonForm.type === 'VIDEO' && loomUrl ? { loomUrl } : {}),
+        ...(lessonForm.type === 'VIDEO' && videoUrl && videoProvider
+          ? { videoUrl, videoProvider }
+          : {}),
         ...(lessonForm.type === 'TEXT' && content ? { content } : {}),
       }
       updateLessonMutation.mutate({ lessonId: editingLesson.id, payload })
@@ -1507,7 +1596,9 @@ function ServerLessonList({
         type: lessonForm.type,
         estimatedMinutes,
         order: lessons.length,
-        ...(lessonForm.type === 'VIDEO' && loomUrl ? { loomUrl } : {}),
+        ...(lessonForm.type === 'VIDEO' && videoUrl && videoProvider
+          ? { videoUrl, videoProvider }
+          : {}),
         ...(lessonForm.type === 'TEXT' && content ? { content } : {}),
       }
       createLessonMutation.mutate(payload)
@@ -1567,6 +1658,31 @@ function ServerLessonList({
               <span className="flex-1 text-[13px] font-[500] text-[#1a2744]">
                 {lesson.title}
               </span>
+              {/* NAB-P0-5 — provider pill for VIDEO lessons. Falls back to
+                  detecting from the URL when the server hasn't migrated yet. */}
+              {lesson.type === 'VIDEO' && (() => {
+                const provider =
+                  lesson.videoProvider ??
+                  (lesson.videoUrl
+                    ? detectVideoProvider(lesson.videoUrl)
+                    : lesson.loomUrl
+                      ? detectVideoProvider(lesson.loomUrl)
+                      : null)
+                if (!provider) return null
+                return (
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-full px-2 py-[2px]',
+                      'text-[10px] font-semibold uppercase tracking-wide',
+                      'bg-[#e8f4fd] text-[#1a2744]',
+                    )}
+                    aria-label={`${providerLabel(provider)} video`}
+                  >
+                    <Video size={10} aria-hidden="true" />
+                    {providerLabel(provider)}
+                  </span>
+                )
+              })()}
               <span className="text-[12px] text-[#717182]">{lesson.estimatedMinutes}m</span>
               <span
                 className={cn(
@@ -1700,24 +1816,43 @@ function ServerLessonList({
                 'focus:ring-4 focus:ring-[var(--color-wise-primary)]/25',
               )}
             >
-              <option value="VIDEO">Video (Loom)</option>
+              <option value="VIDEO">Video</option>
               <option value="TEXT">Text</option>
               <option value="TOOL_SETUP">Tool Setup</option>
             </select>
           </div>
 
-          {lessonForm.type === 'VIDEO' && (
-            <FormField id="lesson-loom-url" label="Loom URL" required>
-              <Input
-                type="url"
-                value={lessonForm.loomUrl}
-                onChange={(e) =>
-                  setLessonForm({ ...lessonForm, loomUrl: e.target.value })
+          {lessonForm.type === 'VIDEO' && (() => {
+            // NAB-P0-5 — Live provider detection for the Video URL field.
+            const trimmed = lessonForm.videoUrl.trim()
+            const detected = trimmed ? detectVideoProvider(trimmed) : null
+            const isUnsupported = trimmed.length > 0 && detected === null
+            const hint: string = detected
+              ? `${providerLabel(detected)} detected`
+              : 'Paste a Loom, YouTube, or Vimeo URL.'
+            return (
+              <FormField
+                id="lesson-video-url"
+                label="Video URL"
+                required
+                helperText={isUnsupported ? undefined : hint}
+                errorText={
+                  isUnsupported
+                    ? 'Unsupported URL — use Loom, YouTube, or Vimeo'
+                    : undefined
                 }
-                placeholder="https://www.loom.com/share/…"
-              />
-            </FormField>
-          )}
+              >
+                <Input
+                  type="url"
+                  value={lessonForm.videoUrl}
+                  onChange={(e) =>
+                    setLessonForm({ ...lessonForm, videoUrl: e.target.value })
+                  }
+                  placeholder="Loom, YouTube, or Vimeo link…"
+                />
+              </FormField>
+            )
+          })()}
 
           {lessonForm.type === 'TEXT' && (
             <div>
@@ -2879,22 +3014,52 @@ export default function CourseBuilderPage() {
     setSelectedCourse(course)
     if (course === null) {
       setDraft(newCourse())
-    } else {
-      setDraft({
-        id: course.id,
-        title: course.title,
-        slug: course.slug,
-        tagline: course.tagline ?? '',
-        description: '',
-        type: course.type,
-        status: course.status,
-        startDate: course.startDate ?? '',
-        endDate: course.endDate ?? '',
-        maxSeats: course.maxSeats != null ? String(course.maxSeats) : '',
-        coverImageKey: course.coverImageKey ?? null,
-        modules: [],
-      })
+      return
     }
+
+    // Seed the draft synchronously from the list row so the editor mounts
+    // immediately, then hydrate the fields that live only on the detail
+    // endpoint (description + NAB-P0-2 bullet arrays). If the detail fetch
+    // fails we keep the sidebar-seeded defaults and surface a toast.
+    setDraft({
+      id: course.id,
+      title: course.title,
+      slug: course.slug,
+      tagline: course.tagline ?? '',
+      description: '',
+      type: course.type,
+      status: course.status,
+      startDate: course.startDate ?? '',
+      endDate: course.endDate ?? '',
+      maxSeats: course.maxSeats != null ? String(course.maxSeats) : '',
+      coverImageKey: course.coverImageKey ?? null,
+      modules: [],
+      learningOutcomes: [],
+      requirements: [],
+      targetAudience: [],
+    })
+
+    void (async () => {
+      try {
+        const detail = await fetchAdminCourseDetail(course.id)
+        // Guard against the user jumping to a different course before the
+        // fetch resolves — only merge if we're still looking at the same id.
+        setDraft((prev) =>
+          prev && prev.id === course.id
+            ? {
+                ...prev,
+                description:      detail.description ?? '',
+                learningOutcomes: detail.learningOutcomes,
+                requirements:     detail.requirements,
+                targetAudience:   detail.targetAudience,
+              }
+            : prev,
+        )
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load course detail'
+        addToast(message, 'error')
+      }
+    })()
   }
 
   function handleDraftChange(updated: Partial<CourseDraft>) {
@@ -2926,6 +3091,11 @@ export default function CourseBuilderPage() {
           : undefined,
       liveStartDate: dateInputToIso(draft.startDate),
       liveEndDate: dateInputToIso(draft.endDate),
+      // NAB-P0-2 — always send the bullet arrays so clearing the last entry
+      // actually persists. Sending `[]` is valid per the Zod schema.
+      learningOutcomes: draft.learningOutcomes,
+      requirements:     draft.requirements,
+      targetAudience:   draft.targetAudience,
     }
 
     try {
