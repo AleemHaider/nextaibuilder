@@ -40,6 +40,14 @@ vi.mock('../../../lib/api', () => ({
   createAdminLiveSession: vi.fn(),
   updateAdminLiveSession: vi.fn(),
   deleteAdminLiveSession: vi.fn(),
+  // Sprint 2 Story 12 — module + lesson CRUD helpers.
+  createAdminModule: vi.fn(),
+  updateAdminModule: vi.fn(),
+  deleteAdminModule: vi.fn(),
+  createAdminLesson: vi.fn(),
+  updateAdminLesson: vi.fn(),
+  toggleAdminLessonPublish: vi.fn(),
+  deleteAdminLesson: vi.fn(),
 }))
 
 vi.mock('../../../context/AuthContext', () => ({
@@ -78,6 +86,8 @@ vi.mock('../../../components/common/SortableList', () => ({
 import CourseBuilderPage from '../CourseBuilderPage'
 import {
   fetchAdminCourses,
+  fetchAdminCourseModules,
+  fetchAdminModuleLessons,
   createAdminCourse,
   updateAdminCourse,
   publishAdminCourse,
@@ -87,6 +97,8 @@ import {
   fetchAdminLiveSessions,
   createAdminLiveSession,
   deleteAdminLiveSession,
+  createAdminModule,
+  createAdminLesson,
 } from '../../../lib/api'
 import { useAuth } from '../../../context/AuthContext'
 
@@ -168,6 +180,8 @@ describe('<CourseBuilderPage> — Sprint 2 Story 11', () => {
     })
     asMock(fetchAdminPaymentPlans).mockResolvedValue([])
     asMock(fetchAdminLiveSessions).mockResolvedValue([])
+    asMock(fetchAdminCourseModules).mockResolvedValue([])
+    asMock(fetchAdminModuleLessons).mockResolvedValue([])
   })
 
   // ── handleSave ─────────────────────────────────────────────────────────
@@ -529,5 +543,153 @@ describe('<CourseBuilderPage> — Sprint 2 Story 11', () => {
     await user.click(screen.getByRole('button', { name: /^publish$/i }))
 
     expect(await screen.findByText(/course published/i)).toBeInTheDocument()
+  })
+
+  // ── Sprint 2 Story 12 — Curriculum tab: Add Module + Add Lesson ────────
+
+  it('Add Module flow: opens modal, submits, and calls createAdminModule', async () => {
+    asMock(fetchAdminCourseModules).mockResolvedValue([])
+    asMock(createAdminModule).mockResolvedValue({
+      id: 'mod-new',
+      title: 'Week 1: Foundations',
+      order: 0,
+      lessonCount: 0,
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    const listItem = (await screen.findByText('AI Builder 101')).closest('button')!
+    await user.click(listItem)
+    await user.click(screen.getByRole('tab', { name: 'Curriculum' }))
+
+    // Open the Add Module modal via the dashed row button.
+    await user.click(await screen.findByRole('button', { name: /\+ add module/i }))
+
+    // The modal renders a <FormField id="module-title" label="Title" />, so
+    // the associated <input> has id="module-title". We query by that explicit
+    // id to avoid a clash with the "Course title" input in the editor topbar.
+    await waitFor(() =>
+      expect(document.getElementById('module-title')).toBeTruthy(),
+    )
+    const titleInput = document.getElementById('module-title') as HTMLInputElement
+    await user.type(titleInput, 'Week 1: Foundations')
+
+    await user.click(screen.getByRole('button', { name: /create module/i }))
+
+    await waitFor(() => {
+      expect(createAdminModule).toHaveBeenCalledTimes(1)
+    })
+    const [cohortIdArg, payloadArg] = asMock(createAdminModule).mock.calls[0]
+    expect(cohortIdArg).toBe(existingCourse.id)
+    expect(payloadArg).toMatchObject({
+      title: 'Week 1: Foundations',
+      order: 0,
+    })
+
+    // Success toast confirms the invalidate-and-close path fired.
+    expect(await screen.findByText(/module created/i)).toBeInTheDocument()
+  })
+
+  it('Add Module error: backend 400 keeps modal open with inline error', async () => {
+    asMock(fetchAdminCourseModules).mockResolvedValue([])
+    asMock(createAdminModule).mockRejectedValue(new Error('Title already exists'))
+    const user = userEvent.setup()
+    renderPage()
+
+    const listItem = (await screen.findByText('AI Builder 101')).closest('button')!
+    await user.click(listItem)
+    await user.click(screen.getByRole('tab', { name: 'Curriculum' }))
+
+    await user.click(await screen.findByRole('button', { name: /\+ add module/i }))
+
+    await waitFor(() =>
+      expect(document.getElementById('module-title')).toBeTruthy(),
+    )
+    const titleInput = document.getElementById('module-title') as HTMLInputElement
+    await user.type(titleInput, 'Dupe module')
+    await user.click(screen.getByRole('button', { name: /create module/i }))
+
+    // Backend message surfaces as an inline alert under the form; modal is
+    // still visible (submit button is still in the DOM).
+    expect(await screen.findByText(/title already exists/i)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /create module/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('Add Lesson (VIDEO) flow: submits createAdminLesson with loomUrl', async () => {
+    asMock(fetchAdminCourseModules).mockResolvedValue([
+      { id: 'mod-1', title: 'Module 1', order: 0, lessonCount: 0 },
+    ])
+    asMock(fetchAdminModuleLessons).mockResolvedValue([])
+    asMock(createAdminLesson).mockResolvedValue({
+      id: 'lesson-new',
+      title: 'Intro',
+      order: 0,
+      type: 'VIDEO',
+      estimatedMinutes: 0,
+      published: false,
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    const listItem = (await screen.findByText('AI Builder 101')).closest('button')!
+    await user.click(listItem)
+    await user.click(screen.getByRole('tab', { name: 'Curriculum' }))
+
+    // Expand the module to reveal its lesson list + Add Lesson button.
+    await user.click(await screen.findByRole('button', { name: /expand module 1/i }))
+    await user.click(await screen.findByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() =>
+      expect(document.getElementById('lesson-title')).toBeTruthy(),
+    )
+    const titleInput = document.getElementById('lesson-title') as HTMLInputElement
+    await user.type(titleInput, 'Intro')
+    // Default type is VIDEO, so the Loom URL field is rendered.
+    const loomInput = document.getElementById('lesson-loom-url') as HTMLInputElement
+    await user.type(loomInput, 'https://www.loom.com/share/abc')
+
+    await user.click(screen.getByRole('button', { name: /create lesson/i }))
+
+    await waitFor(() => {
+      expect(createAdminLesson).toHaveBeenCalledTimes(1)
+    })
+    const [cohortIdArg, moduleIdArg, payloadArg] =
+      asMock(createAdminLesson).mock.calls[0]
+    expect(cohortIdArg).toBe(existingCourse.id)
+    expect(moduleIdArg).toBe('mod-1')
+    expect(payloadArg).toMatchObject({
+      title: 'Intro',
+      type: 'VIDEO',
+      loomUrl: 'https://www.loom.com/share/abc',
+    })
+  })
+
+  it('Add Lesson (TEXT) flow: switching type swaps Loom URL for Content field', async () => {
+    asMock(fetchAdminCourseModules).mockResolvedValue([
+      { id: 'mod-1', title: 'Module 1', order: 0, lessonCount: 0 },
+    ])
+    asMock(fetchAdminModuleLessons).mockResolvedValue([])
+    const user = userEvent.setup()
+    renderPage()
+
+    const listItem = (await screen.findByText('AI Builder 101')).closest('button')!
+    await user.click(listItem)
+    await user.click(screen.getByRole('tab', { name: 'Curriculum' }))
+
+    await user.click(await screen.findByRole('button', { name: /expand module 1/i }))
+    await user.click(await screen.findByRole('button', { name: /add lesson/i }))
+
+    // Default is VIDEO → Loom URL is shown.
+    expect(await screen.findByLabelText(/loom url/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/^content$/i)).not.toBeInTheDocument()
+
+    // Switching to TEXT replaces the Loom URL field with the Content textarea.
+    const typeSelect = screen.getByLabelText(/^type/i)
+    await user.selectOptions(typeSelect, 'TEXT')
+
+    expect(screen.queryByLabelText(/loom url/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/^content$/i)).toBeInTheDocument()
   })
 })

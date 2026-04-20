@@ -3,7 +3,7 @@
 // Sprint 2 Story 11 — handleSave / Pricing / Live Sessions wired to the admin API.
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, GripVertical, ChevronDown, ChevronUp, Video, FileText, Wrench, Calendar, DollarSign, ImageIcon, X as XIcon } from 'lucide-react'
+import { Search, Plus, GripVertical, ChevronDown, ChevronUp, Video, FileText, Wrench, Calendar, DollarSign, ImageIcon, X as XIcon, Pencil, Trash2 } from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
 import {
   fetchAdminCourses,
@@ -24,14 +24,25 @@ import {
   createAdminLiveSession,
   updateAdminLiveSession,
   deleteAdminLiveSession,
+  createAdminModule,
+  updateAdminModule,
+  deleteAdminModule,
+  createAdminLesson,
+  updateAdminLesson,
+  deleteAdminLesson,
   type AdminCourse,
   type AdminModule,
   type AdminLesson,
   type AdminPaymentPlan,
   type AdminLiveSession,
   type AdminCourseType,
+  type AdminLessonType,
   type CreatePaymentPlanPayload,
   type CreateLiveSessionPayload,
+  type CreateModulePayload,
+  type UpdateModulePayload,
+  type CreateLessonPayload,
+  type UpdateLessonPayload,
 } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
 import { SortableList } from '../../components/common/SortableList'
@@ -875,6 +886,15 @@ function DraftCurriculumList({
 // ServerCurriculumList — API-backed module list with drag-reorder.
 // ---------------------------------------------------------------------------
 
+interface ModuleFormState {
+  title: string
+  description: string
+}
+
+function blankModuleForm(): ModuleFormState {
+  return { title: '', description: '' }
+}
+
 function ServerCurriculumList({
   cohortId,
   isAdmin,
@@ -887,6 +907,15 @@ function ServerCurriculumList({
   const queryClient = useQueryClient()
   const modulesKey = ['admin', 'courses', cohortId, 'modules'] as const
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+
+  // Sprint 2 Story 12 — Add / Edit / Delete module flows. The Add and Edit
+  // paths share a single Modal (prefilled in edit mode). Delete uses the
+  // shared ConfirmDialog with `variant="danger"`.
+  const [moduleModalOpen, setModuleModalOpen] = useState(false)
+  const [editingModule, setEditingModule] = useState<AdminModule | null>(null)
+  const [moduleForm, setModuleForm] = useState<ModuleFormState>(blankModuleForm)
+  const [moduleFormError, setModuleFormError] = useState<string | null>(null)
+  const [deletingModule, setDeletingModule] = useState<AdminModule | null>(null)
 
   // Serialize rapid reorder mutations behind a single in-flight promise so
   // a user dragging twice in quick succession doesn't race the server.
@@ -963,6 +992,87 @@ function ServerCurriculumList({
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
   }, [])
 
+  // Create / update / delete mutations. Create + update share a single modal
+  // (see the JSX below); delete is gated by ConfirmDialog. On success we
+  // invalidate the modules list so the cache reflects the change.
+  const createModuleMutation = useMutation({
+    mutationFn: (payload: CreateModulePayload) => createAdminModule(cohortId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: modulesKey })
+      addToast('Module created', 'success')
+      setModuleModalOpen(false)
+      setEditingModule(null)
+      setModuleForm(blankModuleForm())
+    },
+    onError: (err: Error) => setModuleFormError(err.message),
+  })
+
+  const updateModuleMutation = useMutation({
+    mutationFn: (args: { moduleId: string; payload: UpdateModulePayload }) =>
+      updateAdminModule(cohortId, args.moduleId, args.payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: modulesKey })
+      addToast('Module updated', 'success')
+      setModuleModalOpen(false)
+      setEditingModule(null)
+      setModuleForm(blankModuleForm())
+    },
+    onError: (err: Error) => setModuleFormError(err.message),
+  })
+
+  const deleteModuleMutation = useMutation({
+    mutationFn: (moduleId: string) => deleteAdminModule(cohortId, moduleId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: modulesKey })
+      addToast('Module deleted', 'success')
+      setDeletingModule(null)
+    },
+    onError: (err: Error) => addToast(err.message, 'error'),
+  })
+
+  function openAddModuleModal() {
+    setEditingModule(null)
+    setModuleForm(blankModuleForm())
+    setModuleFormError(null)
+    setModuleModalOpen(true)
+  }
+
+  function openEditModuleModal(mod: AdminModule) {
+    setEditingModule(mod)
+    setModuleForm({ title: mod.title, description: '' })
+    setModuleFormError(null)
+    setModuleModalOpen(true)
+  }
+
+  function handleModuleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setModuleFormError(null)
+    const title = moduleForm.title.trim()
+    if (!title) {
+      setModuleFormError('Title is required')
+      return
+    }
+    const description = moduleForm.description.trim()
+    if (editingModule) {
+      updateModuleMutation.mutate({
+        moduleId: editingModule.id,
+        payload: {
+          title,
+          ...(description ? { description } : {}),
+        },
+      })
+    } else {
+      createModuleMutation.mutate({
+        title,
+        ...(description ? { description } : {}),
+        order: modules.length,
+      })
+    }
+  }
+
+  const isSavingModule =
+    createModuleMutation.isPending || updateModuleMutation.isPending
+
   if (isLoading) {
     return (
       <div className="space-y-2" aria-busy="true" aria-label="Loading modules">
@@ -1012,6 +1122,26 @@ function ServerCurriculumList({
               <span className="text-[12px] text-[#717182] bg-[#f0f0f0] px-[10px] py-[2px] rounded-full">
                 {module.lessonCount ?? 0} lessons
               </span>
+              {isAdmin && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => openEditModuleModal(module)}
+                    aria-label={`Edit ${module.title}`}
+                    className="p-1 text-[#a3a3a3] hover:text-[#1a2744] transition-colors"
+                  >
+                    <Pencil size={14} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeletingModule(module)}
+                    aria-label={`Delete ${module.title}`}
+                    className="p-1 text-[#a3a3a3] hover:text-[#d03238] transition-colors"
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 onClick={() => toggleExpand(module.id)}
@@ -1037,15 +1167,126 @@ function ServerCurriculumList({
 
       <button
         type="button"
-        onClick={() => addToast('Create module UI is tracked in a follow-up story', 'error')}
+        onClick={openAddModuleModal}
+        disabled={!isAdmin}
         className={cn(
           'w-full py-3.5 border-2 border-dashed border-[rgba(26,39,68,0.2)] rounded-[14px]',
           'text-[14px] font-[600] text-[#717182] hover:border-[#4a9ad4] hover:text-[#4a9ad4]',
           'transition-colors bg-transparent font-[inherit]',
+          'disabled:opacity-50 disabled:cursor-not-allowed',
         )}
       >
         + Add Module
       </button>
+
+      {/* Add / Edit module modal */}
+      <Modal
+        open={moduleModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setModuleModalOpen(false)
+            setEditingModule(null)
+            setModuleFormError(null)
+          }
+        }}
+        title={editingModule ? 'Edit module' : 'Add module'}
+        description="Give this module a title. Lessons can be added once the module is saved."
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setModuleModalOpen(false)
+                setEditingModule(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              type="submit"
+              form="module-form"
+              disabled={isSavingModule}
+            >
+              {isSavingModule && (
+                <LoadingSpinner size="sm" label="Saving…" />
+              )}
+              {editingModule ? 'Save Changes' : 'Create Module'}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id="module-form"
+          onSubmit={handleModuleSubmit}
+          className={cn('flex flex-col gap-4')}
+        >
+          <FormField id="module-title" label="Title" required>
+            <Input
+              value={moduleForm.title}
+              onChange={(e) =>
+                setModuleForm({ ...moduleForm, title: e.target.value })
+              }
+              placeholder="Week 1: Foundations"
+            />
+          </FormField>
+          {moduleFormError && (
+            <p
+              role="alert"
+              className="text-[12px] font-semibold text-[var(--color-wise-danger)]"
+            >
+              {moduleFormError}
+            </p>
+          )}
+          <div>
+            <label
+              htmlFor="module-description"
+              className="block text-[14px] font-semibold text-[var(--color-wise-text)] mb-1.5"
+            >
+              Description
+            </label>
+            <textarea
+              id="module-description"
+              value={moduleForm.description}
+              onChange={(e) =>
+                setModuleForm({ ...moduleForm, description: e.target.value })
+              }
+              rows={4}
+              placeholder="Optional overview of what students will learn in this module."
+              className={cn(
+                'w-full rounded-xl bg-white text-[var(--color-wise-text)] border',
+                'border-[var(--color-wise-ring)] px-4 py-3 text-[15px] outline-none',
+                'placeholder:text-[var(--color-wise-text-muted)]',
+                'focus:ring-4 focus:ring-[var(--color-wise-primary)]/25',
+                'focus:border-[var(--color-wise-text)] resize-y',
+              )}
+            />
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete module confirm dialog */}
+      <ConfirmDialog
+        open={Boolean(deletingModule)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingModule(null)
+        }}
+        title="Delete this module?"
+        description={
+          deletingModule
+            ? `This will permanently remove "${deletingModule.title}" and all its lessons. This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete module"
+        cancelLabel="Keep"
+        variant="danger"
+        isLoading={deleteModuleMutation.isPending}
+        onConfirm={async () => {
+          if (deletingModule) {
+            await deleteModuleMutation.mutateAsync(deletingModule.id)
+          }
+        }}
+      />
     </>
   )
 }
@@ -1053,6 +1294,24 @@ function ServerCurriculumList({
 // ---------------------------------------------------------------------------
 // ServerLessonList — API-backed lesson list for an expanded module.
 // ---------------------------------------------------------------------------
+
+interface LessonFormState {
+  title: string
+  type: AdminLessonType
+  loomUrl: string
+  content: string
+  estimatedMinutes: string
+}
+
+function blankLessonForm(): LessonFormState {
+  return {
+    title: '',
+    type: 'VIDEO',
+    loomUrl: '',
+    content: '',
+    estimatedMinutes: '0',
+  }
+}
 
 function ServerLessonList({
   cohortId,
@@ -1074,8 +1333,18 @@ function ServerLessonList({
     moduleId,
     'lessons',
   ] as const
+  const modulesKey = ['admin', 'courses', cohortId, 'modules'] as const
 
   const inFlightRef = useRef<Promise<unknown> | null>(null)
+
+  // Sprint 2 Story 12 — Create / edit / delete lessons. Same Modal + Confirm
+  // pattern as modules; lesson type drives the conditional "Loom URL" vs
+  // "Content" field below.
+  const [lessonModalOpen, setLessonModalOpen] = useState(false)
+  const [editingLesson, setEditingLesson] = useState<AdminLesson | null>(null)
+  const [lessonForm, setLessonForm] = useState<LessonFormState>(blankLessonForm)
+  const [lessonFormError, setLessonFormError] = useState<string | null>(null)
+  const [deletingLesson, setDeletingLesson] = useState<AdminLesson | null>(null)
 
   const {
     data: lessons = [],
@@ -1143,6 +1412,111 @@ function ServerLessonList({
     [reorderLessonsMutation],
   )
 
+  const createLessonMutation = useMutation({
+    mutationFn: (payload: CreateLessonPayload) =>
+      createAdminLesson(cohortId, moduleId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: lessonsKey })
+      // Also invalidate the module list so the "N lessons" pill refreshes.
+      queryClient.invalidateQueries({ queryKey: modulesKey })
+      addToast('Lesson created', 'success')
+      setLessonModalOpen(false)
+      setEditingLesson(null)
+      setLessonForm(blankLessonForm())
+    },
+    onError: (err: Error) => setLessonFormError(err.message),
+  })
+
+  const updateLessonMutation = useMutation({
+    mutationFn: (args: { lessonId: string; payload: UpdateLessonPayload }) =>
+      updateAdminLesson(cohortId, moduleId, args.lessonId, args.payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: lessonsKey })
+      addToast('Lesson updated', 'success')
+      setLessonModalOpen(false)
+      setEditingLesson(null)
+      setLessonForm(blankLessonForm())
+    },
+    onError: (err: Error) => setLessonFormError(err.message),
+  })
+
+  const deleteLessonMutation = useMutation({
+    mutationFn: (lessonId: string) => deleteAdminLesson(cohortId, moduleId, lessonId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: lessonsKey })
+      queryClient.invalidateQueries({ queryKey: modulesKey })
+      addToast('Lesson deleted', 'success')
+      setDeletingLesson(null)
+    },
+    onError: (err: Error) => addToast(err.message, 'error'),
+  })
+
+  function openAddLessonModal() {
+    setEditingLesson(null)
+    setLessonForm(blankLessonForm())
+    setLessonFormError(null)
+    setLessonModalOpen(true)
+  }
+
+  function openEditLessonModal(lesson: AdminLesson) {
+    setEditingLesson(lesson)
+    setLessonForm({
+      title: lesson.title,
+      type: lesson.type,
+      loomUrl: '',
+      content: '',
+      estimatedMinutes: String(lesson.estimatedMinutes),
+    })
+    setLessonFormError(null)
+    setLessonModalOpen(true)
+  }
+
+  function handleLessonSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLessonFormError(null)
+    const title = lessonForm.title.trim()
+    if (!title) {
+      setLessonFormError('Title is required')
+      return
+    }
+    const loomUrl = lessonForm.loomUrl.trim()
+    const content = lessonForm.content.trim()
+    if (lessonForm.type === 'VIDEO' && !editingLesson && !loomUrl) {
+      setLessonFormError('Loom URL is required for video lessons')
+      return
+    }
+    const estimatedMinutesRaw = Number(lessonForm.estimatedMinutes)
+    const estimatedMinutes = Number.isFinite(estimatedMinutesRaw)
+      ? Math.max(0, Math.floor(estimatedMinutesRaw))
+      : 0
+
+    // Strip empty optional fields before dispatching so the backend zod
+    // schemas don't choke on `loomUrl: ''` (which fails url().optional()).
+    if (editingLesson) {
+      const payload: UpdateLessonPayload = {
+        title,
+        type: lessonForm.type,
+        estimatedMinutes,
+        ...(lessonForm.type === 'VIDEO' && loomUrl ? { loomUrl } : {}),
+        ...(lessonForm.type === 'TEXT' && content ? { content } : {}),
+      }
+      updateLessonMutation.mutate({ lessonId: editingLesson.id, payload })
+    } else {
+      const payload: CreateLessonPayload = {
+        title,
+        type: lessonForm.type,
+        estimatedMinutes,
+        order: lessons.length,
+        ...(lessonForm.type === 'VIDEO' && loomUrl ? { loomUrl } : {}),
+        ...(lessonForm.type === 'TEXT' && content ? { content } : {}),
+      }
+      createLessonMutation.mutate(payload)
+    }
+  }
+
+  const isSavingLesson =
+    createLessonMutation.isPending || updateLessonMutation.isPending
+
   if (isLoading) {
     return (
       <div className="border-t border-[rgba(26,39,68,0.05)] px-4 py-3 pl-11">
@@ -1202,6 +1576,26 @@ function ServerLessonList({
               >
                 {lesson.published ? 'Published' : 'Draft'}
               </span>
+              {isAdmin && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => openEditLessonModal(lesson)}
+                    aria-label={`Edit ${lesson.title}`}
+                    className="p-1 text-[#a3a3a3] hover:text-[#1a2744] transition-colors"
+                  >
+                    <Pencil size={13} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeletingLesson(lesson)}
+                    aria-label={`Delete ${lesson.title}`}
+                    className="p-1 text-[#a3a3a3] hover:text-[#d03238] transition-colors"
+                  >
+                    <Trash2 size={13} aria-hidden="true" />
+                  </button>
+                </>
+              )}
             </div>
           )}
         />
@@ -1210,15 +1604,187 @@ function ServerLessonList({
       <div className="px-4 py-2.5 pl-11">
         <button
           type="button"
-          onClick={() =>
-            addToast('Create lesson UI is tracked in a follow-up story', 'error')
-          }
-          className="text-[13px] font-[600] text-[#4a9ad4] hover:underline flex items-center gap-1"
+          onClick={openAddLessonModal}
+          disabled={!isAdmin}
+          className="text-[13px] font-[600] text-[#4a9ad4] hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus size={13} aria-hidden="true" />
           Add Lesson
         </button>
       </div>
+
+      {/* Add / Edit lesson modal */}
+      <Modal
+        open={lessonModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setLessonModalOpen(false)
+            setEditingLesson(null)
+            setLessonFormError(null)
+          }
+        }}
+        title={editingLesson ? 'Edit lesson' : 'Add lesson'}
+        description="Choose a lesson type and fill in the matching fields. You can publish the lesson later from the row menu."
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setLessonModalOpen(false)
+                setEditingLesson(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              type="submit"
+              form="lesson-form"
+              disabled={isSavingLesson}
+            >
+              {isSavingLesson && (
+                <LoadingSpinner size="sm" label="Saving…" />
+              )}
+              {editingLesson ? 'Save Changes' : 'Create Lesson'}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id="lesson-form"
+          onSubmit={handleLessonSubmit}
+          className={cn('flex flex-col gap-4')}
+        >
+          <FormField id="lesson-title" label="Title" required>
+            <Input
+              value={lessonForm.title}
+              onChange={(e) =>
+                setLessonForm({ ...lessonForm, title: e.target.value })
+              }
+              placeholder="Intro to prompt engineering"
+            />
+          </FormField>
+          {lessonFormError && (
+            <p
+              role="alert"
+              className="text-[12px] font-semibold text-[var(--color-wise-danger)]"
+            >
+              {lessonFormError}
+            </p>
+          )}
+          <div>
+            <label
+              htmlFor="lesson-type"
+              className="block text-[14px] font-semibold text-[var(--color-wise-text)] mb-1.5"
+            >
+              Type
+              <span
+                aria-hidden="true"
+                className="ml-0.5 text-[var(--color-wise-danger)]"
+              >
+                *
+              </span>
+            </label>
+            <select
+              id="lesson-type"
+              value={lessonForm.type}
+              onChange={(e) =>
+                setLessonForm({
+                  ...lessonForm,
+                  type: e.target.value as AdminLessonType,
+                })
+              }
+              className={cn(
+                'w-full h-11 px-4 rounded-xl border bg-white text-[15px]',
+                'border-[var(--color-wise-ring)] outline-none',
+                'focus:ring-4 focus:ring-[var(--color-wise-primary)]/25',
+              )}
+            >
+              <option value="VIDEO">Video (Loom)</option>
+              <option value="TEXT">Text</option>
+              <option value="TOOL_SETUP">Tool Setup</option>
+            </select>
+          </div>
+
+          {lessonForm.type === 'VIDEO' && (
+            <FormField id="lesson-loom-url" label="Loom URL" required>
+              <Input
+                type="url"
+                value={lessonForm.loomUrl}
+                onChange={(e) =>
+                  setLessonForm({ ...lessonForm, loomUrl: e.target.value })
+                }
+                placeholder="https://www.loom.com/share/…"
+              />
+            </FormField>
+          )}
+
+          {lessonForm.type === 'TEXT' && (
+            <div>
+              <label
+                htmlFor="lesson-content"
+                className="block text-[14px] font-semibold text-[var(--color-wise-text)] mb-1.5"
+              >
+                Content
+              </label>
+              <textarea
+                id="lesson-content"
+                value={lessonForm.content}
+                onChange={(e) =>
+                  setLessonForm({ ...lessonForm, content: e.target.value })
+                }
+                rows={6}
+                placeholder="Markdown / plain-text body for this lesson."
+                className={cn(
+                  'w-full rounded-xl bg-white text-[var(--color-wise-text)] border',
+                  'border-[var(--color-wise-ring)] px-4 py-3 text-[15px] outline-none',
+                  'placeholder:text-[var(--color-wise-text-muted)]',
+                  'focus:ring-4 focus:ring-[var(--color-wise-primary)]/25',
+                  'focus:border-[var(--color-wise-text)] resize-y',
+                )}
+              />
+            </div>
+          )}
+
+          <FormField id="lesson-estimated-minutes" label="Estimated minutes">
+            <Input
+              type="number"
+              min={0}
+              value={lessonForm.estimatedMinutes}
+              onChange={(e) =>
+                setLessonForm({
+                  ...lessonForm,
+                  estimatedMinutes: e.target.value,
+                })
+              }
+              placeholder="0"
+            />
+          </FormField>
+        </form>
+      </Modal>
+
+      {/* Delete lesson confirm dialog */}
+      <ConfirmDialog
+        open={Boolean(deletingLesson)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingLesson(null)
+        }}
+        title="Delete this lesson?"
+        description={
+          deletingLesson
+            ? `This will permanently remove "${deletingLesson.title}" from the module. This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete lesson"
+        cancelLabel="Keep"
+        variant="danger"
+        isLoading={deleteLessonMutation.isPending}
+        onConfirm={async () => {
+          if (deletingLesson) {
+            await deleteLessonMutation.mutateAsync(deletingLesson.id)
+          }
+        }}
+      />
     </div>
   )
 }

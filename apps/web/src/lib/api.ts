@@ -998,6 +998,202 @@ export async function reorderLessons(
   return res.json() as Promise<ReorderResponse>
 }
 
+// ---- Sprint 2 Story 12 — Admin module + lesson CRUD ----
+//
+// Complements the Wave 5 Story Y list/reorder helpers above. Backend routes
+// live in apps/api/src/routes/admin/courses.ts and all require the
+// `courses:write` permission; the JWT middleware handles that upstream.
+
+export interface CreateModulePayload {
+  title: string
+  description?: string
+  order?: number
+}
+
+export interface UpdateModulePayload {
+  title?: string
+  description?: string
+  order?: number
+  isPublished?: boolean
+}
+
+function normaliseModule(raw: Record<string, unknown>): AdminModule {
+  const lessons = raw.lessons
+  return {
+    id: (raw.id ?? raw._id) as string,
+    title: raw.title as string,
+    order: (raw.order as number) ?? 0,
+    lessonCount:
+      (raw.lessonCount as number | undefined) ??
+      (Array.isArray(lessons) ? lessons.length : 0),
+  }
+}
+
+export async function createAdminModule(
+  cohortId: string,
+  payload: CreateModulePayload,
+): Promise<AdminModule> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/modules`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to create module')
+  }
+  const json = (await res.json()) as { module: Record<string, unknown> }
+  return normaliseModule(json.module)
+}
+
+export async function updateAdminModule(
+  cohortId: string,
+  moduleId: string,
+  payload: UpdateModulePayload,
+): Promise<AdminModule> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/modules/${moduleId}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to update module')
+  }
+  const json = (await res.json()) as { module: Record<string, unknown> }
+  return normaliseModule(json.module)
+}
+
+export async function deleteAdminModule(
+  cohortId: string,
+  moduleId: string,
+): Promise<void> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/modules/${moduleId}`,
+    { method: 'DELETE' },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to delete module')
+  }
+}
+
+export type AdminLessonType = 'VIDEO' | 'TEXT' | 'TOOL_SETUP'
+
+export interface CreateLessonPayload {
+  title: string
+  type: AdminLessonType
+  loomUrl?: string
+  content?: string
+  estimatedMinutes?: number
+  order?: number
+}
+
+export interface UpdateLessonPayload {
+  title?: string
+  type?: AdminLessonType
+  loomUrl?: string
+  content?: string
+  estimatedMinutes?: number
+  order?: number
+}
+
+function normaliseLesson(raw: Record<string, unknown>): AdminLesson {
+  return {
+    id: (raw.id ?? raw._id) as string,
+    title: raw.title as string,
+    order: (raw.order as number) ?? 0,
+    type: (raw.type as AdminLessonType) ?? 'VIDEO',
+    estimatedMinutes: (raw.estimatedMinutes as number) ?? 0,
+    published: Boolean(raw.published ?? raw.isPublished),
+  }
+}
+
+export async function createAdminLesson(
+  cohortId: string,
+  moduleId: string,
+  payload: CreateLessonPayload,
+): Promise<AdminLesson> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/modules/${moduleId}/lessons`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to create lesson')
+  }
+  const json = (await res.json()) as { lesson: Record<string, unknown> }
+  return normaliseLesson(json.lesson)
+}
+
+export async function updateAdminLesson(
+  cohortId: string,
+  moduleId: string,
+  lessonId: string,
+  payload: UpdateLessonPayload,
+): Promise<AdminLesson> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/modules/${moduleId}/lessons/${lessonId}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to update lesson')
+  }
+  const json = (await res.json()) as { lesson: Record<string, unknown> }
+  return normaliseLesson(json.lesson)
+}
+
+export async function toggleAdminLessonPublish(
+  cohortId: string,
+  moduleId: string,
+  lessonId: string,
+  isPublished: boolean,
+): Promise<{ isPublished: boolean }> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/modules/${moduleId}/lessons/${lessonId}/publish`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isPublished }),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to toggle lesson publish state')
+  }
+  return res.json() as Promise<{ isPublished: boolean }>
+}
+
+export async function deleteAdminLesson(
+  cohortId: string,
+  moduleId: string,
+  lessonId: string,
+): Promise<void> {
+  const res = await authFetch(
+    `${BASE}/admin/courses/${cohortId}/modules/${moduleId}/lessons/${lessonId}`,
+    { method: 'DELETE' },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string }
+    throw new Error(body.message ?? 'Failed to delete lesson')
+  }
+}
+
 // ---- Screenshot submissions ----
 
 export interface ScreenshotSubmission {
