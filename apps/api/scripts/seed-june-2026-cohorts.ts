@@ -38,6 +38,9 @@ const BUSINESS_END  = new Date('2026-07-12T23:59:59.000Z')
 // AI Product Builders: 8 weeks
 const BUILDERS_END  = new Date('2026-08-15T23:59:59.000Z')
 
+// AI Agent Builders: 4 to 5 weeks
+const AGENTS_END  = new Date('2026-07-26T23:59:59.000Z')
+
 // ── Cohort + module + lesson definitions ────────────────────────────────
 
 interface LessonSeed {
@@ -482,6 +485,201 @@ const builders: CohortSeed = {
   ],
 }
 
+const agents: CohortSeed = {
+  code: 'CC-AGENTS-2026Q2',
+  name: 'Claude Code for AI Agent Builders',
+  slug: 'claude-code-for-ai-agent-builders-june-2026',
+  tagline: 'Build production AI agents with LangChain, LangGraph, and n8n. You design. Claude Code writes every line.',
+  description: [
+    'Stop watching demos. Ship your first agent this week.',
+    '',
+    'Four agent patterns, one course: PROMPT (one smart LLM call with structured output), CHAIN (LangChain tool-using agents), GRAPH (LangGraph state machines), and WORKFLOW (n8n visual orchestration). You learn when to reach for each.',
+    '',
+    'By the Capstone you have a real agent live on the public internet, traced in LangSmith, watched by an eval suite, with cost caps and fallback model routing. Doing real work in your business, unsupervised.',
+    '',
+    'No coding required. You describe the problem and the agent shape. Claude Code writes every line of Python.',
+  ].join('\n'),
+  startDate:     COHORT_START,
+  endDate:       AGENTS_END,
+  liveStartDate: COHORT_START,
+  liveEndDate:   AGENTS_END,
+  maxSeats:      30,
+  learningOutcomes: [
+    'A live AI agent running on the public internet, doing real work for you',
+    'Four agent patterns under your belt: PROMPT, CHAIN, GRAPH, WORKFLOW',
+    'A clear sense of when to use LangChain, LangGraph, or n8n',
+    'A LangSmith dashboard tracing every call your agent makes',
+    'An eval suite of 10+ golden examples that catches regressions',
+    'Cost caps, rate limits, and fallback model routing in place',
+    'A reusable template you adapt for the next 10 agents you build',
+    'Membership in the alumni community for ongoing patterns and updates',
+  ],
+  requirements: [
+    'A Mac or Windows computer',
+    'API budget for Anthropic plus OpenAI ($30 to $100 monthly is plenty)',
+    'A free LangSmith account',
+    '15 to 20 hours of focused build time over 4 to 5 weeks',
+    'One real problem in your work that an agent could plausibly solve',
+  ],
+  targetAudience: [
+    'Operators and builders who want agents doing real work, not demos',
+    'Anyone comfortable in a terminal but not writing Python by hand',
+    'Founders running ops who keep saying "this should be automated"',
+    'PMs and analysts shipping internal tools without a dev team',
+  ],
+  // Founding-cohort discount: regular $5,500, first 10 seats at 40% off ($3,300).
+  regularPrice: 5500,
+  promoSeats:   10,
+  pricing: {
+    oneTime:    { name: 'Pay in full',        amount: 3300 },         // $3,300 (40% off $5,500)
+    installment: { name: '3 monthly payments', total: 3600, installmentAmount: 1200, intervalDays: 30 }, // $1,200 x 3 = $3,600
+  },
+  modules: [
+    {
+      title: 'Module 0. Pre-flight',
+      description: 'Get the mindset right. Pick the one real problem your agent will solve.',
+      lessons: [
+        {
+          title: 'What an AI Agent Actually Is',
+          description: 'What separates "an agent" from "just calling an LLM in a loop". The three ways beginners get this wrong, and why each one wastes weeks. The shape of agents that actually work in production. How Claude Code fits in, and why you do not need to learn Python. Pick the one real problem you will solve by the end of the course. You ship: one paragraph naming the agent you will build, with specific inputs and outputs.',
+          estimatedMinutes: 20,
+        },
+      ],
+    },
+    {
+      title: 'Module 1. PROMPT',
+      description: 'One smart call. Structured output. Your first agent. Get this layer right and everything above it gets easier.',
+      lessons: [
+        {
+          title: 'Setup. Claude Code, Anthropic, LangSmith',
+          description: 'Installing Claude Code and getting it talking to your terminal. Anthropic and OpenAI API keys, billing, cost caps. LangSmith free account, your tracing dashboard from day one. Python installed and ready, you will never write a line yourself. The first folder layout for an agent project. You build today: your agent project folder, configured, with Claude Code happily writing files into it.',
+          estimatedMinutes: 45,
+        },
+        {
+          title: 'Your First Prompt with Structured Output',
+          description: 'Why "give me JSON" is the foundation of every reliable agent. Pydantic schemas in plain English. Claude Code writes them, you describe them. Asking Claude Code to test the output, not just generate it. The prompt patterns that make output reliable: role, examples, constraints. Reading LangSmith traces to see exactly what your agent saw and said. You build today: an LLM call that takes an email and returns a clean JSON object you can rely on.',
+          estimatedMinutes: 40,
+        },
+        {
+          title: 'Single-Step Agents That Earn Their Keep',
+          description: 'What you can already ship at the PROMPT layer (more than you think). Three useful one-shot agents: email triager, content summarizer, lead qualifier. How to wire it to a real input (your inbox, your Slack, your form responses). When to stay at PROMPT and not move up the stack. You build today: one of the three example agents, running on your real data.',
+          estimatedMinutes: 35,
+        },
+      ],
+    },
+    {
+      title: 'Module 2. CHAIN',
+      description: 'LangChain. Tool-using agents. The workhorse layer. The agent reads, calls APIs, takes actions. This is what most production agents actually are.',
+      lessons: [
+        {
+          title: 'What LangChain Actually Does',
+          description: 'What LangChain is, in one sentence: glue between LLMs and the rest of the world. The three things it does well: tool calling, structured output, prompt management. The two things it does not (state machines, visual flow), and what to use instead. Why you use it for 70% of agents, even after you learn the other layers. You build today: a working LangChain agent skeleton, set up the way you use it for the rest of the course.',
+          estimatedMinutes: 45,
+        },
+        {
+          title: 'Tool-Using Agents (Gmail, Calendar, Slack)',
+          description: 'Wiring an agent to Gmail, Google Calendar, and Slack via their APIs. Why "let the LLM pick the tool" is harder than it sounds, and how to make it work. The five tool patterns: read, search, create, update, delete. Auth and credentials. How to keep them safe (Claude Code handles the plumbing). You build today: an agent that reads your inbox, drafts replies, and waits for your approval before sending.',
+          estimatedMinutes: 60,
+        },
+        {
+          title: 'RAG. Agents That Read Your Documents',
+          description: 'What RAG is, in plain words: the agent looks something up before answering. The vector database setup. Claude Code stands one up for you (Chroma or Pinecone). Embedding your real documents (PDFs, Notion pages, Google Docs). Why most RAG fails, and the chunking and re-ranking tricks that fix it. You build today: an agent that answers questions about your own documents, with citations back to the source.',
+          estimatedMinutes: 60,
+        },
+        {
+          title: 'Your First Useful Multi-Step Agent',
+          description: 'Putting it all together: tools plus RAG plus structured output. The shape of a daily research agent: pull news, read it, summarize, send. The shape of a triage agent: read, classify, route, draft. How to know when your agent is reliable enough to leave alone. You build today: one real LangChain agent doing real work in your business, end to end.',
+          estimatedMinutes: 75,
+        },
+      ],
+    },
+    {
+      title: 'Module 3. GRAPH',
+      description: 'LangGraph. Stateful agents that think in steps. The most powerful agent pattern in production today. Slower to learn, vastly more capable.',
+      lessons: [
+        {
+          title: 'When You Need a Graph, Not a Chain',
+          description: 'The five signals your chain is about to fall over: loops, conditionals, retries, memory, recovery. What "state" actually means in an agent, and why it matters. The mental shift from "pipeline" to "state machine". When to stay in LangChain. When to graduate to LangGraph. You build today: a side-by-side comparison of the same agent in LangChain and LangGraph. See where the chain breaks.',
+          estimatedMinutes: 60,
+        },
+        {
+          title: 'Designing Your First State Machine',
+          description: 'The four pieces of every LangGraph agent: state, nodes, edges, conditions. How to sketch the graph on paper before Claude Code writes it. Human-in-the-loop: pausing the graph for a person to approve. Retries, fallbacks, and what happens when a node fails. You build today: a LangGraph agent that handles a multi-step task in your business: classify, decide, act, confirm.',
+          estimatedMinutes: 75,
+        },
+        {
+          title: 'Visual Debugging with LangGraph Studio',
+          description: 'The Studio interface: watch your agent think in real time. Inspecting state at every node, understanding why it chose what it chose. Time-traveling: rerunning from any node with modified state. Debugging without ever reading code (Claude Code handles fixes). You build today: use Studio to find and fix a real bug in the agent you built in Lesson 9.',
+          estimatedMinutes: 60,
+        },
+        {
+          title: 'Multi-Agent Systems (Supervisor plus Workers)',
+          description: 'The supervisor pattern: one agent decides which specialist handles what. The worker pattern: small focused agents that do one thing well. Hand-offs between agents, and how to keep them from looping. When multi-agent helps. When it just adds cost and confusion. You build today: a 3-agent team. One researcher, one writer, one reviewer, supervised by a fourth. Working together on a real task.',
+          estimatedMinutes: 75,
+        },
+      ],
+    },
+    {
+      title: 'Module 4. WORKFLOW',
+      description: 'n8n. Visual orchestration across all your tools. Drag and drop, with 400+ pre-built integrations. The fastest way to put your agents in front of real triggers and real users.',
+      lessons: [
+        {
+          title: 'What n8n Is and When to Reach for It',
+          description: 'n8n in one sentence: a drag-and-drop pipeline editor with 400+ integrations. The simple rule for choosing: visual flow with triggers, use n8n; stateful reasoning, use LangGraph. n8n Cloud vs self-hosted, which to start with. The five n8n node types you use over and over. You build today: an n8n account up, a starter workflow imported, your first webhook firing into it.',
+          estimatedMinutes: 60,
+        },
+        {
+          title: 'Your First Visual n8n Agent Workflow',
+          description: 'Building a real workflow: trigger (new form fill), LLM step (classify), action (route to CRM or email). The HTTP Request node, your bridge to any API n8n does not have a connector for. The IF / Switch nodes, your conditional logic without any code. Error handling, retries, fallbacks. All visual. You build today: a real visual workflow running on n8n Cloud, triggered by a real event in your business.',
+          estimatedMinutes: 75,
+        },
+        {
+          title: 'Wiring n8n to LangGraph (Best of Both)',
+          description: 'The pattern: n8n handles the trigger and integration, LangGraph handles the reasoning. How to call your LangGraph agent from an n8n HTTP node. How to call back into n8n from inside a LangGraph node. The hybrid architecture that powers most production agents you have seen. You build today: one full agent where n8n triggers, LangGraph thinks, n8n acts. Working end to end.',
+          estimatedMinutes: 75,
+        },
+      ],
+    },
+    {
+      title: 'Module 5. SHIP (Production)',
+      description: 'Hosting. Tracing. Evals. Cost caps. Fallbacks. The four production basics every real agent needs.',
+      lessons: [
+        {
+          title: 'Hosting. Self, Vercel, or n8n Cloud',
+          description: 'The three real hosting paths and the tradeoff each makes (cost, control, complexity). Deploying a LangGraph agent to Vercel or Fly with Claude Code running the deploy. Running your own n8n on a $5/mo VPS, when that makes sense. Webhooks, schedules, and how the world reaches your agent. You build today: your Capstone agent live on the public internet, reachable by a real URL.',
+          estimatedMinutes: 60,
+        },
+        {
+          title: 'LangSmith. Trace Everything',
+          description: 'Reading a trace from input to final output, every LLM call visible. Latency, cost, and token counts per step. Spotting why an agent ran off the rails on a specific input. Sharing a trace with someone else, the new way to ask for help. You build today: a LangSmith dashboard for your live agent with every call traced and searchable.',
+          estimatedMinutes: 60,
+        },
+        {
+          title: 'Evals. Knowing Your Agent Works',
+          description: 'The cheap eval: a golden set of 10 to 20 known-good examples. The right eval: LLM-as-judge, with caveats. Catching regressions when you change a prompt or model. The eval-first habit that separates real agents from demos. You build today: an eval suite for your agent that runs every time you change something.',
+          estimatedMinutes: 75,
+        },
+        {
+          title: 'Cost, Rate Limits, Fallbacks',
+          description: 'The four real costs of an agent in production (tokens, hosting, integrations, your time). Setting per-day and per-call cost caps. Rate limits and what to do when you hit them (retry, queue, escalate). Fallback model routing: Claude fails over to GPT, GPT fails over to Haiku. You build today: a production-grade cost dashboard and three working fallbacks in your agent.',
+          estimatedMinutes: 55,
+        },
+      ],
+    },
+    {
+      title: 'Capstone. Ship It',
+      description: 'Ship a real AI agent into your business. A one-week project, around four hours of focused work. By the end, your agent is live, traced, watched by an eval suite, and doing real work.',
+      lessons: [
+        {
+          title: 'Capstone Project. Real Agent, Real URL',
+          description: 'Deliverables (all required): one live agent at a public URL (Vercel, Fly, or n8n Cloud); the real problem you picked in Lesson 0, actually solved; a LangSmith dashboard with every call traced; an eval suite of 10+ golden examples, all passing; cost caps and fallback model routing in place; a 3-minute screen recording walking through your agent in action.',
+          estimatedMinutes: 240,
+        },
+      ],
+    },
+  ],
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 async function upsertInstructor(): Promise<{ userId: Types.ObjectId; profileId: Types.ObjectId; name: string }> {
@@ -651,15 +849,18 @@ async function main() {
   console.log('Connecting to MongoDB...')
   await connectMongoDB()
 
-  console.log('\n[1/3] Upserting instructor (Aleem Haider)...')
+  console.log('\n[1/4] Upserting instructor (Aleem Haider)...')
   const instructor = await upsertInstructor()
   console.log(`      ${instructor.name}. InstructorProfile=${instructor.profileId}`)
 
-  console.log('\n[2/3] Seeding "Claude Code for Business Owners"...')
+  console.log('\n[2/4] Seeding "Claude Code for Business Owners"...')
   await seedCohort(businessOwners, [instructor.profileId])
 
-  console.log('\n[3/3] Seeding "Claude Code for AI Product Builders"...')
+  console.log('\n[3/4] Seeding "Claude Code for AI Product Builders"...')
   await seedCohort(builders, [instructor.profileId])
+
+  console.log('\n[4/4] Seeding "Claude Code for AI Agent Builders"...')
+  await seedCohort(agents, [instructor.profileId])
 
   console.log('\nDone. Browse the storefront at http://localhost:5173/catalog')
   await mongoose.disconnect()
