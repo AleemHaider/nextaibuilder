@@ -16,7 +16,9 @@ import fastifySensible from '@fastify/sensible'
 import fastifyCookie from '@fastify/cookie'
 import fastifyMultipart from '@fastify/multipart'
 import fastifyJwt from '@fastify/jwt'
+import mongoose from 'mongoose'
 import { connectMongoDB } from './lib/mongodb.js'
+import { redis } from './lib/redis.js'
 import { checkEnv } from './lib/env-check.js'
 import { authRoutes } from './routes/auth.js'
 import { authAdminRoutes } from './routes/auth-admin.js'
@@ -224,15 +226,28 @@ async function start() {
   // ── Local uploads (dev, when S3 not configured) ───
   await server.register(uploadsRoutes, { prefix: '/api/uploads' })
 
-  // ── Health check ──────────────────────────────────
-  // /health      — direct access (port 4000)
-  // /api/health  — via nginx reverse proxy
+  // ── Health + readiness ────────────────────────────
+  // /health  (liveness)  — process is alive. Cheap, used by Docker
+  //                        HEALTHCHECK + nginx upstream probes.
+  // /readyz  (readiness) — process can serve traffic (Mongo + Redis
+  //                        reachable). Used by load balancers to pull
+  //                        instances out of rotation when a downstream
+  //                        breaks without restarting the process.
   const healthHandler = async () => ({
     status: 'ok',
     timestamp: new Date().toISOString(),
   })
   server.get('/health', healthHandler)
   server.get('/api/health', healthHandler)
+
+  const readyzHandler = await import('./lib/readyz.js').then((m) =>
+    m.buildReadyzHandler({
+      pingMongo:  () => m.defaultPingMongo(mongoose),
+      pingRedis:  () => m.defaultPingRedis(redis),
+    }),
+  )
+  server.get('/readyz', readyzHandler)
+  server.get('/api/readyz', readyzHandler)
 
   // ── BullMQ Workers ────────────────────────────────
   // ROLE controls which subsystems boot. Default 'all' preserves the
