@@ -227,6 +227,14 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         }
       })
       const totalLessonCount = modulesResult.reduce((s, m) => s + m.lessonCount, 0)
+      // Sum lesson estimatedMinutes → hours, rounded to 1 decimal. Was
+      // hardcoded 0 before; the storefront's "hours of content" card was
+      // permanently stuck at 0h.
+      const totalMinutes = allLessons.reduce(
+        (sum, l) => sum + ((l as { estimatedMinutes?: number }).estimatedMinutes ?? 0),
+        0,
+      )
+      const hoursOfContent = Math.round((totalMinutes / 60) * 10) / 10
 
       const oneTimePlan = paymentPlans.find((p) => p.type === 'ONE_TIME')
       const installmentPlan = paymentPlans.find((p) => p.type === 'INSTALLMENT')
@@ -270,7 +278,7 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         soldOut,
         published:        true,
         lessonCount:      totalLessonCount,
-        hoursOfContent:   0,
+        hoursOfContent,
         startDate:        cohort.liveStartDate?.toISOString() ?? undefined,
         seatsRemaining:   cohort.maxSeats != null
           ? Math.max(0, cohort.maxSeats - (cohort.enrollmentCount ?? 0))

@@ -64,6 +64,10 @@ interface CohortSeed {
   liveStartDate: Date
   liveEndDate:   Date
   maxSeats:    number
+  // Marketing bullets that populate the storefront detail page.
+  learningOutcomes: string[]
+  requirements:     string[]
+  targetAudience:   string[]
   pricing: {
     oneTime:    { name: string; amount: number }
     installment: { name: string; total: number; installmentAmount: number; intervalDays: number }
@@ -90,11 +94,35 @@ const businessOwners: CohortSeed = {
   liveStartDate: COHORT_START,
   liveEndDate:   BUSINESS_END,
   maxSeats:      40,
+  learningOutcomes: [
+    'A working AI Operating System for your business — not a tutorial clone',
+    '5 custom slash commands specific to your workflows',
+    '2 scheduled agents running on cron — one daily, one weekly',
+    '1 internal tool your team actually uses',
+    'A CLAUDE.md knowledge base that makes every future session smarter',
+    'A Prompt Vault of 20+ prompts you actually reuse',
+    'A 5-minute demo video walking through your week with the new stack',
+    'At least 3 hours per week returned — the success metric, not lessons completed',
+    'Membership in the alumni community for ongoing pattern sharing',
+  ],
+  requirements: [
+    'A Mac or Windows computer',
+    'A dedicated email address for AI sessions',
+    '$20–$100/month budget for the Anthropic API',
+    '30 minutes, 2–3× per week of focused learning time',
+    'One real annoying weekly task you want to eliminate',
+  ],
+  targetAudience: [
+    'Solopreneurs and small-business owners (1–50 employees)',
+    'Founders and operators tired of doing tasks "a computer should be doing"',
+    'Non-technical owners — no coding background required',
+    'Anyone willing to bring real business data to the lessons',
+  ],
   pricing: {
     // Amounts in dollars (not cents) — matches the existing storefront data
     // convention. The web client renders them via Intl.NumberFormat directly.
-    oneTime:    { name: 'Pay in full',        amount: 499 },          // $499
-    installment: { name: '3 monthly payments', total: 567, installmentAmount: 189, intervalDays: 30 }, // $189 × 3 = $567
+    oneTime:    { name: 'Pay in full',        amount: 2200 },         // $2,200
+    installment: { name: '3 monthly payments', total: 2400, installmentAmount: 800, intervalDays: 30 }, // $800 × 3 = $2,400
   },
   modules: [
     {
@@ -235,9 +263,34 @@ const builders: CohortSeed = {
   liveStartDate: COHORT_START,
   liveEndDate:   BUILDERS_END,
   maxSeats:      24,
+  learningOutcomes: [
+    'A shipped cross-platform product (mobile + web) with full SDLC traceability',
+    '6 specialist subagents + 1 orchestrator running your build pipeline',
+    '15+ skills in your .claude/skills/ directory — your library forever',
+    'A monorepo template you reuse on every future product',
+    'A CLAUDE.md and settings that make every future project start at "Day 30"',
+    'A public v0.1 release tag with changelog, CI green, evals passing',
+    'A 10-minute demo video walking through your AI-orchestrated SDLC',
+    'Public GitHub repo + Confluence PRD + Jira epic — proof of work',
+    'Membership in the alumni community for ongoing pattern sharing',
+  ],
+  requirements: [
+    'Comfort in a terminal (Git, package managers, basic shell)',
+    'A real product idea you commit to shipping during the course',
+    '30–40 hours of focused build time over 6–8 weeks',
+    'Anthropic Claude Code (paid plan or API budget for production use)',
+    'GitHub + Atlassian (Jira + Confluence) + Figma accounts',
+    'Node 20 + Flutter SDK installed locally',
+  ],
+  targetAudience: [
+    'Engineers, founders, and PMs comfortable in a terminal',
+    'Builders shipping their first AI-orchestrated product end-to-end',
+    'Teams adopting Claude Code as their primary development surface',
+    'Anyone tired of vibe-coding who wants a spec-driven, agent-orchestrated pipeline',
+  ],
   pricing: {
-    oneTime:    { name: 'Pay in full',        amount: 1499 },         // $1,499
-    installment: { name: '3 monthly payments', total: 1647, installmentAmount: 549, intervalDays: 30 }, // $549 × 3 = $1,647
+    oneTime:    { name: 'Pay in full',        amount: 3000 },         // $3,000
+    installment: { name: '3 monthly payments', total: 3300, installmentAmount: 1100, intervalDays: 30 }, // $1,100 × 3 = $3,300
   },
   modules: [
     {
@@ -479,6 +532,9 @@ async function seedCohort(seed: CohortSeed, instructorIds: Types.ObjectId[]): Pr
         maxSeats:       seed.maxSeats,
         isPublished:    true,
         instructorIds,
+        learningOutcomes: seed.learningOutcomes,
+        requirements:     seed.requirements,
+        targetAudience:   seed.targetAudience,
       },
       $setOnInsert: { code: seed.code, enrollmentCount: 0 },
     },
