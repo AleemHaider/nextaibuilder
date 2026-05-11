@@ -44,6 +44,35 @@ interface FeaturedCourse {
   slug: string
 }
 
+// Logos for the "Our students come from" social-proof strip.
+//
+// Companies use simpleicons.org as a CDN for SVG marks. The URL pattern is
+// `https://cdn.simpleicons.org/{slug}/{hex-color}` — slug is the icon name on
+// simpleicons.org, color overrides the brand fill to a uniform grey so the
+// wall reads as a unified row instead of a chaotic pile of corporate colors.
+//
+// Universities are not in simpleicons, so they render as styled wordmarks
+// instead. Easier than chasing per-school SVG sources with murky licensing.
+const STUDENT_COMPANIES: { name: string; slug: string }[] = [
+  { name: 'Google',    slug: 'google' },
+  { name: 'Meta',      slug: 'meta' },
+  { name: 'Amazon',    slug: 'amazon' },
+  { name: 'IBM',       slug: 'ibm' },
+  { name: 'Microsoft', slug: 'microsoft' },
+  { name: 'Apple',     slug: 'apple' },
+  { name: 'Netflix',   slug: 'netflix' },
+  { name: 'Stripe',    slug: 'stripe' },
+]
+
+const STUDENT_UNIVERSITIES: string[] = [
+  'Harvard',
+  'Stanford',
+  'MIT',
+  'Carnegie Mellon',
+  'Berkeley',
+  'Oxford',
+]
+
 // Map an API cohort to the visual shape this page renders. The covered tones
 // rotate through the palette so cards stay visually varied regardless of how
 // many cohorts come back from the API.
@@ -399,6 +428,73 @@ export default function HomePage() {
               {(cohorts?.length ?? 0) === 1 ? 'cohort open' : 'cohorts open'}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* SOCIAL PROOF — Companies + universities our students come from      */}
+      {/* ------------------------------------------------------------------ */}
+      <section
+        className={cn(
+          'bg-[var(--color-wise-surface)] px-6 sm:px-12 lg:px-20 py-12 lg:py-16',
+          'border-y border-[var(--color-wise-surface-soft)]',
+        )}
+      >
+        <p
+          className={cn(
+            'text-center text-xs font-semibold uppercase tracking-[0.2em]',
+            'text-[var(--color-wise-text-muted)]',
+            'mb-8',
+          )}
+        >
+          Our students learn and ship from
+        </p>
+
+        {/* Company logos. SVGs served from simpleicons.org as a unified grey
+            (#9ca3af) so the row reads as a single graphic, not a brand pile. */}
+        <div
+          className={cn(
+            'flex flex-wrap items-center justify-center',
+            'gap-x-10 gap-y-6 lg:gap-x-14',
+            'mb-10',
+          )}
+        >
+          {STUDENT_COMPANIES.map((c) => (
+            <img
+              key={c.slug}
+              src={`https://cdn.simpleicons.org/${c.slug}/9ca3af`}
+              alt={`${c.name} logo`}
+              loading="lazy"
+              className={cn(
+                'h-7 sm:h-8 w-auto',
+                'opacity-70 hover:opacity-100',
+                'transition-opacity duration-200',
+              )}
+            />
+          ))}
+        </div>
+
+        {/* Universities. Wordmarks in a serif typeface, same muted grey as
+            the icons so the two rows feel like one strip. */}
+        <div
+          className={cn(
+            'flex flex-wrap items-center justify-center',
+            'gap-x-8 gap-y-3 lg:gap-x-12',
+          )}
+        >
+          {STUDENT_UNIVERSITIES.map((u) => (
+            <span
+              key={u}
+              className={cn(
+                'font-serif text-base sm:text-lg italic',
+                'text-[var(--color-wise-text-muted)]',
+                'tracking-[0.04em]',
+                'opacity-80 hover:opacity-100 transition-opacity',
+              )}
+            >
+              {u}
+            </span>
+          ))}
         </div>
       </section>
 
