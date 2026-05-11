@@ -1,0 +1,48 @@
+# Systemd unit for the nightly MongoDB → S3 backup.
+# Triggered by nab-backup.timer; runs scripts/backup-mongodb.sh.
+#
+# Install (on the EC2 host):
+#   sudo cp infra/systemd/nab-backup.{service,timer} /etc/systemd/system/
+#   sudo cp scripts/backup-mongodb.sh scripts/restore-mongodb.sh /opt/nab/
+#   sudo chmod 750 /opt/nab/backup-mongodb.sh /opt/nab/restore-mongodb.sh
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now nab-backup.timer
+#
+# Verify:
+#   systemctl list-timers nab-backup.timer
+#   sudo systemctl start nab-backup.service   # run on demand
+#   journalctl -u nab-backup.service -n 50
+
+[Unit]
+Description=NAB MongoDB nightly backup → S3
+Documentation=https://github.com/AleemHaider/nextaibuilder/blob/main/infra/BACKUP-RUNBOOK.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/nab
+ExecStart=/opt/nab/backup-mongodb.sh
+
+# Hardening — keep this service strictly read-only outside its working area.
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+ReadWritePaths=/var/lib/nab-backup
+ReadOnlyPaths=/opt/nab
+
+# Generous timeout — a full dump on a multi-GB cluster + S3 upload can take
+# several minutes over the public network. Fail loud if we ever cross 30 min.
+TimeoutStartSec=1800
+Nice=10
+IOSchedulingClass=idle
+
+# Capture all output to the journal; never write to a log file under /var/log.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

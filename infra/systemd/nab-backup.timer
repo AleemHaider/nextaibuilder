@@ -1,0 +1,20 @@
+# Systemd timer for the nightly MongoDB backup.
+# Fires the nab-backup.service every day at 03:00 UTC + random jitter so the
+# whole fleet doesn't hit S3 at the same instant.
+#
+# Persistent=true means a missed run (host was offline at 03:00) fires as
+# soon as the host comes back online — never silently drop a night.
+
+[Unit]
+Description=NAB MongoDB nightly backup timer
+Documentation=https://github.com/AleemHaider/nextaibuilder/blob/main/infra/BACKUP-RUNBOOK.md
+Requires=nab-backup.service
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 UTC
+RandomizedDelaySec=15min
+Persistent=true
+Unit=nab-backup.service
+
+[Install]
+WantedBy=timers.target

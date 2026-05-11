@@ -1,0 +1,28 @@
+{
+  "Rules": [
+    {
+      "ID": "nab-mongo-backups-tiered-retention",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "mongodb/" },
+      "Transitions": [
+        {
+          "Days": 30,
+          "StorageClass": "GLACIER_IR"
+        },
+        {
+          "Days": 90,
+          "StorageClass": "DEEP_ARCHIVE"
+        }
+      ],
+      "Expiration": {
+        "Days": 365
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      },
+      "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 30
+      }
+    }
+  ]
+}
