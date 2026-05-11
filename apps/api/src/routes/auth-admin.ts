@@ -18,29 +18,7 @@ import {
   adminOtpEmailTemplate,
   adminPasswordResetTemplate,
 } from '../lib/email.js'
-import { redis } from '../lib/redis.js'
-
-// ── Lockout constants ─────────────────────────────────────────────────────
-const LOCKOUT_MAX_ATTEMPTS = 5
-const LOCKOUT_TTL_SECONDS  = 15 * 60  // 15 minutes
-
-async function checkLockout(email: string): Promise<boolean> {
-  const count = await redis.get(`login_fail:${email}`)
-  return Number(count ?? 0) >= LOCKOUT_MAX_ATTEMPTS
-}
-
-async function incrementFailCount(email: string): Promise<void> {
-  const key = `login_fail:${email}`
-  const count = await redis.incr(key)
-  if (count === 1) {
-    // Set TTL only on first increment so the window is fixed from first failure
-    await redis.expire(key, LOCKOUT_TTL_SECONDS)
-  }
-}
-
-async function clearFailCount(email: string): Promise<void> {
-  await redis.del(`login_fail:${email}`)
-}
+import { checkLockout, incrementFailCount, clearFailCount } from '../lib/auth-lockout.js'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 

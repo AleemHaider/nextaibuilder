@@ -7,6 +7,11 @@ import crypto from 'node:crypto'
 import { z } from 'zod'
 import { User } from '../models/User.js'
 import { RefreshToken } from '../models/RefreshToken.js'
+import { checkLockout, incrementFailCount, clearFailCount } from '../lib/auth-lockout.js'
+
+// Constant-time dummy hash used to pad bcrypt.compare() when no user / no
+// password / disabled account is found, preventing a login-timing oracle.
+const TIMING_PAD_HASH = '$2a$12$invalidhashfortimingnormalization000000000000000000000000'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -139,8 +144,10 @@ export async function authStudentRoutes(fastify: FastifyInstance) {
     })
     } catch (err: unknown) {
       fastify.log.error({ err }, '[register] unhandled error')
-      const msg = err instanceof Error ? err.message : String(err)
-      return reply.code(500).send({ error: 'INTERNAL_ERROR', message: msg })
+      return reply.code(500).send({
+        error:   'INTERNAL_ERROR',
+        message: 'An internal error occurred. Please try again.',
+      })
     }
   })
 
@@ -159,39 +166,36 @@ export async function authStudentRoutes(fastify: FastifyInstance) {
     }
     const { email, password } = parsed.data
 
-    const user = await User.findOne({ email, role: 'STUDENT' })
+    // FIR-172 — check Redis lockout before touching the DB
+    if (await checkLockout(email)) {
+      return reply.code(429).send({
+        error:   'ACCOUNT_LOCKED',
+        message: 'Account temporarily locked. Try again in 15 minutes.',
+      })
+    }
 
-    if (!user) {
+    const user = await User.findOne({ email, role: 'STUDENT' }).select('+passwordHash')
+
+    // No user, no password (OAuth-only), or disabled account ⇒ treat as bad
+    // credentials. We still run bcrypt.compare against a dummy hash so the
+    // response time does not leak which branch we took (login-timing oracle).
+    const noCredentials = !user || !user.passwordHash || !user.isActive
+    const passwordMatch = await bcrypt.compare(
+      password,
+      noCredentials ? TIMING_PAD_HASH : user!.passwordHash!,
+    )
+
+    if (noCredentials || !passwordMatch) {
+      await incrementFailCount(email)
       return reply.code(401).send({
         error:   'INVALID_CREDENTIALS',
         message: 'Invalid email or password.',
       })
     }
 
-    // OAuth-only account (no password set)
-    if (!user.passwordHash) {
-      return reply.code(401).send({
-        error:   'USE_OAUTH',
-        message: 'This account was created with Google. Please use the "Continue with Google" button.',
-      })
-    }
+    await clearFailCount(email)
 
-    if (!user.isActive) {
-      return reply.code(401).send({
-        error:   'ACCOUNT_DISABLED',
-        message: 'Your account has been disabled. Please contact support.',
-      })
-    }
-
-    const valid = await bcrypt.compare(password, user.passwordHash)
-    if (!valid) {
-      return reply.code(401).send({
-        error:   'INVALID_CREDENTIALS',
-        message: 'Invalid email or password.',
-      })
-    }
-
-    const userId = user._id.toString()
+    const userId = user!._id.toString()
     const { accessToken, rawRefresh } = await issueFullTokens(fastify, userId, email, 'STUDENT')
 
     reply.setCookie('nab_refresh', rawRefresh, {
@@ -204,7 +208,7 @@ export async function authStudentRoutes(fastify: FastifyInstance) {
 
     return reply.send({
       accessToken,
-      user: buildUserResponse(user),
+      user: buildUserResponse(user!),
     })
   })
 
