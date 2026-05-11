@@ -7,6 +7,7 @@
 // through the normal `sm:` / `md:` / `lg:` modifiers.
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { useQuery } from '@tanstack/react-query'
 import {
   ChevronDown,
   ChevronRight,
@@ -22,6 +23,7 @@ import {
 import { TopNav } from '../components/TopNav'
 import { Footer } from '../components/Footer'
 import { usePageMeta } from '../hooks/usePageMeta'
+import { fetchCohorts, type CohortSummary } from '../lib/api'
 import { cn } from '../lib/utils'
 
 // ---------------------------------------------------------------------------
@@ -42,41 +44,37 @@ interface FeaturedCourse {
   slug: string
 }
 
-const FEATURED_COURSES: FeaturedCourse[] = [
-  {
-    title: 'Claude API Mastery',
-    tagline: "Build production AI apps with Anthropic's API",
-    coverTone: 'primary',
-    badgeLabel: 'Recorded',
-    badgeTone: 'primary',
-    price: '$499',
-    installment: '3×$166/mo',
-    meta: 'Self-paced · 24 lessons',
-    slug: 'claude-api-mastery',
-  },
-  {
-    title: 'AI Product Bootcamp',
-    tagline: 'Ship your first AI product in 8 weeks',
-    coverTone: 'mint',
-    badgeLabel: 'Live Cohort',
-    badgeTone: 'mint',
-    price: '$999',
-    installment: '3×$333/mo',
-    meta: 'Starts Jan 20 · 12 seats',
-    slug: 'ai-product-bootcamp',
-  },
-  {
-    title: 'Full-Stack AI Dev',
-    tagline: 'End-to-end AI engineering from prompt to prod',
-    coverTone: 'dark',
-    badgeLabel: 'Combined',
-    badgeTone: 'neutral',
-    price: '$1,499',
-    installment: '3×$499/mo',
-    meta: 'Starts Feb 3 · 8 seats left',
-    slug: 'full-stack-ai-dev',
-  },
-]
+// Map an API cohort to the visual shape this page renders. The covered tones
+// rotate through the palette so cards stay visually varied regardless of how
+// many cohorts come back from the API.
+const COVER_TONES: FeaturedCourse['coverTone'][] = ['primary', 'mint', 'dark']
+const BADGE_TONES: Record<string, FeaturedCourse['badgeTone']> = {
+  live:     'mint',
+  recorded: 'primary',
+  combined: 'neutral',
+}
+const BADGE_LABELS: Record<string, string> = {
+  live:     'Live Cohort',
+  recorded: 'Recorded',
+  combined: 'Combined',
+}
+
+function toFeatured(c: CohortSummary, i: number): FeaturedCourse {
+  const type = (c.type ?? 'recorded').toLowerCase()
+  return {
+    title:       c.title,
+    tagline:     c.tagline,
+    coverTone:   COVER_TONES[i % COVER_TONES.length],
+    badgeLabel:  BADGE_LABELS[type] ?? 'Course',
+    badgeTone:   BADGE_TONES[type] ?? 'neutral',
+    price:       `$${c.price.toLocaleString('en-US')}`,
+    installment: c.installmentPrice != null
+      ? `${c.installmentCount ?? 3}× $${c.installmentPrice.toLocaleString('en-US')}/mo`
+      : '',
+    meta:        c.meta || (type === 'recorded' ? 'Self-paced' : ''),
+    slug:        c.slug,
+  }
+}
 
 const FAQ_ITEMS = [
   {
@@ -241,6 +239,19 @@ export default function HomePage() {
       'Learn to build, deploy, and scale AI-powered products through hands-on cohorts and recorded courses.',
   })
 
+  // Pull published cohorts from the storefront API. Same query the catalog
+  // page uses so React Query dedupes the request when both pages mount.
+  const { data: cohorts } = useQuery<CohortSummary[]>({
+    queryKey: ['cohorts'],
+    queryFn:  fetchCohorts,
+  })
+  const featured = (cohorts ?? []).slice(0, 3).map(toFeatured)
+  // Pricing teaser at the bottom mirrors whatever the first cohort costs so
+  // the headline number is never a stale hand-typed string.
+  const teaserPrice       = cohorts?.[0]?.price
+  const teaserInstallment = cohorts?.[0]?.installmentPrice
+  const teaserCount       = cohorts?.[0]?.installmentCount ?? 3
+
   const ctaPrimary =
     'inline-flex items-center justify-center rounded-[var(--radius-pill)] ' +
     'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)] ' +
@@ -328,88 +339,51 @@ export default function HomePage() {
             )}
             aria-hidden="true"
           >
-            {/* Card 1 — top left */}
-            <div
-              className={cn(
-                'absolute top-10 left-[30px] w-[200px]',
-                'rounded-[var(--radius-sm)] bg-white px-5 py-4',
-                'shadow-[var(--shadow-ring)]',
-              )}
-            >
-              <div
-                className={cn(
-                  'mb-2 inline-block rounded-[var(--radius-pill)] px-2.5 py-0.5',
-                  'text-[11px] font-semibold',
-                  'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
-                )}
-              >
-                Recorded
-              </div>
-              <div className="mb-1 text-[13px] font-bold text-[var(--color-wise-text)]">
-                Claude API Mastery
-              </div>
-              <div className="text-[11px] text-[var(--color-wise-text-muted)]">
-                24 lessons · Self-paced
-              </div>
-              <div className="mt-2 h-1 rounded-sm bg-[var(--color-wise-surface-soft)]">
-                <div className="h-full w-[68%] rounded-sm bg-[var(--color-wise-primary-text)]" />
-              </div>
-            </div>
+            {/* Hero illustration cards. Now mirror whichever cohorts the API
+                returns so the marketing visual never lies about what we sell. */}
+            {(cohorts ?? []).slice(0, 3).map((c, i) => {
+              const type = (c.type ?? 'recorded').toLowerCase()
+              const positions = [
+                'top-10 left-[30px] w-[200px]',
+                'top-[120px] right-5 w-[180px]',
+                'bottom-[60px] left-[50px] w-[220px]',
+              ]
+              const badgeBgs = [
+                'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+                'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+                'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text)]',
+              ]
+              return (
+                <div
+                  key={c.id}
+                  className={cn(
+                    'absolute',
+                    positions[i] ?? positions[0],
+                    'rounded-[var(--radius-sm)] bg-white px-5 py-4',
+                    'shadow-[var(--shadow-ring)]',
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'mb-2 inline-block rounded-[var(--radius-pill)] px-2.5 py-0.5',
+                      'text-[11px] font-semibold',
+                      badgeBgs[i] ?? badgeBgs[0],
+                    )}
+                  >
+                    {BADGE_LABELS[type] ?? 'Course'}
+                  </div>
+                  <div className="mb-1 text-[13px] font-bold text-[var(--color-wise-text)]">
+                    {c.title}
+                  </div>
+                  <div className="text-[11px] text-[var(--color-wise-text-muted)]">
+                    {c.meta || (type === 'recorded' ? 'Self-paced' : '')}
+                  </div>
+                </div>
+              )
+            })}
 
-            {/* Card 2 — top right */}
-            <div
-              className={cn(
-                'absolute top-[120px] right-5 w-[180px]',
-                'rounded-[var(--radius-sm)] bg-white px-5 py-4',
-                'shadow-[var(--shadow-ring)]',
-              )}
-            >
-              <div
-                className={cn(
-                  'mb-2 inline-block rounded-[var(--radius-pill)] px-2.5 py-0.5',
-                  'text-[11px] font-semibold',
-                  'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
-                )}
-              >
-                Live Cohort
-              </div>
-              <div className="mb-1 text-[13px] font-bold text-[var(--color-wise-text)]">
-                AI Product Bootcamp
-              </div>
-              <div className="text-[11px] text-[var(--color-wise-text-muted)]">
-                Starts Jan 20 · 12 seats
-              </div>
-            </div>
-
-            {/* Card 3 — bottom left */}
-            <div
-              className={cn(
-                'absolute bottom-[60px] left-[50px] w-[220px]',
-                'rounded-[var(--radius-sm)] bg-white px-5 py-4',
-                'shadow-[var(--shadow-ring)]',
-              )}
-            >
-              <div
-                className={cn(
-                  'mb-2 inline-block rounded-[var(--radius-pill)] px-2.5 py-0.5',
-                  'text-[11px] font-semibold',
-                  'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text)]',
-                )}
-              >
-                Combined
-              </div>
-              <div className="mb-1 text-[13px] font-bold text-[var(--color-wise-text)]">
-                Full-Stack AI Dev
-              </div>
-              <div className="text-[11px] text-[var(--color-wise-text-muted)]">
-                48 lessons + 8 live sessions
-              </div>
-              <div className="mt-2 h-1 rounded-sm bg-[var(--color-wise-surface-soft)]">
-                <div className="h-full w-[35%] rounded-sm bg-[var(--color-wise-primary-text)]" />
-              </div>
-            </div>
-
-            {/* Floating stat */}
+            {/* Floating stat. Live seat count across all cohorts so we don't
+                advertise a hardcoded "500+ students" number that nobody can verify. */}
             <div
               className={cn(
                 'absolute bottom-[30px] right-5',
@@ -419,9 +393,10 @@ export default function HomePage() {
               )}
             >
               <span className="block text-xl font-black text-[var(--color-wise-primary)]">
-                500+
+                {(cohorts ?? [])
+                  .reduce((sum, c) => sum + (c.soldOut ? 0 : 1), 0)}
               </span>
-              Students Enrolled
+              {(cohorts?.length ?? 0) === 1 ? 'cohort open' : 'cohorts open'}
             </div>
           </div>
         </div>
@@ -545,7 +520,12 @@ export default function HomePage() {
           Start learning today
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {FEATURED_COURSES.map((c) => (
+          {featured.length === 0 && (
+            <div className="md:col-span-3 text-center text-sm text-[var(--color-wise-text-muted)] py-12">
+              Loading courses...
+            </div>
+          )}
+          {featured.map((c) => (
             <div
               key={c.title}
               className={cn(
@@ -752,7 +732,9 @@ export default function HomePage() {
               <div className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-white/50">
                 Pay in Full
               </div>
-              <div className="text-4xl font-black tracking-[-1px]">$999</div>
+              <div className="text-4xl font-black tracking-[-1px]">
+                {teaserPrice != null ? `$${teaserPrice.toLocaleString('en-US')}` : 'From $—'}
+              </div>
               <div className="mt-1.5 text-sm text-white/60">One-time payment</div>
             </div>
             <div
@@ -765,9 +747,12 @@ export default function HomePage() {
                 Installment Plan
               </div>
               <div className="text-4xl font-black tracking-[-1px]">
-                $333<span className="text-base font-medium">/mo</span>
+                {teaserInstallment != null ? `$${teaserInstallment.toLocaleString('en-US')}` : '$—'}
+                <span className="text-base font-medium">/mo</span>
               </div>
-              <div className="mt-1.5 text-sm text-white/60">×3 monthly payments</div>
+              <div className="mt-1.5 text-sm text-white/60">
+                ×{teaserCount} monthly payments
+              </div>
               <div className="mt-2 text-sm font-semibold text-[var(--color-wise-primary)]">
                 Most popular option
               </div>
