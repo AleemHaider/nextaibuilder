@@ -5,8 +5,8 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { Types } from 'mongoose'
-import { requireAdmin } from '../../middleware/authenticate.js'
 import type { JwtPayload } from '../../middleware/authenticate.js'
+import { requirePermission } from '../../middleware/require-permission.js'
 import { CallBooking } from '../../models/CallBooking.js'
 import { sendEmail } from '../../lib/email.js'
 
@@ -59,7 +59,7 @@ export async function adminCallsRoutes(fastify: FastifyInstance) {
   // ── GET /my-calls ── Agent sees their own calls ───────────────────────────
   fastify.get<{ Querystring: MyCallsQuery }>(
     '/my-calls',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('students:read') },
     async (request, reply) => {
       const caller = request.user as JwtPayload
 
@@ -108,7 +108,7 @@ export async function adminCallsRoutes(fastify: FastifyInstance) {
   // ── POST /calls/:id/complete ── Mark a call as completed ──────────────────
   fastify.post<{ Params: { id: string } }>(
     '/calls/:id/complete',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('students:read') },
     async (request, reply) => {
       const { id } = request.params
       const caller = request.user as JwtPayload

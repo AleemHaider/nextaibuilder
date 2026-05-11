@@ -6,7 +6,8 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { Types } from 'mongoose'
 import type { PipelineStage } from 'mongoose'
-import { authenticate, requireAdmin } from '../../middleware/require-admin.js'
+import { authenticate } from '../../middleware/require-admin.js'
+import { requirePermission } from '../../middleware/require-permission.js'
 import type { JwtPayload } from '../../middleware/authenticate.js'
 import { Enrollment } from '../../models/Enrollment.js'
 import { Cohort } from '../../models/Cohort.js'
@@ -43,7 +44,7 @@ export async function firAdminEnrollmentsRoutes(fastify: FastifyInstance) {
   // ── GET / ── FIR-213: List all enrollments with filters ──────────────────
   fastify.get<{ Querystring: ListQuery }>(
     '/',
-    { preHandler: [authenticate, requireAdmin] },
+    { preHandler: [authenticate, requirePermission('enrollments:read')] },
     async (request, reply) => {
       const parsed = listQuerySchema.safeParse(request.query)
       if (!parsed.success) {
@@ -163,7 +164,7 @@ export async function firAdminEnrollmentsRoutes(fastify: FastifyInstance) {
   // ── PATCH /:id/cancel ── FIR-214: Cancel (revoke) an enrollment ──────────
   fastify.patch<{ Params: { id: string } }>(
     '/:id/cancel',
-    { preHandler: [authenticate, requireAdmin] },
+    { preHandler: [authenticate, requirePermission('enrollments:manage')] },
     async (request, reply) => {
       const { id } = request.params
 
@@ -198,7 +199,7 @@ export async function firAdminEnrollmentsRoutes(fastify: FastifyInstance) {
   // ── POST /:id/transfer ── FIR-215: Transfer enrollment to a different cohort
   fastify.post<{ Params: { id: string }; Body: TransferBody }>(
     '/:id/transfer',
-    { preHandler: [authenticate, requireAdmin] },
+    { preHandler: [authenticate, requirePermission('enrollments:manage')] },
     async (request, reply) => {
       const { id } = request.params
 

@@ -6,10 +6,11 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { Types } from 'mongoose'
 import type { PipelineStage } from 'mongoose'
-import { authenticate, requireAdmin } from '../../middleware/require-admin.js'
+import { authenticate } from '../../middleware/require-admin.js'
+import { requirePermission } from '../../middleware/require-permission.js'
 import { StripePayment } from '../../models/StripePayment.js'
 import { ManualPaymentRequest } from '../../models/ManualPaymentRequest.js'
-import { stripe } from '../../lib/stripe.js'
+import { issueRefund, REFUND_FAILURE_STATUS } from '../../services/paymentService.js'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -297,7 +298,7 @@ export async function firAdminPaymentsRoutes(fastify: FastifyInstance) {
   // ── GET / ── FIR-216: Unified payment ledger ──────────────────────────────
   fastify.get<{ Querystring: ListQuery }>(
     '/',
-    { preHandler: [authenticate, requireAdmin] },
+    { preHandler: [authenticate, requirePermission('payments:read')] },
     async (request, reply) => {
       const parsed = listQuerySchema.safeParse(request.query)
       if (!parsed.success) {
@@ -344,16 +345,14 @@ export async function firAdminPaymentsRoutes(fastify: FastifyInstance) {
   )
 
   // ── POST /:id/refund ── FIR-217: Issue refund ─────────────────────────────
+  // The actual refund logic (Stripe SDK + DB writes for both stripe + manual
+  // paths) lives in services/paymentService.ts. This handler is a thin
+  // translator between the HTTP envelope and the service's discriminated
+  // result.
   fastify.post<{ Params: { id: string }; Body: RefundBody }>(
     '/:id/refund',
-    { preHandler: [authenticate, requireAdmin] },
+    { preHandler: [authenticate, requirePermission('payments:manual-review')] },
     async (request, reply) => {
-      const { id } = request.params
-
-      if (!isValidOid(id)) {
-        return reply.code(400).send({ error: 'INVALID_ID', message: 'Payment id is not a valid ObjectId.' })
-      }
-
       const parsed = refundBodySchema.safeParse(request.body)
       if (!parsed.success) {
         return reply.code(400).send({
@@ -361,63 +360,23 @@ export async function firAdminPaymentsRoutes(fastify: FastifyInstance) {
           message: parsed.error.errors[0]?.message ?? 'Invalid request body.',
         })
       }
-
       const { type, amount, reason } = parsed.data
+      const { id } = request.params
 
       try {
-        if (type === 'stripe') {
-          const payment = await StripePayment.findById(id)
-          if (!payment) {
-            return reply.code(404).send({ error: 'NOT_FOUND', message: 'Stripe payment not found.' })
-          }
-          if (payment.status === 'REFUNDED') {
-            return reply.code(409).send({ error: 'ALREADY_REFUNDED', message: 'Payment has already been refunded.' })
-          }
+        const result = type === 'stripe'
+          ? await issueRefund({ type: 'stripe', paymentId: id, amount, reason })
+          : await issueRefund({ type: 'manual', paymentId: id, reason })
 
-          // Attempt Stripe SDK refund — gracefully degrade if Stripe not configured
-          if (payment.stripePaymentIntentId && process.env.STRIPE_SECRET_KEY) {
-            try {
-              await stripe.refunds.create({
-                payment_intent: payment.stripePaymentIntentId,
-                amount:         Math.round(amount * 100), // Stripe expects cents
-                reason:         'requested_by_customer',
-              })
-            } catch (stripeErr) {
-              fastify.log.error(stripeErr, 'FIR-217 Stripe refund API call failed — updating DB only')
-            }
-          } else {
-            fastify.log.warn(
-              { paymentId: id },
-              'FIR-217 Stripe not configured or no paymentIntentId — skipping Stripe SDK refund, updating DB only',
-            )
-          }
-
-          payment.status = 'REFUNDED'
-          await payment.save()
-
-          return reply.code(200).send({
-            message: 'Refund processed.',
-            payment: payment.toJSON(),
-          })
+        if (!result.ok) {
+          return reply
+            .code(REFUND_FAILURE_STATUS[result.code])
+            .send({ error: result.code, message: result.message })
         }
-
-        // type === 'manual'
-        const manualPayment = await ManualPaymentRequest.findById(id)
-        if (!manualPayment) {
-          return reply.code(404).send({ error: 'NOT_FOUND', message: 'Manual payment not found.' })
-        }
-        if (manualPayment.status === 'REJECTED') {
-          return reply.code(409).send({ error: 'ALREADY_REJECTED', message: 'Manual payment is already rejected/refunded.' })
-        }
-
-        manualPayment.status          = 'REJECTED'
-        manualPayment.rejectionReason = reason
-        manualPayment.reviewedAt      = new Date()
-        await manualPayment.save()
 
         return reply.code(200).send({
-          message: 'Manual payment marked as refunded.',
-          payment: manualPayment.toJSON(),
+          message: result.type === 'stripe' ? 'Refund processed.' : 'Manual payment marked as refunded.',
+          payment: result.payment,
         })
       } catch (err) {
         fastify.log.error(err, 'FIR-217 refund error')
@@ -429,7 +388,7 @@ export async function firAdminPaymentsRoutes(fastify: FastifyInstance) {
   // ── GET /export ── FIR-218: CSV export ───────────────────────────────────
   fastify.get<{ Querystring: ListQuery }>(
     '/export',
-    { preHandler: [authenticate, requireAdmin] },
+    { preHandler: [authenticate, requirePermission(['payments:read', 'reports:export'])] },
     async (request, reply) => {
       const parsed = listQuerySchema.safeParse(request.query)
       if (!parsed.success) {

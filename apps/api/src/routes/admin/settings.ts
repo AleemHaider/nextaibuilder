@@ -10,7 +10,8 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { Types } from 'mongoose'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
-import { requireAdmin, type JwtPayload } from '../../middleware/require-admin.js'
+import { type JwtPayload } from '../../middleware/require-admin.js'
+import { requirePermission } from '../../middleware/require-permission.js'
 import { User } from '../../models/User.js'
 import { AuditLog } from '../../models/AuditLog.js'
 import { s3, BUCKET_NAME } from '../../lib/s3.js'
@@ -45,7 +46,7 @@ export async function adminSettingsRoutes(fastify: FastifyInstance) {
   // ── GET /profile ── Admin's own profile ───────────────────────────────
   fastify.get(
     '/profile',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('settings:read-own-profile') },
     async (request, reply) => {
       const admin = request.user as JwtPayload
 
@@ -82,7 +83,7 @@ export async function adminSettingsRoutes(fastify: FastifyInstance) {
   // ── PATCH /profile ── Update firstName / lastName ─────────────────────
   fastify.patch<{ Body: UpdateProfileBody }>(
     '/profile',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('settings:read-own-profile') },
     async (request, reply) => {
       const admin = request.user as JwtPayload
 
@@ -133,7 +134,7 @@ export async function adminSettingsRoutes(fastify: FastifyInstance) {
   // ── POST /avatar ── Upload avatar to S3 ───────────────────────────────
   fastify.post(
     '/avatar',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('settings:read-own-profile') },
     async (request, reply) => {
       const admin = request.user as JwtPayload
 
@@ -250,7 +251,7 @@ export async function adminSettingsRoutes(fastify: FastifyInstance) {
   // PBA-253
   fastify.post(
     '/2fa/enable',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('settings:read-own-profile') },
     async (request, reply) => {
       const admin = request.user as JwtPayload
 
@@ -278,7 +279,7 @@ export async function adminSettingsRoutes(fastify: FastifyInstance) {
 
   fastify.post<{ Body: { code: string } }>(
     '/2fa/enable/confirm',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('settings:read-own-profile') },
     async (request, reply) => {
       const admin       = request.user as JwtPayload
       const parseResult = confirmOtpSchema.safeParse(request.body)
@@ -326,7 +327,7 @@ export async function adminSettingsRoutes(fastify: FastifyInstance) {
   // PBA-253
   fastify.post<{ Body: { code?: string } }>(
     '/2fa/disable',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('settings:read-own-profile') },
     async (request, reply) => {
       const admin = request.user as JwtPayload
 

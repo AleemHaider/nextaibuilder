@@ -4,8 +4,8 @@
 
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { requireAdmin } from '../../middleware/authenticate.js'
 import type { JwtPayload } from '../../middleware/authenticate.js'
+import { requirePermission } from '../../middleware/require-permission.js'
 import { User } from '../../models/User.js'
 
 const agentSettingsSchema = z.object({
@@ -19,11 +19,11 @@ export async function agentProfileRoutes(fastify: FastifyInstance) {
   // PATCH /agent-settings — update own agent scheduling settings
   fastify.patch<{ Body: AgentSettingsBody }>(
     '/agent-settings',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('settings:read-own-profile') },
     async (request, reply) => {
       const caller = request.user as JwtPayload
 
-      // Students cannot reach this endpoint (requireAdmin guards it), but be explicit
+      // Students cannot reach this endpoint (requirePermission guards it), but be explicit
       if (caller.role === 'STUDENT') {
         return reply.code(403).send({
           error:   'FORBIDDEN',

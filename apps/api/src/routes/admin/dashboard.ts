@@ -4,7 +4,7 @@
 
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { requireAdmin } from '../../middleware/require-admin.js'
+import { requirePermission } from '../../middleware/require-permission.js'
 import { User } from '../../models/User.js'
 import { Cohort } from '../../models/Cohort.js'
 import { CohortMembership } from '../../models/CohortMembership.js'
@@ -29,7 +29,7 @@ export async function adminDashboardRoutes(fastify: FastifyInstance) {
   // ── GET /stats ── Summary stats ────────────────────────────────────────
   fastify.get(
     '/stats',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('analytics:read') },
     async (_request, reply) => {
       // 1. Cohorts: all non-archived (DRAFT, UPCOMING, ACTIVE, COMPLETED)
       const activeCohorts = await Cohort.countDocuments({ status: { $ne: 'ARCHIVED' } })
@@ -98,7 +98,7 @@ export async function adminDashboardRoutes(fastify: FastifyInstance) {
   // ── GET /at-risk ── Students with no submission in last 7 days ─────────
   fastify.get<{ Querystring: Record<string, string> }>(
     '/at-risk',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('analytics:read') },
     async (request, reply) => {
       const parseResult = atRiskQuerySchema.safeParse(request.query)
       if (!parseResult.success) {
