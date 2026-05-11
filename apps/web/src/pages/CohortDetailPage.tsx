@@ -528,12 +528,35 @@ function PricingCard({ cohort }: { cohort: CohortDetail }) {
     >
       {/* Price */}
       <div className="mb-5">
+        {/* Founding discount: strike-through regular price + percent-off badge. */}
+        {cohort.regularPrice != null && cohort.price > 0 && (
+          <div className="mb-1.5 flex items-center gap-2">
+            <span className="text-base font-bold text-[var(--color-wise-text-muted)] line-through">
+              {fmt(cohort.regularPrice)}
+            </span>
+            <span
+              className={cn(
+                'rounded-[var(--radius-pill)] px-2 py-0.5',
+                'text-[11px] font-bold uppercase tracking-wide',
+                'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+              )}
+            >
+              {Math.round((1 - cohort.price / cohort.regularPrice) * 100)}% off
+            </span>
+          </div>
+        )}
         <div className="text-[42px] font-black leading-none tracking-[-1.5px] text-[var(--color-wise-text)]">
           {cohort.price === 0 ? 'Free' : fmt(cohort.price)}
         </div>
         {cohort.installmentPrice != null && (
           <p className="mt-1.5 text-sm font-bold text-[var(--color-wise-primary-text)]">
             or {cohort.installmentCount ?? 3}× {fmt(cohort.installmentPrice)}/mo
+          </p>
+        )}
+        {cohort.promoSeatsRemaining != null && cohort.promoSeatsRemaining > 0 && (
+          <p className="mt-2 text-xs font-semibold text-[var(--color-wise-text-muted)]">
+            Founding rate. {cohort.promoSeatsRemaining}{' '}
+            {cohort.promoSeatsRemaining === 1 ? 'seat' : 'seats'} left at this price.
           </p>
         )}
       </div>

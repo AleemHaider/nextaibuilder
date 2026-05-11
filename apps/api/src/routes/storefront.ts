@@ -39,6 +39,10 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         learningOutcomes: 1,
         requirements:     1,
         targetAudience:   1,
+        // Founding-discount fields. Surface so cards can render the
+        // strike-through regular price + "first 10 seats" badge.
+        regularPrice:     1,
+        promoSeats:       1,
       },
     )
       .sort({ liveStartDate: 1, createdAt: -1 })
@@ -101,6 +105,18 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         }
       }
 
+      // Founding-discount math. The active payment plan already carries the
+      // discounted price, so `price` above is the founding rate. We surface
+      // `regularPrice` separately so the UI can render a strike-through
+      // until promoSeats seats are sold.
+      const promoActive =
+        c.regularPrice != null &&
+        c.promoSeats != null &&
+        (c.enrollmentCount ?? 0) < c.promoSeats
+      const seatsRemainingPromo = promoActive
+        ? Math.max(0, (c.promoSeats ?? 0) - (c.enrollmentCount ?? 0))
+        : null
+
       return {
         id:               cohortWithId._id.toString(),
         slug:             c.slug ?? '',
@@ -119,6 +135,9 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         learningOutcomes: c.learningOutcomes ?? [],
         requirements:     c.requirements     ?? [],
         targetAudience:   c.targetAudience   ?? [],
+        // Founding discount. regularPrice is null when no promo is configured.
+        regularPrice:        promoActive ? c.regularPrice : null,
+        promoSeatsRemaining: seatsRemainingPromo,
       }
     })
 
@@ -263,6 +282,14 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         }
       }
 
+      const promoActive =
+        cohort.regularPrice != null &&
+        cohort.promoSeats != null &&
+        (cohort.enrollmentCount ?? 0) < cohort.promoSeats
+      const seatsRemainingPromo = promoActive
+        ? Math.max(0, (cohort.promoSeats ?? 0) - (cohort.enrollmentCount ?? 0))
+        : null
+
       return reply.send({
         id:               cohortId.toString(),
         slug:             cohort.slug ?? '',
@@ -279,6 +306,9 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         published:        true,
         lessonCount:      totalLessonCount,
         hoursOfContent,
+        // Founding discount. regularPrice null when no promo active.
+        regularPrice:        promoActive ? cohort.regularPrice : null,
+        promoSeatsRemaining: seatsRemainingPromo,
         startDate:        cohort.liveStartDate?.toISOString() ?? undefined,
         seatsRemaining:   cohort.maxSeats != null
           ? Math.max(0, cohort.maxSeats - (cohort.enrollmentCount ?? 0))

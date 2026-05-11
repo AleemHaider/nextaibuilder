@@ -33,6 +33,12 @@ export interface ICohort extends Document {
   // NAB-P0-3 — assigned instructor profiles. The first entry is the
   // "primary" instructor rendered on the storefront hero card.
   instructorIds?: Types.ObjectId[]
+  // Founding-cohort discount. When set, the active payment plans carry the
+  // discounted price and the storefront renders the regularPrice with a
+  // strike-through plus a "First N seats" badge until enrollmentCount catches
+  // up to promoSeats.
+  regularPrice?: number | null
+  promoSeats?: number | null
 }
 
 const cohortSchema = new Schema<ICohort>(
@@ -99,6 +105,9 @@ const cohortSchema = new Schema<ICohort>(
       default: [],
       index: true,
     },
+    // Founding-cohort discount fields. Both null when there's no promo.
+    regularPrice: { type: Number, default: null },
+    promoSeats:   { type: Number, default: null },
   },
   { timestamps: true },
 )

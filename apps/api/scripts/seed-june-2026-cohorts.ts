@@ -67,6 +67,11 @@ interface CohortSeed {
   learningOutcomes: string[]
   requirements:     string[]
   targetAudience:   string[]
+  // Founding-discount fields. regularPrice is the post-promo price shown
+  // with a strike-through until promoSeats seats are sold. Both null when
+  // there's no promo.
+  regularPrice: number | null
+  promoSeats:   number | null
   pricing: {
     oneTime:    { name: string; amount: number }
     installment: { name: string; total: number; installmentAmount: number; intervalDays: number }
@@ -117,11 +122,16 @@ const businessOwners: CohortSeed = {
     'Non-technical owners. No coding background required',
     'Anyone willing to bring real business data to the lessons',
   ],
+  // Founding cohort: regular price $4,500, first 10 seats at 40% off ($2,700).
+  // Once the 10th seat sells, regularPrice falls back to $4,500 automatically
+  // (the storefront route compares enrollmentCount against promoSeats).
+  regularPrice: 4500,
+  promoSeats:   10,
   pricing: {
-    // Amounts in dollars (not cents) so the storefront's Intl.NumberFormat
-    // call renders them correctly without conversion.
-    oneTime:    { name: 'Pay in full',        amount: 2200 },         // $2,200
-    installment: { name: '3 monthly payments', total: 2400, installmentAmount: 800, intervalDays: 30 }, // $800 x 3 = $2,400
+    // Active prices are the founding rate. After the founding 10 sell, the
+    // user updates these to the full $4,500 / $1,650 amounts manually.
+    oneTime:    { name: 'Pay in full',        amount: 2700 },         // $2,700 (40% off $4,500)
+    installment: { name: '3 monthly payments', total: 3000, installmentAmount: 1000, intervalDays: 30 }, // $1,000 x 3 = $3,000
   },
   modules: [
     {
@@ -287,9 +297,12 @@ const builders: CohortSeed = {
     'Teams adopting Claude Code as their primary development surface',
     'Anyone tired of vibe-coding who wants a spec-driven, agent-orchestrated pipeline',
   ],
+  // No founding discount on this cohort: flat $3,000 / 3x $1,000.
+  regularPrice: null,
+  promoSeats:   null,
   pricing: {
     oneTime:    { name: 'Pay in full',        amount: 3000 },         // $3,000
-    installment: { name: '3 monthly payments', total: 3300, installmentAmount: 1100, intervalDays: 30 }, // $1,100 x 3 = $3,300
+    installment: { name: '3 monthly payments', total: 3000, installmentAmount: 1000, intervalDays: 30 }, // $1,000 x 3 = $3,000
   },
   modules: [
     {
@@ -534,6 +547,8 @@ async function seedCohort(seed: CohortSeed, instructorIds: Types.ObjectId[]): Pr
         learningOutcomes: seed.learningOutcomes,
         requirements:     seed.requirements,
         targetAudience:   seed.targetAudience,
+        regularPrice:     seed.regularPrice,
+        promoSeats:       seed.promoSeats,
       },
       $setOnInsert: { code: seed.code, enrollmentCount: 0 },
     },

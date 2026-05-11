@@ -245,6 +245,11 @@ export interface CohortSummary {
   // NAB-P0-3 — optional populated instructor summaries. Present on detail
   // responses that return the full instructor list; list-card endpoints omit.
   instructors?: InstructorSummary[]
+  // Founding discount. `regularPrice` is the post-promo price (rendered with
+  // a strike-through). `price` is the current discounted price. Both null
+  // when no promo is active or it has ended.
+  regularPrice?: number | null
+  promoSeatsRemaining?: number | null
 }
 
 export interface CohortLesson {
