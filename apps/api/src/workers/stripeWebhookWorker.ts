@@ -18,12 +18,10 @@
 //   (Enrollment, StripePayment, SlackInvite, EmailLog) makes every replay
 //   a no-op at the storage layer.
 
-import { Worker, Queue } from 'bullmq'
+import { Worker } from 'bullmq'
 import { bullMQConnection } from '../lib/redis.js'
 import { Enrollment } from '../models/Enrollment.js'
 import { StripePayment } from '../models/StripePayment.js'
-import { SlackInvite } from '../models/SlackInvite.js'
-import { EmailLog } from '../models/EmailLog.js'
 import { User } from '../models/User.js'
 // Sprint 2 Story 10 (GAP-036) — upstream idempotency guard
 import { ProcessedStripeEvent } from '../models/ProcessedStripeEvent.js'
@@ -31,17 +29,9 @@ import { ProcessedStripeEvent } from '../models/ProcessedStripeEvent.js'
 import { scheduleInstallmentReminders } from './installmentReminderWorker.js'
 import { Types } from 'mongoose'
 import type { StripeWebhookJobData } from '../routes/webhook-stripe.js'
-
-// ── Downstream queues enqueued by webhook handlers ────────────────────────
-const slackInviteQueue = new Queue('slack-invite-queue', {
-  connection: bullMQConnection,
-  defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 2000 } },
-})
-
-const emailNotificationsQueue = new Queue('email-notifications', {
-  connection: bullMQConnection,
-  defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 2000 } },
-})
+import { logger } from '../lib/logger.js'
+// Service-layer extraction: Enrollment + Slack + welcome-email side effects.
+import { activateEnrollment } from '../services/enrollmentService.js'
 
 // ── Idempotency-key helpers ───────────────────────────────────────────────
 // Key format: `{stripeEventId}:{operation}` — deterministic + human-readable,
@@ -96,93 +86,11 @@ async function deriveInstallmentNumber(enrollmentId: Types.ObjectId): Promise<nu
   return Math.min(count + 1, 3)
 }
 
-// ── Helper: replay-safe EmailLog upsert + queue enqueue ───────────────────
-// Creates a PENDING EmailLog keyed by idempotencyKey. If a log with the same
-// key already exists (replay), returns wasInserted=false and skips enqueue.
-// Downstream email worker receives the idempotencyKey in job data and can
-// perform a final skip-check before SMTP dispatch.
-async function enqueueEmailWithIdempotency(
-  userId: Types.ObjectId,
-  emailType: 'WELCOME' | 'BROADCAST' | 'NUDGE' | 'URGENCY_REMINDER' | 'CHECK_IN' | 'VERIFY_EMAIL' | 'RESET_PASSWORD' | 'STEP_APPROVED' | 'STEP_REJECTED',
-  idempotencyKey: string,
-  jobName: string,
-  jobData: Record<string, unknown>,
-): Promise<void> {
-  // Atomic upsert — existing = replay, new = first execution.
-  const existing = await EmailLog.findOne({ idempotencyKey }).lean()
-  if (existing) {
-    console.info(`[Stripe Worker] EmailLog already exists for key=${idempotencyKey} — skipping enqueue`)
-    return
-  }
-
-  try {
-    await EmailLog.create({
-      userId,
-      emailType,
-      status: 'PENDING',
-      sentAt: null,
-      idempotencyKey,
-    })
-  } catch (err: unknown) {
-    // Duplicate key race — another worker process claimed this key. Safe no-op.
-    const code = (err as { code?: number } | null)?.code
-    if (code === 11000) {
-      console.info(`[Stripe Worker] EmailLog race on key=${idempotencyKey} — another process won, skipping`)
-      return
-    }
-    throw err
-  }
-
-  await emailNotificationsQueue
-    .add(jobName, { ...jobData, idempotencyKey })
-    .catch((err: unknown) =>
-      console.error(`[Stripe Worker] Failed to enqueue ${jobName} job:`, err),
-    )
-}
-
-// ── Helper: replay-safe SlackInvite upsert + queue enqueue ────────────────
-// The Slack API call itself is external — idempotency is layered:
-//   (a) Upsert the SlackInvite by idempotencyKey with status='PENDING'.
-//   (b) If doc already has status='SENT' → skip enqueue (external call done).
-//   (c) Otherwise enqueue the slack-invite job. The slackInviteWorker flips
-//       status to SENT on success or FAILED on error.
-async function enqueueSlackInviteWithIdempotency(
-  studentId: Types.ObjectId,
-  enrollmentId: Types.ObjectId,
-  email: string,
-  idempotencyKey: string,
-): Promise<void> {
-  const invite = await SlackInvite.findOneAndUpdate(
-    { idempotencyKey },
-    {
-      $setOnInsert: {
-        studentId,
-        enrollmentId,
-        email,
-        status:        'PENDING',
-        attempts:      0,
-        idempotencyKey,
-      },
-    },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  )
-
-  if (invite.status === 'SENT') {
-    console.info(`[Stripe Worker] SlackInvite for key=${idempotencyKey} already SENT — skipping`)
-    return
-  }
-
-  slackInviteQueue
-    .add('invite-to-slack', {
-      enrollmentId:  enrollmentId.toString(),
-      studentId:     studentId.toString(),
-      slackInviteId: invite._id.toString(),
-      email,
-    })
-    .catch((err: unknown) =>
-      console.error('[Stripe Worker] Failed to enqueue slack-invite-queue job:', err),
-    )
-}
+// Idempotency-keyed helpers moved to ../services/enrollmentService.
+import {
+  enqueueEmailWithIdempotency,
+  enqueueSlackInviteWithIdempotency,
+} from '../services/enrollmentService.js'
 
 // ── Handler: payment_intent.succeeded (ONE_TIME) ──────────────────────────
 // FIR-43
@@ -195,45 +103,40 @@ async function handlePaymentIntentSucceeded(
 
   if (planType !== 'ONE_TIME') {
     // invoice.payment_succeeded covers INSTALLMENT first payments — skip here
-    console.info(`[Stripe Worker] payment_intent.succeeded: planType=${planType ?? 'unknown'} — skipping (not ONE_TIME)`)
+    logger.info(`[Stripe Worker] payment_intent.succeeded: planType=${planType ?? 'unknown'} — skipping (not ONE_TIME)`)
     return
   }
 
   if (!cohortId || !studentId) {
-    console.warn(`[Stripe Worker] payment_intent.succeeded: missing metadata on PI ${pi.id} — skipping`)
+    logger.warn(`[Stripe Worker] payment_intent.succeeded: missing metadata on PI ${pi.id} — skipping`)
     return
   }
 
   const studentObjectId = new Types.ObjectId(studentId)
   const cohortObjectId  = new Types.ObjectId(cohortId)
 
-  // ── Enrollment (FIR Wave 2 Story K) ────────────────────────────────────
-  // Replay-safe: findOneAndUpdate upsert keyed on the unique
-  // (studentId, cohortId) tuple. idempotencyKey is stamped on first insert
-  // and left untouched on subsequent updates so operators can trace origin.
-  const enrollmentIdemKey = idemKey(eventId, 'create-enrollment')
-  const enrollment = await Enrollment.findOneAndUpdate(
-    { studentId: studentObjectId, cohortId: cohortObjectId },
-    {
-      $set: {
-        paymentStatus:   'PAID',
-        status:          'ACTIVE',
-        accessGrantedAt: new Date(),
-        paymentMethod:   'STRIPE',
-        ...(paymentPlanId ? { paymentPlanId: new Types.ObjectId(paymentPlanId) } : {}),
-      },
-      $setOnInsert: {
-        studentId:            studentObjectId,
-        cohortId:             cohortObjectId,
-        lessonsCompleted:     0,
-        completionPercentage: 0,
-        idempotencyKey:       enrollmentIdemKey,
-      },
-    },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  )
+  // Fetch user once — stripeCustomerId is copied onto the enrollment, and
+  // email is needed for the Slack-invite step inside the service.
+  const user = await User.findById(studentObjectId).select('stripeCustomerId email').lean()
 
-  // ── StripePayment ledger row (FIR Wave 2 Story K) ──────────────────────
+  // ── Enrollment + Slack invite + welcome email (service-layer extraction)
+  // Idempotency scope = `${eventId}` so every replay deterministically
+  // produces the same set of sub-keys (`:create-enrollment`, `:slack-invite`,
+  // `:welcome-email`) and lands on the same upsert no-ops.
+  const { enrollment } = await activateEnrollment({
+    studentId:        studentObjectId,
+    cohortId:         cohortObjectId,
+    paymentMethod:    'STRIPE',
+    paymentPlanId:    paymentPlanId ? new Types.ObjectId(paymentPlanId) : null,
+    studentEmail:     user?.email ?? null,
+    idempotencyScope: eventId,
+    email: {
+      jobName:          'enrollment-confirmed',
+      notificationType: 'ENROLLMENT_CONFIRMED',
+    },
+  })
+
+  // ── StripePayment ledger row (Stripe-specific, stays in the worker) ────
   // Replay-safe: atomic upsert keyed on idempotencyKey. The existing
   // stripeEventId unique index also guards against duplicates at the DB
   // level, but the idempotencyKey gives us per-operation granularity.
@@ -256,32 +159,12 @@ async function handlePaymentIntentSucceeded(
     { upsert: true, new: true, setDefaultsOnInsert: true },
   )
 
-  // Fetch user's stripeCustomerId to store on enrollment for convenience
-  const user = await User.findById(studentObjectId).select('stripeCustomerId email').lean()
+  // Copy stripeCustomerId onto the enrollment for fast lookups later.
   if (user?.stripeCustomerId) {
     await Enrollment.findByIdAndUpdate(enrollment._id, { stripeCustomerId: user.stripeCustomerId })
   }
 
-  // ── Slack invite (external side effect — 2-step pattern) ───────────────
-  if (user?.email) {
-    await enqueueSlackInviteWithIdempotency(
-      studentObjectId,
-      enrollment._id as Types.ObjectId,
-      user.email,
-      idemKey(eventId, 'slack-invite'),
-    )
-  }
-
-  // ── Enrollment-confirmed email (idempotent enqueue) ────────────────────
-  await enqueueEmailWithIdempotency(
-    studentObjectId,
-    'WELCOME',
-    idemKey(eventId, 'send-welcome-email'),
-    'enrollment-confirmed',
-    { type: 'ENROLLMENT_CONFIRMED', studentId, cohortId },
-  )
-
-  console.info(
+  logger.info(
     `[Stripe Worker] payment_intent.succeeded: enrollment activated — student=${studentId} cohort=${cohortId} enrollment=${enrollment._id.toString()}`,
   )
 }
@@ -303,7 +186,7 @@ async function handleInvoicePaymentSucceeded(
   let enrollment = await Enrollment.findOne({ stripeSubscriptionId: invoice.subscription })
 
   if (!enrollment) {
-    console.warn(
+    logger.warn(
       `[Stripe Worker] invoice.payment_succeeded: no enrollment found for subscription ${invoice.subscription}` +
       ` — skipping (enrollment will be activated via payment_intent.succeeded)`,
     )
@@ -397,11 +280,11 @@ async function handleInvoicePaymentSucceeded(
       enrollment._id as Types.ObjectId,
       new Date(),
     ).catch((err: unknown) =>
-      console.error('[Stripe Worker] Failed to schedule installment reminders:', err),
+      logger.error({ err: err }, '[Stripe Worker] Failed to schedule installment reminders:'),
     )
   }
 
-  console.info(
+  logger.info(
     `[Stripe Worker] invoice.payment_succeeded: installment ${installmentNumber}/3 — enrollment=${enrollment._id.toString()} allPaid=${allPaid}`,
   )
 }
@@ -418,7 +301,7 @@ async function handleInvoicePaymentFailed(
 
   const enrollment = await Enrollment.findOne({ stripeSubscriptionId: invoice.subscription })
   if (!enrollment) {
-    console.warn(
+    logger.warn(
       `[Stripe Worker] invoice.payment_failed: no enrollment for subscription ${invoice.subscription}`,
     )
     return
@@ -468,7 +351,7 @@ async function handleInvoicePaymentFailed(
     },
   )
 
-  console.warn(
+  logger.warn(
     `[Stripe Worker] invoice.payment_failed: installment ${installmentNumber} failed — enrollment=${enrollment._id.toString()} grace=${gracePeriodHours}h`,
   )
 }
@@ -482,7 +365,7 @@ async function handleSubscriptionDeleted(
 
   const enrollment = await Enrollment.findOne({ stripeSubscriptionId: sub.id })
   if (!enrollment) {
-    console.info(`[Stripe Worker] customer.subscription.deleted: no enrollment for subscription ${sub.id}`)
+    logger.info(`[Stripe Worker] customer.subscription.deleted: no enrollment for subscription ${sub.id}`)
     return
   }
 
@@ -494,7 +377,7 @@ async function handleSubscriptionDeleted(
 
   if (paidCount >= 3) {
     // All 3 installments paid — subscription naturally expired. Enrollment stays ACTIVE.
-    console.info(
+    logger.info(
       `[Stripe Worker] customer.subscription.deleted: all 3 installments paid — enrollment stays ACTIVE (sub=${sub.id})`,
     )
   } else {
@@ -503,7 +386,7 @@ async function handleSubscriptionDeleted(
     await Enrollment.findByIdAndUpdate(enrollment._id, {
       $set: { status: 'SUSPENDED', paymentStatus: 'PARTIAL' },
     })
-    console.warn(
+    logger.warn(
       `[Stripe Worker] customer.subscription.deleted: only ${paidCount}/3 paid — enrollment SUSPENDED (sub=${sub.id})`,
     )
   }
@@ -523,7 +406,7 @@ async function processEventWithGuard(
   // ── Step 1: upstream dedup check ──────────────────────────────────────
   const existing = await ProcessedStripeEvent.findOne({ stripeEventId: eventId }).lean()
   if (existing && existing.outcome === 'SUCCESS') {
-    console.info(
+    logger.info(
       `[Stripe Worker] Job ${jobId} SKIP — eventId=${eventId} already processed at ${
         existing.processedAt instanceof Date
           ? existing.processedAt.toISOString()
@@ -554,7 +437,7 @@ async function processEventWithGuard(
       default:
         // Log and discard unhandled event types gracefully. We still record a
         // SUCCESS row so Stripe retries of the same event short-circuit.
-        console.info(`[Stripe Worker] Unhandled event type: ${eventType} — skipping`)
+        logger.info(`[Stripe Worker] Unhandled event type: ${eventType} — skipping`)
     }
 
     // ── Step 2: record SUCCESS ──────────────────────────────────────────
@@ -574,7 +457,7 @@ async function processEventWithGuard(
       { upsert: true, new: true, setDefaultsOnInsert: true },
     )
 
-    console.info(`[Stripe Worker] Job ${jobId} DONE — eventId=${eventId} type=${eventType}`)
+    logger.info(`[Stripe Worker] Job ${jobId} DONE — eventId=${eventId} type=${eventType}`)
   } catch (err) {
     // Record the failure so operators have a trail. We use an upsert so
     // repeated failures don't explode with duplicate-key errors. BullMQ
@@ -594,15 +477,15 @@ async function processEventWithGuard(
       )
     } catch (recordErr) {
       // Swallow record-failure errors so we don't mask the original cause.
-      console.error(
-        `[Stripe Worker] Failed to record FAILED ProcessedStripeEvent for eventId=${eventId}:`,
-        recordErr,
+      logger.error(
+        { err: recordErr, eventId },
+        '[Stripe Worker] Failed to record FAILED ProcessedStripeEvent',
       )
     }
 
-    console.error(
-      `[Stripe Worker] Job ${jobId} FAILED — eventId=${eventId} type=${eventType}:`,
-      err,
+    logger.error(
+      { err, jobId, eventId, eventType },
+      '[Stripe Worker] Job FAILED',
     )
     throw err
   }
@@ -611,20 +494,20 @@ async function processEventWithGuard(
 // ── Worker bootstrap ───────────────────────────────────────────────────────
 export function startStripeWebhookWorker() {
   // Startup connectivity check
-  console.info('[Stripe Worker] Starting...')
+  logger.info('[Stripe Worker] Starting...')
 
   const hasWebhookSecret = !!(process.env.STRIPE_WEBHOOK_SECRET?.trim())
   const hasStripeKey     = !!(process.env.STRIPE_SECRET_KEY?.trim())
 
-  if (!hasStripeKey)     console.warn('[Stripe Worker] STRIPE_SECRET_KEY not set — Stripe API calls will fail')
-  if (!hasWebhookSecret) console.warn('[Stripe Worker] STRIPE_WEBHOOK_SECRET not set — webhook verification will fail')
+  if (!hasStripeKey)     logger.warn('[Stripe Worker] STRIPE_SECRET_KEY not set — Stripe API calls will fail')
+  if (!hasWebhookSecret) logger.warn('[Stripe Worker] STRIPE_WEBHOOK_SECRET not set — webhook verification will fail')
 
   const worker = new Worker<StripeWebhookJobData>(
     'stripe-webhook-queue',
     async (job) => {
       const { eventId, eventType, data } = job.data
 
-      console.info(`[Stripe Worker] Job ${job.id} START — eventId=${eventId} type=${eventType}`)
+      logger.info(`[Stripe Worker] Job ${job.id} START — eventId=${eventId} type=${eventType}`)
 
       // Sprint 2 Story 10 (GAP-036) — upstream idempotency guard.
       // Short-circuit before invoking handlers if we've already successfully
@@ -644,13 +527,13 @@ export function startStripeWebhookWorker() {
   // Surface terminal failures for operational visibility
   worker.on('failed', (job, err) => {
     if (!job) return
-    console.error(
-      `[Stripe Worker] Job ${job.id} exhausted retries — eventId=${job.data.eventId} type=${job.data.eventType}:`,
-      err,
+    logger.error(
+      { err, jobId: job.id, eventId: job.data.eventId, eventType: job.data.eventType },
+      '[Stripe Worker] Job exhausted retries',
     )
   })
 
-  console.info('[Stripe Worker] Started — concurrency=5 listening on stripe-webhook-queue')
+  logger.info('[Stripe Worker] Started — concurrency=5 listening on stripe-webhook-queue')
   return worker
 }
 

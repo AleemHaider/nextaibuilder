@@ -7,21 +7,22 @@ import { StepSubmission } from '../models/StepSubmission.js'
 import { sendNudgeEmail, sendUrgencyEmail } from '../services/emailService.js'
 import { createNotification } from '../services/notificationService.js'
 import { User } from '../models/User.js'
+import { logger } from '../lib/logger.js'
 
 const QUEUE_NAME = 'scheduled-email-queue'
 const JOB_NAME  = 'daily-email-check'
 
 // ── Job processor ──────────────────────────────────────────────────────────
 
-async function runDailyEmailCheck(): Promise<void> {
-  console.info('[ScheduledEmailWorker] Running daily email check')
+export async function runDailyEmailCheck(): Promise<void> {
+  logger.info('[ScheduledEmailWorker] Running daily email check')
 
   const now = new Date()
 
   // Fetch all active cohorts
   const activeCohorts = await Cohort.find({ status: 'ACTIVE' }).lean()
   if (activeCohorts.length === 0) {
-    console.info('[ScheduledEmailWorker] No active cohorts — nothing to do')
+    logger.info('[ScheduledEmailWorker] No active cohorts — nothing to do')
     return
   }
 
@@ -34,7 +35,7 @@ async function runDailyEmailCheck(): Promise<void> {
   }).lean()
 
   if (memberships.length === 0) {
-    console.info('[ScheduledEmailWorker] No active memberships — nothing to do')
+    logger.info('[ScheduledEmailWorker] No active memberships — nothing to do')
     return
   }
 
@@ -86,7 +87,7 @@ async function runDailyEmailCheck(): Promise<void> {
         : 'your cohort end date'
 
       sendUrgencyEmail(userId, deadline).catch((err) =>
-        console.error(`[ScheduledEmailWorker] sendUrgencyEmail failed for user=${userId}:`, err),
+        logger.error({ err: err }, `[ScheduledEmailWorker] sendUrgencyEmail failed for user=${userId}:`),
       )
       void createNotification({
         userId,
@@ -99,7 +100,7 @@ async function runDailyEmailCheck(): Promise<void> {
     } else if (daysSinceActive >= 3) {
       // 3–6 days inactive → nudge
       sendNudgeEmail(userId, daysSinceActive).catch((err) =>
-        console.error(`[ScheduledEmailWorker] sendNudgeEmail failed for user=${userId}:`, err),
+        logger.error({ err: err }, `[ScheduledEmailWorker] sendNudgeEmail failed for user=${userId}:`),
       )
       nudgeCount++
     } else {
@@ -107,7 +108,7 @@ async function runDailyEmailCheck(): Promise<void> {
     }
   }
 
-  console.info(
+  logger.info(
     `[ScheduledEmailWorker] Done — nudges=${nudgeCount} urgency=${urgencyCount} skipped=${skippedCount}`,
   )
 }
@@ -128,10 +129,10 @@ export function startScheduledEmailWorker() {
       },
     )
     .then(() => {
-      console.info('[ScheduledEmailWorker] Repeatable job registered — cron: 0 9 * * *')
+      logger.info('[ScheduledEmailWorker] Repeatable job registered — cron: 0 9 * * *')
     })
     .catch((err: unknown) => {
-      console.error('[ScheduledEmailWorker] Failed to register repeatable job:', err)
+      logger.error({ err: err }, '[ScheduledEmailWorker] Failed to register repeatable job:')
     })
 
   // Worker that processes the queue
@@ -147,13 +148,13 @@ export function startScheduledEmailWorker() {
   )
 
   worker.on('completed', (job) => {
-    console.info(`[ScheduledEmailWorker] Job ${job.id} completed`)
+    logger.info(`[ScheduledEmailWorker] Job ${job.id} completed`)
   })
 
   worker.on('failed', (job, err) => {
-    console.error(`[ScheduledEmailWorker] Job ${job?.id} failed:`, err.message)
+    logger.error({ err, jobId: job?.id }, '[ScheduledEmailWorker] Job failed')
   })
 
-  console.info('[ScheduledEmailWorker] Started')
+  logger.info('[ScheduledEmailWorker] Started')
   return worker
 }

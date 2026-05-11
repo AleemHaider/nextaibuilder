@@ -9,6 +9,7 @@ import { Enrollment } from '../models/Enrollment.js'
 import { Cohort } from '../models/Cohort.js'
 import { StudentLesson } from '../models/StudentLesson.js'
 import type { NotificationJobData } from '../workers/notificationWorker.js'
+import { logger } from '../lib/logger.js'
 
 const CRON_QUEUE_NAME  = 're-engagement-cron-queue'
 const CRON_JOB_NAME    = 're-engagement-daily'
@@ -21,7 +22,7 @@ const emailNotificationsQueue = new Queue<NotificationJobData>('email-notificati
 // ── Core cron logic ────────────────────────────────────────────────────────
 
 async function runReEngagementCheck(): Promise<void> {
-  console.info('[ReEngagementCron] Running daily re-engagement check')
+  logger.info('[ReEngagementCron] Running daily re-engagement check')
 
   const now = new Date()
 
@@ -34,7 +35,7 @@ async function runReEngagementCheck(): Promise<void> {
     .lean()
 
   if (enrollments.length === 0) {
-    console.info('[ReEngagementCron] No eligible enrollments — done')
+    logger.info('[ReEngagementCron] No eligible enrollments — done')
     return
   }
 
@@ -105,7 +106,7 @@ async function runReEngagementCheck(): Promise<void> {
     }
   }
 
-  console.info(
+  logger.info(
     `[ReEngagementCron] Done — nudged3=${nudged3} nudged7=${nudged7} skipped=${skipped}`,
   )
 }
@@ -125,10 +126,10 @@ export function startReEngagementCron() {
       },
     )
     .then(() => {
-      console.info('[ReEngagementCron] Repeatable job registered — cron: 0 9 * * *')
+      logger.info('[ReEngagementCron] Repeatable job registered — cron: 0 9 * * *')
     })
     .catch((err: unknown) => {
-      console.error('[ReEngagementCron] Failed to register repeatable job:', err)
+      logger.error({ err: err }, '[ReEngagementCron] Failed to register repeatable job:')
     })
 
   const worker = new Worker(
@@ -143,13 +144,13 @@ export function startReEngagementCron() {
   )
 
   worker.on('completed', (job) => {
-    console.info(`[ReEngagementCron] Job ${job.id} completed`)
+    logger.info(`[ReEngagementCron] Job ${job.id} completed`)
   })
 
   worker.on('failed', (job, err) => {
-    console.error(`[ReEngagementCron] Job ${job?.id} failed:`, err.message)
+    logger.error({ err, jobId: job?.id }, '[ReEngagementCron] Job failed')
   })
 
-  console.info('[ReEngagementCron] Started')
+  logger.info('[ReEngagementCron] Started')
   return worker
 }

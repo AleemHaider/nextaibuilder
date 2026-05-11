@@ -8,6 +8,7 @@ import { Worker } from 'bullmq'
 import { bullMQConnection } from '../lib/redis.js'
 import { sendEmail } from '../lib/mailer.js'
 import { User } from '../models/User.js'
+import { logger } from '../lib/logger.js'
 
 const QUEUE_NAME = 'email-notifications'
 
@@ -126,11 +127,11 @@ async function getUserEmail(userId: string): Promise<string | null> {
 
 // ── Job processor ─────────────────────────────────────────────────────────
 
-async function processNotificationJob(data: NotificationJobData): Promise<void> {
+export async function processNotificationJob(data: NotificationJobData): Promise<void> {
   switch (data.type) {
     case 'enrollment_confirmed': {
       const email = await getUserEmail(data.userId)
-      if (!email) { console.warn(`[NotificationWorker] User not found: ${data.userId}`); return }
+      if (!email) { logger.warn(`[NotificationWorker] User not found: ${data.userId}`); return }
       await sendEmail(
         email,
         `You're enrolled in ${data.cohortName}!`,
@@ -141,7 +142,7 @@ async function processNotificationJob(data: NotificationJobData): Promise<void> 
 
     case 'receipt_received': {
       const email = await getUserEmail(data.userId)
-      if (!email) { console.warn(`[NotificationWorker] User not found: ${data.userId}`); return }
+      if (!email) { logger.warn(`[NotificationWorker] User not found: ${data.userId}`); return }
       await sendEmail(
         email,
         `Payment receipt received — ${data.cohortName}`,
@@ -152,7 +153,7 @@ async function processNotificationJob(data: NotificationJobData): Promise<void> 
 
     case 'manual_approved': {
       const email = await getUserEmail(data.userId)
-      if (!email) { console.warn(`[NotificationWorker] User not found: ${data.userId}`); return }
+      if (!email) { logger.warn(`[NotificationWorker] User not found: ${data.userId}`); return }
       await sendEmail(
         email,
         `Payment approved — ${data.cohortName}`,
@@ -163,7 +164,7 @@ async function processNotificationJob(data: NotificationJobData): Promise<void> 
 
     case 'manual_rejected': {
       const email = await getUserEmail(data.userId)
-      if (!email) { console.warn(`[NotificationWorker] User not found: ${data.userId}`); return }
+      if (!email) { logger.warn(`[NotificationWorker] User not found: ${data.userId}`); return }
       await sendEmail(
         email,
         `Payment review update — ${data.cohortName}`,
@@ -174,7 +175,7 @@ async function processNotificationJob(data: NotificationJobData): Promise<void> 
 
     case 're_engagement_nudge': {
       const email = await getUserEmail(data.userId)
-      if (!email) { console.warn(`[NotificationWorker] User not found: ${data.userId}`); return }
+      if (!email) { logger.warn(`[NotificationWorker] User not found: ${data.userId}`); return }
       await sendEmail(
         email,
         `Still with us? You're ${data.completionPercentage}% through ${data.cohortName}`,
@@ -185,14 +186,14 @@ async function processNotificationJob(data: NotificationJobData): Promise<void> 
 
     case 'broadcast': {
       const email = await getUserEmail(data.userId)
-      if (!email) { console.warn(`[NotificationWorker] User not found: ${data.userId}`); return }
+      if (!email) { logger.warn(`[NotificationWorker] User not found: ${data.userId}`); return }
       await sendEmail(email, data.subject, data.html)
       break
     }
 
     default: {
       // Runtime safety: log and skip unknown job types (TypeScript ensures exhaustiveness above)
-      console.warn('[NotificationWorker] Unknown job type received — skipping')
+      logger.warn('[NotificationWorker] Unknown job type received — skipping')
     }
   }
 }
@@ -200,14 +201,14 @@ async function processNotificationJob(data: NotificationJobData): Promise<void> 
 // ── Worker bootstrap ──────────────────────────────────────────────────────
 
 export function startNotificationWorker() {
-  console.info('[NotificationWorker] Starting...')
+  logger.info('[NotificationWorker] Starting...')
 
   const worker = new Worker<NotificationJobData>(
     QUEUE_NAME,
     async (job) => {
-      console.info(`[NotificationWorker] Job ${job.id} START — type=${job.data.type} userId=${job.data.userId}`)
+      logger.info(`[NotificationWorker] Job ${job.id} START — type=${job.data.type} userId=${job.data.userId}`)
       await processNotificationJob(job.data)
-      console.info(`[NotificationWorker] Job ${job.id} DONE — type=${job.data.type}`)
+      logger.info(`[NotificationWorker] Job ${job.id} DONE — type=${job.data.type}`)
     },
     {
       connection:  bullMQConnection,
@@ -217,12 +218,12 @@ export function startNotificationWorker() {
 
   worker.on('failed', (job, err) => {
     if (!job) return
-    console.error(
-      `[NotificationWorker] Job ${job.id} failed — type=${job.data.type} userId=${job.data.userId}:`,
-      err,
+    logger.error(
+      { err, jobId: job.id, type: job.data.type, userId: job.data.userId },
+      '[NotificationWorker] Job failed',
     )
   })
 
-  console.info('[NotificationWorker] Started — concurrency=5 listening on email-notifications')
+  logger.info('[NotificationWorker] Started — concurrency=5 listening on email-notifications')
   return worker
 }

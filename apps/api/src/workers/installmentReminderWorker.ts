@@ -28,6 +28,7 @@ import { Enrollment } from '../models/Enrollment.js'
 import { Cohort } from '../models/Cohort.js'
 import { User } from '../models/User.js'
 import { EmailLog } from '../models/EmailLog.js'
+import { logger } from '../lib/logger.js'
 
 const QUEUE_NAME = 'installment-reminder-queue'
 const JOB_NAME   = 'send-installment-reminder'
@@ -104,15 +105,14 @@ export async function scheduleInstallmentReminders(
         },
       )
     } catch (err) {
-      console.error(
-        `[InstallmentReminderWorker] Failed to enqueue reminder ${installmentNumber}` +
-        ` for enrollment=${enrollmentId.toString()}:`,
-        err,
+      logger.error(
+        { err, installmentNumber, enrollmentId: enrollmentId.toString() },
+        '[InstallmentReminderWorker] Failed to enqueue reminder',
       )
     }
   }
 
-  console.info(
+  logger.info(
     `[InstallmentReminderWorker] Scheduled 3 reminders for enrollment=${enrollmentId.toString()}` +
     ` (anchor=${anchor.toISOString()})`,
   )
@@ -167,7 +167,7 @@ export async function runInstallmentReminderJob(
   // Guard 1: dedup via EmailLog idempotencyKey
   const existingLog = await EmailLog.findOne({ idempotencyKey }).lean()
   if (existingLog) {
-    console.info(
+    logger.info(
       `[InstallmentReminderWorker] Skip — EmailLog already exists for key=${idempotencyKey}`,
     )
     return
@@ -177,14 +177,14 @@ export async function runInstallmentReminderJob(
   const enrollmentId = new Types.ObjectId(enrollmentIdStr)
   const enrollment = await Enrollment.findById(enrollmentId).lean()
   if (!enrollment) {
-    console.warn(
+    logger.warn(
       `[InstallmentReminderWorker] Enrollment ${enrollmentIdStr} not found — skipping reminder ${installmentNumber}`,
     )
     return
   }
 
   if (enrollment.status !== 'ACTIVE' || !enrollment.stripeSubscriptionId) {
-    console.info(
+    logger.info(
       `[InstallmentReminderWorker] Skip — enrollment=${enrollmentIdStr} status=${enrollment.status}` +
       ` sub=${enrollment.stripeSubscriptionId ?? 'none'}`,
     )
@@ -198,7 +198,7 @@ export async function runInstallmentReminderJob(
   ])
 
   if (!cohort || !user) {
-    console.warn(
+    logger.warn(
       `[InstallmentReminderWorker] Missing cohort or user for enrollment=${enrollmentIdStr} — skipping`,
     )
     return
@@ -219,7 +219,7 @@ export async function runInstallmentReminderJob(
     const code = (err as { code?: number } | null)?.code
     if (code === 11000) {
       // Race with another worker — the other side wins, we skip.
-      console.info(
+      logger.info(
         `[InstallmentReminderWorker] Race on key=${idempotencyKey} — another worker won`,
       )
       return
@@ -227,7 +227,7 @@ export async function runInstallmentReminderJob(
     throw err
   }
 
-  console.info(
+  logger.info(
     `[InstallmentReminderWorker] Recorded reminder ${installmentNumber}/3 for enrollment=${enrollmentIdStr}` +
     ` due=${dueAtStr}`,
   )
@@ -238,7 +238,7 @@ export function startInstallmentReminderWorker() {
   const worker = new Worker<InstallmentReminderJobData>(
     QUEUE_NAME,
     async (job) => {
-      console.info(
+      logger.info(
         `[InstallmentReminderWorker] Job ${job.id} START — enrollment=${job.data.enrollmentId}` +
         ` installment=${job.data.installmentNumber}`,
       )
@@ -252,13 +252,13 @@ export function startInstallmentReminderWorker() {
 
   worker.on('failed', (job, err) => {
     if (!job) return
-    console.error(
-      `[InstallmentReminderWorker] Job ${job.id} failed:`,
-      err,
+    logger.error(
+      { err, jobId: job.id },
+      '[InstallmentReminderWorker] Job failed',
     )
   })
 
-  console.info('[InstallmentReminderWorker] Started')
+  logger.info('[InstallmentReminderWorker] Started')
   return worker
 }
 
