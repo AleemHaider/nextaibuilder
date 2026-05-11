@@ -28,6 +28,7 @@ import {
   type SubAdmin,
   type SubAdminPermission,
 } from '../../lib/api'
+import { STALE_TIME } from '../../lib/queryConfig'
 import { cn } from '../../lib/utils'
 
 // ---------------------------------------------------------------------------
@@ -703,7 +704,7 @@ export default function SubAdminPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['sub-admins'],
     queryFn: fetchSubAdmins,
-    staleTime: 60_000,
+    staleTime: STALE_TIME.long,
   })
 
   const deactivateMutation = useMutation({

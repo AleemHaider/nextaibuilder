@@ -11,6 +11,7 @@ import {
   escalateSubmission,
   type ScreenshotSubmission,
 } from '../../lib/api'
+import { STALE_TIME } from '../../lib/queryConfig'
 import { cn } from '../../lib/utils'
 
 // ---------------------------------------------------------------------------
@@ -466,7 +467,7 @@ export default function ScreenshotReviewPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['screenshot-submissions', activeTab],
     queryFn: () => fetchScreenshotSubmissions(activeTab),
-    staleTime: 30_000,
+    staleTime: STALE_TIME.medium,
   })
 
   function scheduleRemove(id: string) {

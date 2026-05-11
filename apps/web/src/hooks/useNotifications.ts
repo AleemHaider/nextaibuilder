@@ -11,6 +11,7 @@ import {
   deleteAllNotifications as deleteAllNotificationsApi,
   type NotificationsResponse,
 } from '../lib/api'
+import { STALE_TIME } from '../lib/queryConfig'
 
 const QUERY_KEY = ['student', 'notifications']
 
@@ -21,7 +22,7 @@ export function useNotifications() {
     queryKey: QUERY_KEY,
     queryFn: fetchNotifications,
     refetchInterval: 30_000,
-    staleTime: 20_000,
+    staleTime: STALE_TIME.short,
   })
 
   const markOneMutation = useMutation<{ success: true }, Error, string>({

@@ -11,6 +11,7 @@ import {
   authFetch,
   type AdminEnrollment,
 } from '../../lib/api'
+import { STALE_TIME } from '../../lib/queryConfig'
 import { cn } from '../../lib/utils'
 
 // ---------------------------------------------------------------------------
@@ -531,7 +532,7 @@ export default function StudentListPage() {
         page,
         limit: ITEMS_PER_PAGE,
       }),
-    staleTime: 30_000,
+    staleTime: STALE_TIME.medium,
     placeholderData: (prev) => prev,
   })
 

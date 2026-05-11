@@ -17,6 +17,7 @@ import {
   rejectManualPayment,
   type ManualPaymentRequest,
 } from '../../lib/api'
+import { STALE_TIME } from '../../lib/queryConfig'
 import { cn } from '../../lib/utils'
 import { EmptyState } from '../../components/ui/EmptyState'
 
@@ -714,7 +715,7 @@ export default function ManualPaymentsPage() {
   } = useQuery({
     queryKey: ['admin', 'manual-payments', activeTab, page],
     queryFn: () => fetchManualPayments(activeTab, page),
-    staleTime: 30_000,
+    staleTime: STALE_TIME.medium,
   })
 
   // ---- Toast helpers ----
