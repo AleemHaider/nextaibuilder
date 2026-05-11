@@ -312,9 +312,12 @@ export default function HomePage() {
       <section
         className={cn(
           'bg-[var(--color-wise-surface)]',
-          'px-6 sm:px-12 lg:px-20 py-16 sm:py-20 lg:py-24',
-          'flex flex-col lg:flex-row items-center gap-12 lg:gap-16',
-          'min-h-[560px]',
+          'px-6 sm:px-12 lg:px-20 py-12 sm:py-14 lg:py-16',
+          'flex flex-col lg:flex-row items-center gap-10 lg:gap-12',
+          'min-h-[460px]',
+          // Cap the hero row width on very wide monitors so the h1 doesn't
+          // stretch into "billboard" territory and feel zoomed in.
+          'max-w-[1280px] mx-auto',
         )}
       >
         {/* Left — copy */}
@@ -335,8 +338,8 @@ export default function HomePage() {
 
           <h1
             className={cn(
-              'mb-7 font-black tracking-[-1px] leading-[0.9]',
-              'text-5xl sm:text-6xl md:text-7xl lg:text-[88px]',
+              'mb-6 font-black tracking-[-1px] leading-[0.95]',
+              'text-4xl sm:text-5xl md:text-6xl lg:text-[64px]',
               'text-[var(--color-wise-text)]',
             )}
           >
@@ -347,16 +350,16 @@ export default function HomePage() {
             Projects.
           </h1>
 
-          <p className="mb-10 max-w-[480px] text-[20px] leading-[1.55] text-[var(--color-wise-text-warm)]">
+          <p className="mb-8 max-w-[460px] text-[17px] leading-[1.55] text-[var(--color-wise-text-warm)]">
             Learn to build, deploy, and scale AI-powered products through
             hands-on cohorts and recorded courses.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5">
-            <Link to="/courses" className={cn(ctaPrimary, 'px-8 py-4 text-[17px]')}>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <Link to="/courses" className={cn(ctaPrimary, 'px-6 py-3 text-[15px]')}>
               Browse Courses
             </Link>
-            <Link to="#how-it-works" className={cn(ctaOutline, 'px-8 py-4 text-[17px]')}>
+            <Link to="#how-it-works" className={cn(ctaOutline, 'px-6 py-3 text-[15px]')}>
               See How It Works
             </Link>
           </div>
@@ -521,12 +524,12 @@ export default function HomePage() {
       {/* ------------------------------------------------------------------ */}
       {/* VALUE PROPS                                                         */}
       {/* ------------------------------------------------------------------ */}
-      <section className="bg-[var(--color-wise-canvas)] px-6 sm:px-12 lg:px-20 py-16 lg:py-24">
+      <section className="bg-[var(--color-wise-canvas)] px-6 sm:px-12 lg:px-20 py-12 lg:py-16">
         <SectionEyebrow>Why nextaibuilder</SectionEyebrow>
         <h2
           className={cn(
-            'mb-14 font-black leading-[0.9] tracking-[-1.5px]',
-            'text-3xl sm:text-4xl md:text-5xl text-[var(--color-wise-text)]',
+            'mb-10 font-black leading-[0.95] tracking-[-1px]',
+            'text-2xl sm:text-3xl md:text-4xl text-[var(--color-wise-text)]',
           )}
         >
           Everything you need<br />to ship AI products
@@ -563,12 +566,12 @@ export default function HomePage() {
       {/* ------------------------------------------------------------------ */}
       {/* COURSE TYPES                                                        */}
       {/* ------------------------------------------------------------------ */}
-      <section className="bg-[var(--color-wise-surface)] px-6 sm:px-12 lg:px-20 py-16 lg:py-24">
+      <section className="bg-[var(--color-wise-surface)] px-6 sm:px-12 lg:px-20 py-12 lg:py-16">
         <SectionEyebrow>Learning Formats</SectionEyebrow>
         <h2
           className={cn(
-            'mb-14 font-black leading-[0.9] tracking-[-1.5px]',
-            'text-3xl sm:text-4xl md:text-5xl text-[var(--color-wise-text)]',
+            'mb-10 font-black leading-[0.95] tracking-[-1px]',
+            'text-2xl sm:text-3xl md:text-4xl text-[var(--color-wise-text)]',
           )}
         >
           Three ways to learn,<br />one destination
@@ -625,12 +628,12 @@ export default function HomePage() {
       {/* ------------------------------------------------------------------ */}
       {/* FEATURED COURSES                                                    */}
       {/* ------------------------------------------------------------------ */}
-      <section className="bg-[var(--color-wise-canvas)] px-6 sm:px-12 lg:px-20 py-16 lg:py-24">
+      <section className="bg-[var(--color-wise-canvas)] px-6 sm:px-12 lg:px-20 py-12 lg:py-16">
         <SectionEyebrow>Featured Cohorts</SectionEyebrow>
         <h2
           className={cn(
-            'mb-14 font-black leading-[0.9] tracking-[-1.5px]',
-            'text-3xl sm:text-4xl md:text-5xl text-[var(--color-wise-text)]',
+            'mb-10 font-black leading-[0.95] tracking-[-1px]',
+            'text-2xl sm:text-3xl md:text-4xl text-[var(--color-wise-text)]',
           )}
         >
           Start learning today
@@ -700,13 +703,13 @@ export default function HomePage() {
       {/* ------------------------------------------------------------------ */}
       <section
         id="how-it-works"
-        className="bg-[var(--color-wise-surface)] px-6 sm:px-12 lg:px-20 py-16 lg:py-24"
+        className="bg-[var(--color-wise-surface)] px-6 sm:px-12 lg:px-20 py-12 lg:py-16"
       >
         <SectionEyebrow>Process</SectionEyebrow>
         <h2
           className={cn(
-            'mb-14 font-black leading-[0.9] tracking-[-1.5px]',
-            'text-3xl sm:text-4xl md:text-5xl text-[var(--color-wise-text)]',
+            'mb-10 font-black leading-[0.95] tracking-[-1px]',
+            'text-2xl sm:text-3xl md:text-4xl text-[var(--color-wise-text)]',
           )}
         >
           Three steps to<br />your first AI product
@@ -771,7 +774,7 @@ export default function HomePage() {
       <section
         className={cn(
           'bg-[var(--color-wise-dark)] text-white text-center',
-          'px-6 sm:px-12 lg:px-20 py-16 lg:py-24',
+          'px-6 sm:px-12 lg:px-20 py-12 lg:py-16',
         )}
       >
         <p className="mb-3 text-[13px] font-semibold uppercase tracking-[1.5px] text-white/50">
@@ -794,14 +797,14 @@ export default function HomePage() {
             <div key={s.label}>
               <div
                 className={cn(
-                  'font-black leading-none tracking-[-2px]',
-                  'text-5xl sm:text-6xl md:text-7xl lg:text-[80px]',
+                  'font-black leading-none tracking-[-1.5px]',
+                  'text-4xl sm:text-5xl md:text-6xl lg:text-[56px]',
                   'text-[var(--color-wise-primary)]',
                 )}
               >
                 {s.number}
               </div>
-              <div className="mt-2 text-lg font-medium text-white/70">
+              <div className="mt-2 text-base font-medium text-white/70">
                 {s.label}
               </div>
             </div>
@@ -812,7 +815,7 @@ export default function HomePage() {
       {/* ------------------------------------------------------------------ */}
       {/* PRICING CALLOUT                                                     */}
       {/* ------------------------------------------------------------------ */}
-      <section className="bg-[var(--color-wise-canvas)] px-6 sm:px-12 lg:px-20 py-16 lg:py-24">
+      <section className="bg-[var(--color-wise-canvas)] px-6 sm:px-12 lg:px-20 py-12 lg:py-16">
         <div
           className={cn(
             'rounded-[var(--radius-xl)]',
@@ -880,13 +883,13 @@ export default function HomePage() {
       {/* ------------------------------------------------------------------ */}
       {/* FAQ                                                                 */}
       {/* ------------------------------------------------------------------ */}
-      <section className="bg-[var(--color-wise-surface)] px-6 sm:px-12 lg:px-20 py-16 lg:py-24">
+      <section className="bg-[var(--color-wise-surface)] px-6 sm:px-12 lg:px-20 py-12 lg:py-16">
         <div className="text-center">
           <SectionEyebrow>FAQ</SectionEyebrow>
           <h2
             className={cn(
-              'mb-14 font-black leading-[0.9] tracking-[-1.5px]',
-              'text-3xl sm:text-4xl md:text-5xl text-[var(--color-wise-text)]',
+              'mb-10 font-black leading-[0.95] tracking-[-1px]',
+              'text-2xl sm:text-3xl md:text-4xl text-[var(--color-wise-text)]',
             )}
           >
             Frequently asked<br />questions
@@ -905,18 +908,18 @@ export default function HomePage() {
       <section
         className={cn(
           'bg-[var(--color-wise-dark)] text-white text-center',
-          'px-6 sm:px-12 lg:px-20 py-16 lg:py-24',
+          'px-6 sm:px-12 lg:px-20 py-12 lg:py-16',
         )}
       >
         <h2
           className={cn(
-            'mb-8 font-black leading-[0.9] tracking-[-2px]',
-            'text-4xl sm:text-5xl md:text-6xl lg:text-[64px]',
+            'mb-6 font-black leading-[0.95] tracking-[-1.5px]',
+            'text-3xl sm:text-4xl md:text-5xl lg:text-[48px]',
           )}
         >
           Ready to build<br />your first AI product?
         </h2>
-        <Link to="/courses" className={cn(ctaPrimary, 'px-10 py-[18px] text-lg')}>
+        <Link to="/courses" className={cn(ctaPrimary, 'px-8 py-3.5 text-base')}>
           Get Started Today
         </Link>
         <div className="mt-6 flex justify-center gap-6">
