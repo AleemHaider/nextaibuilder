@@ -287,10 +287,13 @@ describe('POST /stripe (webhook receiver)', () => {
     // Route-level dedup is intentionally delegated to BullMQ's unique-jobId semantics.
   })
 
-  // ── e) Event types per BRD — all enqueued with correct jobName & jobId ───
+  // ── e) Event types in the allowlist — all enqueued with correct jobName & jobId ───
+  // `invoice.payment_succeeded` is the event the worker switch actually
+  // handles (Stripe's modern `invoice.paid` is intentionally NOT in the
+  // allowlist; see the security hardening commit).
   it.each([
     'payment_intent.succeeded',
-    'invoice.paid',
+    'invoice.payment_succeeded',
     'invoice.payment_failed',
     'customer.subscription.deleted',
   ])('enqueues a %s event', async (eventType) => {
@@ -309,6 +312,21 @@ describe('POST /stripe (webhook receiver)', () => {
     expect(jobName).toBe(eventType)
     expect(jobData['eventType']).toBe(eventType)
     expect(jobOpts.jobId).toBe(`evt_${eventType.replace(/\./g, '_')}`)
+  })
+
+  // ── e2) Allowlist: signed but unhandled event types → 200 skipped, no enqueue ──
+  it('returns 200 skipped without enqueuing for event types not on the allowlist', async () => {
+    const event = makeEvent('charge.refunded', 'evt_unhandled_001')
+    const payload = JSON.stringify(event)
+    const sig = signPayload(payload)
+
+    const reply = await runRequest(fastify, Buffer.from(payload, 'utf8'), {
+      'content-type':     'application/json',
+      'stripe-signature': sig,
+    })
+
+    expect(reply._body).toEqual({ received: true, skipped: true })
+    expect(addSpy).not.toHaveBeenCalled()
   })
 
   // ── f) Malformed JSON body with valid-looking signature ──────────────────

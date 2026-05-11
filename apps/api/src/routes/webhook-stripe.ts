@@ -35,6 +35,19 @@ export interface StripeWebhookJobData {
   data:      Record<string, unknown>
 }
 
+// ── Event-type allowlist ───────────────────────────────────────────────────
+// Defense in depth: the signature check verifies that Stripe sent this event,
+// but signed-but-unhandled events still cost a queue slot, a Mongo write
+// (ProcessedStripeEvent), and worker CPU. Allowlist matches the switch
+// statement in workers/stripeWebhookWorker.ts — adding a handler there means
+// adding the type here. Keep this list in sync.
+export const STRIPE_WEBHOOK_EVENT_ALLOWLIST = new Set<string>([
+  'payment_intent.succeeded',
+  'invoice.payment_succeeded',
+  'invoice.payment_failed',
+  'customer.subscription.deleted',
+])
+
 // ── Route plugin ────────────────────────────────────────────────────────────
 export async function stripeWebhookRoutes(fastify: FastifyInstance) {
 
@@ -88,6 +101,18 @@ export async function stripeWebhookRoutes(fastify: FastifyInstance) {
       const errMsg = err instanceof Error ? err.message : String(err)
       fastify.log.warn({ err: errMsg }, '[FIR-42] Stripe signature verification failed')
       return reply.code(400).send({ error: 'INVALID_SIGNATURE', message: 'Webhook signature verification failed.' })
+    }
+
+    // Defense in depth: ack and discard event types we don't handle. We still
+    // return 200 so Stripe doesn't retry — the event is genuine, we just don't
+    // care about it. This stops a signed-but-unhandled event from filling the
+    // queue or littering ProcessedStripeEvent rows.
+    if (!STRIPE_WEBHOOK_EVENT_ALLOWLIST.has(event.type)) {
+      fastify.log.info(
+        { eventId: event.id, eventType: event.type },
+        '[FIR-42] Stripe event acknowledged but skipped (not in allowlist)',
+      )
+      return reply.send({ received: true, skipped: true })
     }
 
     // Enqueue the event for async processing — do NOT process synchronously here.

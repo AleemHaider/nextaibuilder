@@ -112,8 +112,29 @@ async function handlePaymentIntentSucceeded(
     return
   }
 
+  // Validate ObjectId shape BEFORE constructing — an invalid value here throws,
+  // which propagates up to processEventWithGuard's catch and burns 5 retry
+  // slots on a permanently-broken event. paymentPlanId is optional so it gets
+  // the same treatment but doesn't gate the whole event.
+  if (!Types.ObjectId.isValid(studentId) || !Types.ObjectId.isValid(cohortId)) {
+    logger.warn(
+      { eventId, studentId, cohortId, paymentIntentId: pi.id },
+      '[Stripe Worker] payment_intent.succeeded: malformed ObjectId in metadata — skipping (will not retry)',
+    )
+    return
+  }
+  if (paymentPlanId && !Types.ObjectId.isValid(paymentPlanId)) {
+    logger.warn(
+      { eventId, paymentPlanId, paymentIntentId: pi.id },
+      '[Stripe Worker] payment_intent.succeeded: malformed paymentPlanId in metadata — dropping field, continuing',
+    )
+  }
+
   const studentObjectId = new Types.ObjectId(studentId)
   const cohortObjectId  = new Types.ObjectId(cohortId)
+  const validPaymentPlanId = paymentPlanId && Types.ObjectId.isValid(paymentPlanId)
+    ? new Types.ObjectId(paymentPlanId)
+    : null
 
   // Fetch user once — stripeCustomerId is copied onto the enrollment, and
   // email is needed for the Slack-invite step inside the service.
@@ -127,7 +148,7 @@ async function handlePaymentIntentSucceeded(
     studentId:        studentObjectId,
     cohortId:         cohortObjectId,
     paymentMethod:    'STRIPE',
-    paymentPlanId:    paymentPlanId ? new Types.ObjectId(paymentPlanId) : null,
+    paymentPlanId:    validPaymentPlanId,
     studentEmail:     user?.email ?? null,
     idempotencyScope: eventId,
     email: {
