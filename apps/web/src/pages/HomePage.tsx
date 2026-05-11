@@ -46,13 +46,18 @@ interface FeaturedCourse {
 
 // Logos for the "Our students come from" social-proof strip.
 //
-// Companies use simpleicons.org as a CDN for SVG marks. The URL pattern is
-// `https://cdn.simpleicons.org/{slug}/{hex-color}` — slug is the icon name on
-// simpleicons.org, color overrides the brand fill to a uniform grey so the
-// wall reads as a unified row instead of a chaotic pile of corporate colors.
+// Companies: Iconify proxies the simple-icons collection through
+// `api.iconify.design`, which still serves brands that the cdn.simpleicons.org
+// took down (Amazon, Microsoft, IBM were removed there). Color query is
+// `?color=%239ca3af` (URL-encoded #9ca3af) so every SVG comes back tinted to
+// a uniform grey instead of full brand color.
 //
-// Universities are not in simpleicons, so they render as styled wordmarks
-// instead. Easier than chasing per-school SVG sources with murky licensing.
+// Universities: Google's favicon service returns each school's own
+// site favicon at 128x128. Quality is good enough for a 32px row and the URL
+// is stable. This is also how LinkedIn, Twitter, and most logo-wall services
+// resolve "school" logos without paying for a logo-licensing API.
+const ICON_COLOR = '9ca3af'  // muted grey, same as text-muted
+
 const STUDENT_COMPANIES: { name: string; slug: string }[] = [
   { name: 'Google',    slug: 'google' },
   { name: 'Meta',      slug: 'meta' },
@@ -64,13 +69,13 @@ const STUDENT_COMPANIES: { name: string; slug: string }[] = [
   { name: 'Stripe',    slug: 'stripe' },
 ]
 
-const STUDENT_UNIVERSITIES: string[] = [
-  'Harvard',
-  'Stanford',
-  'MIT',
-  'Carnegie Mellon',
-  'Berkeley',
-  'Oxford',
+const STUDENT_UNIVERSITIES: { name: string; domain: string }[] = [
+  { name: 'Harvard',          domain: 'harvard.edu' },
+  { name: 'Stanford',         domain: 'stanford.edu' },
+  { name: 'MIT',              domain: 'mit.edu' },
+  { name: 'Carnegie Mellon',  domain: 'cmu.edu' },
+  { name: 'UC Berkeley',      domain: 'berkeley.edu' },
+  { name: 'Oxford',           domain: 'ox.ac.uk' },
 ]
 
 // Map an API cohort to the visual shape this page renders. The covered tones
@@ -450,8 +455,7 @@ export default function HomePage() {
           Our students learn and ship from
         </p>
 
-        {/* Company logos. SVGs served from simpleicons.org as a unified grey
-            (#9ca3af) so the row reads as a single graphic, not a brand pile. */}
+        {/* Company logos. Iconify simple-icons collection, recolored grey. */}
         <div
           className={cn(
             'flex flex-wrap items-center justify-center',
@@ -462,11 +466,11 @@ export default function HomePage() {
           {STUDENT_COMPANIES.map((c) => (
             <img
               key={c.slug}
-              src={`https://cdn.simpleicons.org/${c.slug}/9ca3af`}
+              src={`https://api.iconify.design/simple-icons:${c.slug}.svg?color=%23${ICON_COLOR}`}
               alt={`${c.name} logo`}
               loading="lazy"
               className={cn(
-                'h-7 sm:h-8 w-auto',
+                'h-8 sm:h-9 w-auto',
                 'opacity-70 hover:opacity-100',
                 'transition-opacity duration-200',
               )}
@@ -474,26 +478,42 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Universities. Wordmarks in a serif typeface, same muted grey as
-            the icons so the two rows feel like one strip. */}
+        {/* Universities. Google's favicon service at 128px gives us each
+            school's official site logo. The slight color variation between
+            schools is OK here, the row already feels distinct from the
+            companies row above. */}
         <div
           className={cn(
             'flex flex-wrap items-center justify-center',
-            'gap-x-8 gap-y-3 lg:gap-x-12',
+            'gap-x-10 gap-y-6 lg:gap-x-14',
           )}
         >
           {STUDENT_UNIVERSITIES.map((u) => (
-            <span
-              key={u}
+            <div
+              key={u.domain}
               className={cn(
-                'font-serif text-base sm:text-lg italic',
-                'text-[var(--color-wise-text-muted)]',
-                'tracking-[0.04em]',
-                'opacity-80 hover:opacity-100 transition-opacity',
+                'flex items-center gap-2.5',
+                'opacity-70 hover:opacity-100 transition-opacity duration-200',
               )}
             >
-              {u}
-            </span>
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${u.domain}&sz=128`}
+                alt={`${u.name} crest`}
+                loading="lazy"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
+              />
+              <span
+                className={cn(
+                  'text-sm font-semibold',
+                  'text-[var(--color-wise-text-muted)]',
+                  'tracking-[0.02em]',
+                )}
+              >
+                {u.name}
+              </span>
+            </div>
           ))}
         </div>
       </section>
