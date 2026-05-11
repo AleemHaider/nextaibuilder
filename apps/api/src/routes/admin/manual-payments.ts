@@ -6,20 +6,18 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { Queue } from 'bullmq'
 import { Types } from 'mongoose'
-import { requireAdmin } from '../../middleware/authenticate.js'
+import { requirePermission } from '../../middleware/require-permission.js'
 import type { JwtPayload } from '../../middleware/authenticate.js'
 import { ManualPaymentRequest } from '../../models/ManualPaymentRequest.js'
-import { Enrollment } from '../../models/Enrollment.js'
+import { User } from '../../models/User.js'
+import { activateEnrollment } from '../../services/enrollmentService.js'
 import { getPresignedReadUrl } from '../../lib/s3.js'
 import { bullMQConnection } from '../../lib/redis.js'
 
 // ── BullMQ queues ─────────────────────────────────────────────────────────
+// Only the rejection-email queue lives here — approval side effects (slack
+// invite + approval email) flow through enrollmentService for idempotency.
 const emailNotificationsQueue = new Queue('email-notifications', {
-  connection: bullMQConnection,
-  defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 2000 } },
-})
-
-const slackInviteQueue = new Queue('slack-invite-queue', {
   connection: bullMQConnection,
   defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 2000 } },
 })
@@ -50,7 +48,7 @@ export async function adminManualPaymentsRoutes(fastify: FastifyInstance) {
   // ── GET / ── FIR-47: List manual payment requests ─────────────────────
   fastify.get<{ Querystring: ListQuery }>(
     '/',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('payments:read') },
     async (request, reply) => {
       // Validate query params
       const parsed = listQuerySchema.safeParse(request.query)
@@ -100,7 +98,7 @@ export async function adminManualPaymentsRoutes(fastify: FastifyInstance) {
   // ── POST /:id/approve ── FIR-48: Approve a manual payment request ──────
   fastify.post<{ Params: { id: string }; Body: ApproveBody }>(
     '/:id/approve',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('payments:manual-review') },
     async (request, reply) => {
       const { sub: adminId } = request.user as JwtPayload
       const { id } = request.params
@@ -146,32 +144,30 @@ export async function adminManualPaymentsRoutes(fastify: FastifyInstance) {
       manualRequest.reviewedAt  = now
       if (note) manualRequest.rejectionReason = note  // reuse field for optional admin note
 
-      // Upsert Enrollment — idempotent: if enrollment already exists, set it to ACTIVE
-      const enrollment = await Enrollment.findOneAndUpdate(
-        {
-          studentId: manualRequest.studentId,
-          cohortId:  manualRequest.cohortId,
+      // Look up the student's email up front — the service uses it for the
+      // Slack invite job. A user without an email skips that step gracefully.
+      const student = await User.findById(manualRequest.studentId)
+        .select('email')
+        .lean()
+
+      // Service handles: Enrollment upsert (idempotent on studentId+cohortId)
+      // + Slack invite + approval email, all guarded by an idempotency scope
+      // tied to this manual-payment-request id. Re-clicking Approve on the
+      // same row is now a safe no-op (regression-fix vs. the prior raw
+      // queue.add calls that produced duplicate invites + emails).
+      const { enrollment } = await activateEnrollment({
+        studentId:        manualRequest.studentId,
+        cohortId:         manualRequest.cohortId,
+        paymentMethod:    'MANUAL_RECEIPT',
+        paymentPlanId:    manualRequest.paymentPlanId ?? null,
+        enrolledBy:       adminObjectId,
+        studentEmail:     student?.email ?? null,
+        idempotencyScope: `manual-payment-request:${id}`,
+        email: {
+          jobName:          'manual-payment-approved',
+          notificationType: 'MANUAL_PAYMENT_APPROVED',
         },
-        {
-          $set: {
-            paymentMethod:   'MANUAL_RECEIPT',
-            paymentStatus:   'PAID',
-            status:          'ACTIVE',
-            accessGrantedAt: now,
-            enrolledBy:      adminObjectId,
-            ...(manualRequest.paymentPlanId
-              ? { paymentPlanId: manualRequest.paymentPlanId }
-              : {}),
-          },
-          $setOnInsert: {
-            studentId:            manualRequest.studentId,
-            cohortId:             manualRequest.cohortId,
-            lessonsCompleted:     0,
-            completionPercentage: 0,
-          },
-        },
-        { upsert: true, new: true },
-      )
+      })
 
       // Link enrollment back to the ManualPaymentRequest
       manualRequest.enrollmentId = enrollment._id as Types.ObjectId
@@ -180,24 +176,6 @@ export async function adminManualPaymentsRoutes(fastify: FastifyInstance) {
       const enrollmentId = enrollment._id.toString()
       const studentId    = manualRequest.studentId.toString()
       const cohortId     = manualRequest.cohortId.toString()
-
-      // Enqueue email notification (fire-and-forget)
-      emailNotificationsQueue.add('manual-payment-approved', {
-        type:      'MANUAL_PAYMENT_APPROVED',
-        studentId,
-        cohortId,
-      }).catch((err: unknown) =>
-        fastify.log.error({ err }, '[FIR-48] Failed to enqueue manual-payment-approved notification'),
-      )
-
-      // Enqueue Slack invite (fire-and-forget)
-      slackInviteQueue.add('invite-to-slack', {
-        enrollmentId,
-        studentId,
-        cohortId,
-      }).catch((err: unknown) =>
-        fastify.log.error({ err }, '[FIR-48] Failed to enqueue slack-invite-queue job'),
-      )
 
       fastify.log.info(
         { requestId: id, enrollmentId, adminId, studentId, cohortId },
@@ -214,7 +192,7 @@ export async function adminManualPaymentsRoutes(fastify: FastifyInstance) {
   // ── POST /:id/reject ── FIR-49: Reject a manual payment request ────────
   fastify.post<{ Params: { id: string }; Body: RejectBody }>(
     '/:id/reject',
-    { preHandler: requireAdmin },
+    { preHandler: requirePermission('payments:manual-review') },
     async (request, reply) => {
       const { sub: adminId } = request.user as JwtPayload
       const { id } = request.params

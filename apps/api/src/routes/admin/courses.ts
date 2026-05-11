@@ -22,6 +22,7 @@ import { PaymentPlan } from '../../models/PaymentPlan.js'
 import { Enrollment } from '../../models/Enrollment.js'
 // NAB-P0-3 — populate assigned instructor profiles on the admin course detail.
 import { InstructorProfile } from '../../models/InstructorProfile.js'
+import { setCohortPublished, COHORT_LIFECYCLE_FAILURE_STATUS } from '../../services/cohortService.js'
 import { uploadToS3, IS_S3_CONFIGURED } from '../../lib/s3.js'
 import { bullMQConnection } from '../../lib/redis.js'
 import { detectVideoProvider, type VideoProvider } from '../../lib/detectVideoProvider.js'
@@ -610,16 +611,13 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
   )
 
   // PATCH /courses/:id/publish — FIR-62: toggle isPublished
+  // Invariants enforced inside services/cohortService.ts:
+  //   • ≥1 published Module + ≥1 active PaymentPlan when publishing.
+  //   • Unpublishing is always allowed (existing enrollments unaffected).
   fastify.patch<{ Params: { id: string }; Body: z.infer<typeof publishCourseSchema> }>(
     '/:id/publish',
     { preHandler: requirePermission('courses:write') },
     async (request, reply) => {
-      const { id } = request.params
-
-      if (!isValidOid(id)) {
-        return reply.code(400).send({ error: 'INVALID_ID', message: 'Invalid cohort ID.' })
-      }
-
       const parsed = publishCourseSchema.safeParse(request.body)
       if (!parsed.success) {
         return reply.code(400).send({
@@ -628,41 +626,14 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
         })
       }
 
-      const { isPublished } = parsed.data
+      const result = await setCohortPublished(request.params.id, parsed.data.isPublished)
 
-      if (isPublished) {
-        // Publishing guard: must have at least one published module and one active payment plan
-        const [publishedModuleCount, activePlanCount] = await Promise.all([
-          Module.countDocuments({ cohortId: id, isPublished: true }),
-          PaymentPlan.countDocuments({ cohortId: id, isActive: true }),
-        ])
-
-        if (publishedModuleCount === 0) {
-          return reply.code(422).send({
-            error:   'CANNOT_PUBLISH',
-            message: 'Cannot publish a course with no published modules.',
-          })
-        }
-
-        if (activePlanCount === 0) {
-          return reply.code(422).send({
-            error:   'CANNOT_PUBLISH',
-            message: 'Cannot publish a course with no active payment plans.',
-          })
-        }
+      if (!result.ok) {
+        return reply
+          .code(COHORT_LIFECYCLE_FAILURE_STATUS[result.code])
+          .send({ error: result.code, message: result.message })
       }
-
-      const cohort = await Cohort.findByIdAndUpdate(
-        id,
-        { $set: { isPublished } },
-        { new: true },
-      ).lean({ virtuals: true })
-
-      if (!cohort) {
-        return reply.code(404).send({ error: 'NOT_FOUND', message: 'Course not found.' })
-      }
-
-      return reply.send({ isPublished: cohort.isPublished })
+      return reply.send({ isPublished: result.cohort.isPublished })
     },
   )
 
