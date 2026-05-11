@@ -218,10 +218,22 @@ jobs:
               export IMAGE_BASE IMAGE_TAG
               cd /opt/nab
 
-              echo "==> Saving current image tag for rollback..."
-              CURRENT_TAG=$(docker inspect nab-api --format='{{index .Config.Image}}' 2>/dev/null | awk -F: '{print $NF}' || echo "latest")
-              echo "${CURRENT_TAG}" > /opt/nab/.previous_tag
-              echo "Previous tag: ${CURRENT_TAG}"
+              echo "==> Saving current image ref for rollback..."
+              # Capture the FULL image reference (registry/repo/name:tag) so
+              # rollback can replay it as-is. Splitting on ':' lets us write
+              # the IMAGE_BASE and IMAGE_TAG that docker-compose substitutes.
+              CURRENT_REF=$(docker inspect nab-api --format='{{index .Config.Image}}' 2>/dev/null || echo "")
+              if [ -n "${CURRENT_REF}" ]; then
+                CURRENT_BASE="${CURRENT_REF%:*}"               # ghcr.io/owner/repo/nextaibuilder-api
+                CURRENT_TAG_ONLY="${CURRENT_REF##*:}"          # abc12345 (or "latest")
+                # The compose IMAGE_BASE is the repo root without the image-name suffix.
+                COMPOSE_BASE="${CURRENT_BASE%/*}"              # ghcr.io/owner/repo
+                printf 'IMAGE_BASE=%s\nIMAGE_TAG=%s\n' "${COMPOSE_BASE}" "${CURRENT_TAG_ONLY}" > /opt/nab/.previous_image
+                echo "Saved previous image ref: ${COMPOSE_BASE} / ${CURRENT_TAG_ONLY}"
+              else
+                echo "No previous nab-api container found — rollback will not be available for this deploy."
+                rm -f /opt/nab/.previous_image
+              fi
 
               echo "==> Pulling new images (before stopping current containers)..."
               docker compose pull
@@ -268,21 +280,31 @@ jobs:
               set -e
               echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
 
-              PREVIOUS_TAG=$(cat /opt/nab/.previous_tag 2>/dev/null || echo "latest")
-              echo "Rolling back to tag: ${PREVIOUS_TAG}"
-
-              REPO_LC=$(docker inspect nab-api --format='{{index .Config.Image}}' 2>/dev/null | awk -F/ '{print $1"/"$2"/"$3}' | awk -F: '{print $1}' || echo "")
-              if [ -n "${REPO_LC}" ]; then
-                export IMAGE_TAG="${PREVIOUS_TAG}"
-                export IMAGE_BASE="${REPO_LC%/*}"
-                cd /opt/nab
-                docker compose pull
-                docker compose up -d --remove-orphans
-                echo "Rollback complete — running on tag ${PREVIOUS_TAG}"
-              else
-                echo "ERROR: Could not determine previous image base. Manual intervention required."
+              if [ ! -f /opt/nab/.previous_image ]; then
+                echo "ERROR: /opt/nab/.previous_image missing — no rollback target recorded."
+                echo "       Manual intervention required."
                 exit 1
               fi
+
+              # .previous_image holds IMAGE_BASE=... and IMAGE_TAG=... captured
+              # BEFORE the failed deploy replaced the running container — so
+              # we can replay the exact previous image even if the registry
+              # name or the running container have changed.
+              # shellcheck disable=SC1091
+              set -a
+              . /opt/nab/.previous_image
+              set +a
+
+              if [ -z "${IMAGE_BASE:-}" ] || [ -z "${IMAGE_TAG:-}" ]; then
+                echo "ERROR: .previous_image is malformed (BASE='${IMAGE_BASE:-}' TAG='${IMAGE_TAG:-}')."
+                exit 1
+              fi
+              echo "Rolling back to ${IMAGE_BASE} :: ${IMAGE_TAG}"
+
+              cd /opt/nab
+              docker compose pull
+              docker compose up -d --remove-orphans
+              echo "Rollback complete — running on ${IMAGE_BASE}/*:${IMAGE_TAG}"
           ENDSSH
 
       - name: Notify Slack — Success

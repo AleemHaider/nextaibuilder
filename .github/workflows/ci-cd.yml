@@ -52,6 +52,12 @@ env:
 # Job 1: CI — Frontend
 # ─────────────────────────────────────────────────────────────────────────────
 jobs:
+  # NOTE: This job builds nextaibuilder-app/, which is the legacy frontend
+  # currently deployed to production. The active product surface lives in
+  # apps/web/ (41+ commits in the recent sprint that DO NOT yet reach prod
+  # because the Docker frontend image is built from nextaibuilder-app/).
+  # When the team is ready to cut over, swap the working-directory + the
+  # COPY paths in docker/Dockerfile.frontend + the dependabot directory.
   ci-frontend:
     name: Frontend CI (lint + type-check + build)
     runs-on: ubuntu-24.04
@@ -89,6 +95,49 @@ jobs:
           VITE_APPLE_REDIRECT_URI: ${{ secrets.VITE_APPLE_REDIRECT_URI || '' }}
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Job 1b: CI — apps/web (canonical product frontend, NOT YET DEPLOYED)
+# Runs lint/typecheck/test/build against apps/web/ so the active product
+# surface stays green even though the production Docker image is currently
+# built from nextaibuilder-app/. This job does NOT block docker-build —
+# fail mode is "warn loudly" until the team decides to switch. Once the
+# Dockerfile.frontend is updated to copy apps/web/, add ci-web to
+# docker-build.needs so a broken apps/web blocks deploys.
+# ─────────────────────────────────────────────────────────────────────────────
+  ci-web:
+    name: apps/web CI (type-check + test + build)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --run
+
+      - name: Build (smoke-test with placeholder env vars)
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'http://localhost:3000' }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID || '' }}
+          VITE_APPLE_CLIENT_ID: ${{ secrets.VITE_APPLE_CLIENT_ID || '' }}
+          VITE_APP_URL: ${{ secrets.VITE_APP_URL || '' }}
+          VITE_APPLE_REDIRECT_URI: ${{ secrets.VITE_APPLE_REDIRECT_URI || '' }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN || '' }}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Job 2: CI — API
 # ─────────────────────────────────────────────────────────────────────────────
   ci-api:
@@ -97,6 +146,28 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
+
+    # Provision MongoDB + Redis so tests can exercise the DB-bound code paths
+    # (matches deploy.yml's test gate — keep these two jobs symmetric).
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval \"db.adminCommand('ping').ok\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 3
 
     steps:
       - name: Checkout code
@@ -117,6 +188,19 @@ jobs:
 
       - name: Run tests
         run: npm run test
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://localhost:27017/nextaibuilder_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ci-test-jwt-secret-minimum-32-chars-long
+          JWT_REFRESH_SECRET: ci-test-refresh-secret-min-32-chars-long
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_REGION: us-east-1
+          S3_BUCKET_NAME: test-bucket
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder
+          FRONTEND_URL: http://localhost:3000
 
       - name: Build
         run: npm run build
@@ -154,13 +238,14 @@ jobs:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Job 4: Build & push Docker images (main branch only)
-# Runs after both CI jobs pass.
+# Runs after CI + security-audit pass. A high/critical CVE in production deps
+# now blocks the build (matches the deploy.yml production gate).
 # Images are pushed to GitHub Container Registry (GHCR).
 # ─────────────────────────────────────────────────────────────────────────────
   docker-build:
     name: Build & Push Docker Images
     runs-on: ubuntu-24.04
-    needs: [ci-frontend, ci-api]
+    needs: [ci-frontend, ci-api, security-audit]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: read

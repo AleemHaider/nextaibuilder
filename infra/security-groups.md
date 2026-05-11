@@ -13,13 +13,13 @@
 | 22   | TCP      | Your IP only   | SSH access — restrict to your static IP or VPN |
 | 80   | TCP      | 0.0.0.0/0      | HTTP — Nginx redirects all traffic to HTTPS    |
 | 443  | TCP      | 0.0.0.0/0      | HTTPS — Nginx terminates SSL, proxies to app   |
-| 3000 | TCP      | 0.0.0.0/0      | Docker Nginx container (current DEV setup)     |
-| 4000 | TCP      | 127.0.0.1/32   | API process — internal only, never public      |
+| 3000 | TCP      | 127.0.0.1/32   | Docker nginx — local-only; Apache reaches it via loopback |
+| 4000 | TCP      | 127.0.0.1/32   | API container — internal only, never public    |
 
 ## Notes
 
 - **Port 22:** Restrict to a known static IP or a bastion/VPN CIDR. Never open `0.0.0.0/0` for SSH.
-- **Port 3000:** Used in the current DEV Docker deployment. In a production setup with a domain + SSL, close port 3000 and serve only via 443.
+- **Port 3000:** Should NOT be open to the world. Apache terminates TLS on 443 and reverse-proxies to Docker nginx via `127.0.0.1:3000`. See `infra/HTTPS-RUNBOOK.md` § 1 for the steps to revoke the public ingress.
 - **Port 4000:** Listed here for documentation only. This port must remain closed in the Security Group. Nginx communicates with the API container over Docker's internal network, not via the public interface.
 - **Egress:** Allow all outbound traffic (default AWS behaviour) — required for MongoDB Atlas, Stripe, SMTP, GHCR pulls, and package installs.
 
