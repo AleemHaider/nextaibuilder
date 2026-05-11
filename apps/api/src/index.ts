@@ -1,7 +1,14 @@
 // PBA-135 — Fastify API entry point
+// Sentry init MUST run before any other imports that could throw at module
+// load (e.g. lib/stripe.ts) so those errors are captured.
+import { initSentry } from './lib/sentry.js'
+initSentry()
+
 import { createServer } from 'node:http'
 import Fastify from 'fastify'
 import { sendSlackAlert } from './services/slack.js'
+import { logger } from './lib/logger.js'
+import { captureError } from './lib/sentry.js'
 import fastifyCors from '@fastify/cors'
 import fastifyHelmet from '@fastify/helmet'
 import fastifyRateLimit from '@fastify/rate-limit'
@@ -61,9 +68,11 @@ import { startNotificationWorker } from './workers/notificationWorker.js'       
 import { startReEngagementCron } from './jobs/reEngagementCron.js'                       // FIR-170
 
 const server = Fastify({
-  logger: {
-    level: process.env.LOG_LEVEL ?? 'info',
-  },
+  // Use the shared pino instance — same redaction rules and Sentry forwarding
+  // as workers/jobs. Trust X-Forwarded-* from the nginx reverse proxy so
+  // request.ip / rate-limit / HSTS reflect the real client.
+  loggerInstance: logger,
+  trustProxy: true,
   // Use a custom http server so Socket.io can share the same port
   serverFactory: (handler) => {
     const httpServer = createServer(handler)
@@ -127,11 +136,16 @@ async function start() {
     secret: process.env.JWT_SECRET ?? 'change-me-in-production',
   })
 
-  // ── Slack error handler (5xx only) ───────────────
+  // ── 5xx error handler: Sentry + Slack ───────────────
   server.setErrorHandler((err, request, reply) => {
     const e = err as { statusCode?: number; code?: string; message?: string; stack?: string }
     const statusCode = e.statusCode ?? 500
     if (statusCode >= 500) {
+      captureError(err, {
+        method: request.method,
+        url: request.url,
+        statusCode,
+      })
       void sendSlackAlert({
         severity: 'error',
         title: `HTTP ${statusCode} — ${request.method} ${request.url}`,
@@ -221,7 +235,14 @@ async function start() {
   server.get('/api/health', healthHandler)
 
   // ── BullMQ Workers ────────────────────────────────
-  if (process.env.NODE_ENV !== 'test') {
+  // ROLE controls which subsystems boot. Default 'all' preserves the
+  // single-process deployment that the EC2 host currently runs.
+  //   ROLE=all (default)  — HTTP + workers in one process
+  //   ROLE=api            — HTTP only (workers run elsewhere)
+  //   ROLE=worker         — workers only (no HTTP)  ← started via separate entrypoint
+  const role = process.env.ROLE ?? 'all'
+  const isTest = process.env.NODE_ENV === 'test'
+  if (!isTest && (role === 'all' || role === 'worker')) {
     void startScreenshotValidationWorker()    // PBA-150 / PBA-372 (async for startup health checks)
     startScheduledEmailWorker()               // PBA-134
     startStripeWebhookWorker()                // FIR-43/44
@@ -249,7 +270,7 @@ start()
 // ── Process-level crash reporting ─────────────────
 process.on('unhandledRejection', (reason) => {
   const err = reason instanceof Error ? reason : new Error(String(reason))
-  console.error('[process] unhandledRejection:', err)
+  logger.fatal({ err }, '[process] unhandledRejection')
   void sendSlackAlert({
     severity: 'fatal',
     title: 'Unhandled Promise Rejection',
@@ -260,7 +281,7 @@ process.on('unhandledRejection', (reason) => {
 })
 
 process.on('uncaughtException', (err) => {
-  console.error('[process] uncaughtException:', err)
+  logger.fatal({ err }, '[process] uncaughtException')
   void sendSlackAlert({
     severity: 'fatal',
     title: 'Uncaught Exception — Server Crashing',
