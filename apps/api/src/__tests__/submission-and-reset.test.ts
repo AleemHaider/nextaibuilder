@@ -78,6 +78,7 @@ vi.mock('../models/SetupStep.js', () => ({
 
 vi.mock('../models/StudentStep.js', () => ({
   StudentStep: {
+    find:             vi.fn(),
     findOne:          vi.fn(),
     findOneAndUpdate: vi.fn(),
     create:           vi.fn(),
@@ -187,6 +188,17 @@ import { User } from '../models/User.js'
 import { emitProgressReset } from '../lib/socket.js'
 import { stepsRoutes } from '../routes/student/steps.js'
 import { adminStudentsRoutes } from '../routes/admin/students.js'
+
+// Helper — getStudentStepStatus calls `StudentStep.find({...}).select(...).lean()`
+// to batch the prior-step lookup. Tests mock that chain via this builder so the
+// boilerplate stays in one place.
+function mockPriorStudentSteps(records: unknown[]) {
+  vi.mocked(StudentStep.find).mockReturnValueOnce({
+    select: vi.fn().mockReturnValue({
+      lean: vi.fn().mockResolvedValue(records),
+    }),
+  } as unknown as ReturnType<typeof StudentStep.find>)
+}
 
 const mockQueueAdd = (BullMQModule as unknown as { __queueAdd: ReturnType<typeof vi.fn> }).__queueAdd
 
@@ -331,6 +343,7 @@ describe('POST /api/student/steps/:stepId/submissions', () => {
   beforeEach(async () => {
     vi.mocked(SetupStep.findById).mockReset()
     vi.mocked(SetupStep.find).mockReset()
+    vi.mocked(StudentStep.find).mockReset()
     vi.mocked(StudentStep.findOne).mockReset()
     vi.mocked(StudentStep.create).mockReset()
     vi.mocked(StepSubmission.findOne).mockReset()
@@ -356,9 +369,9 @@ describe('POST /api/student/steps/:stepId/submissions', () => {
     vi.mocked(SetupStep.find).mockReturnValue({
       sort: vi.fn().mockResolvedValue([stepDoc]),
     } as ReturnType<typeof SetupStep.find>)
-    vi.mocked(StudentStep.findOne)
-      .mockResolvedValueOnce(null)  // no prior step record (called inside getStudentStepStatus)
-      .mockResolvedValueOnce(null)  // no existing studentStepDoc
+    // First step: priorSteps is empty so getStudentStepStatus skips the
+    // batched `StudentStep.find` call entirely. Only the target lookup runs.
+    vi.mocked(StudentStep.findOne).mockResolvedValueOnce(null)  // no existing studentStepDoc
     vi.mocked(StepSubmission.findOne).mockResolvedValueOnce(null)   // no pending submission
     vi.mocked(StepSubmission.countDocuments).mockResolvedValueOnce(0)  // no prior submissions
     const createdStep = makeStudentStepDoc()
@@ -466,10 +479,11 @@ describe('POST /api/student/steps/:stepId/submissions', () => {
     vi.mocked(SetupStep.find).mockReturnValue({
       sort: vi.fn().mockResolvedValue([step0, step1]),
     } as ReturnType<typeof SetupStep.find>)
-    // Prior step not complete
-    vi.mocked(StudentStep.findOne).mockResolvedValueOnce(
-      makeStudentStepDoc({ stepId: step0.id, status: 'UNLOCKED' }) as never,
-    )
+    // Prior step exists but is UNLOCKED — not COMPLETE/OVERRIDE_PASS, so the
+    // function bails before the target-step findOne.
+    mockPriorStudentSteps([
+      makeStudentStepDoc({ stepId: step0.id, status: 'UNLOCKED' }),
+    ])
 
     const req = makeRequest({ body: { s3Key: VALID_S3_KEY }, params: { stepId: STEP_ID } })
     const reply = makeReply()
@@ -492,7 +506,10 @@ describe('POST /api/student/steps/:stepId/submissions', () => {
     vi.mocked(SetupStep.find).mockReturnValue({
       sort: vi.fn().mockResolvedValue([stepDoc]),
     } as ReturnType<typeof SetupStep.find>)
-    vi.mocked(StudentStep.findOne).mockResolvedValueOnce(null)  // no prior step, step is first
+    // First step → no prior-step batched query; we still need the target
+    // findOne to return null so we get past getStudentStepStatus to the
+    // PENDING_SUBMISSION_EXISTS check.
+    vi.mocked(StudentStep.findOne).mockResolvedValueOnce(null)
 
     vi.mocked(StepSubmission.findOne).mockResolvedValueOnce(
       makeSubmissionDoc({ status: 'PENDING' }) as never,
@@ -545,12 +562,13 @@ describe('POST /api/student/steps/:stepId/submissions', () => {
     vi.mocked(SetupStep.find).mockReturnValue({
       sort: vi.fn().mockResolvedValue([stepDoc]),
     } as ReturnType<typeof SetupStep.find>)
-    // No prior incomplete steps (step is first)
+    // First step → priorSteps is empty, no batched StudentStep.find call.
+    // Two StudentStep.findOne calls happen: one inside getStudentStepStatus
+    // (target lookup, returns the REJECTED doc → rawStatus 'REJECTED') and one
+    // in the POST handler (re-fetch to call .save() with incremented attempts).
     vi.mocked(StudentStep.findOne)
-      .mockResolvedValueOnce(null)   // inside getStudentStepStatus: no prior step record
-      .mockResolvedValueOnce(       // existing studentStepDoc for current step
-        makeStudentStepDoc({ status: 'REJECTED', attempts: 1 }) as never,
-      )
+      .mockResolvedValueOnce(makeStudentStepDoc({ status: 'REJECTED', attempts: 1 }) as never)
+      .mockResolvedValueOnce(makeStudentStepDoc({ status: 'REJECTED', attempts: 1 }) as never)
 
     vi.mocked(StepSubmission.findOne).mockResolvedValueOnce(null)    // no pending
     vi.mocked(StepSubmission.countDocuments).mockResolvedValueOnce(1)  // 1 prior submission today
@@ -781,6 +799,7 @@ describe('Student step status — locked/unlocked logic', () => {
   beforeEach(async () => {
     vi.mocked(SetupStep.findById).mockReset()
     vi.mocked(SetupStep.find).mockReset()
+    vi.mocked(StudentStep.find).mockReset()
     vi.mocked(StudentStep.findOne).mockReset()
     vi.mocked(StepSubmission.findOne).mockReset()
     vi.mocked(User.findById).mockReset()
@@ -829,8 +848,8 @@ describe('Student step status — locked/unlocked logic', () => {
     vi.mocked(SetupStep.find).mockReturnValue({
       sort: vi.fn().mockResolvedValue([step0, step1]),
     } as ReturnType<typeof SetupStep.find>)
-    // Prior step has no record → locked
-    vi.mocked(StudentStep.findOne).mockResolvedValueOnce(null)
+    // Prior step has no record → locked (batched find returns empty array)
+    mockPriorStudentSteps([])
 
     const req = makeRequest({ params: { stepId: STEP_ID } })
     const reply = makeReply()
@@ -855,9 +874,9 @@ describe('Student step status — locked/unlocked logic', () => {
       sort: vi.fn().mockResolvedValue([step0, step1]),
     } as ReturnType<typeof SetupStep.find>)
     // Prior step exists but is PENDING_REVIEW — not COMPLETE
-    vi.mocked(StudentStep.findOne).mockResolvedValueOnce(
-      makeStudentStepDoc({ stepId: step0.id, status: 'PENDING_REVIEW' }) as never,
-    )
+    mockPriorStudentSteps([
+      makeStudentStepDoc({ stepId: step0.id, status: 'PENDING_REVIEW' }),
+    ])
 
     const req = makeRequest({ params: { stepId: STEP_ID } })
     const reply = makeReply()
@@ -881,10 +900,13 @@ describe('Student step status — locked/unlocked logic', () => {
     vi.mocked(SetupStep.find).mockReturnValue({
       sort: vi.fn().mockResolvedValue([step0, step1]),
     } as ReturnType<typeof SetupStep.find>)
-    // Prior step is COMPLETE
-    vi.mocked(StudentStep.findOne)
-      .mockResolvedValueOnce(makeStudentStepDoc({ stepId: step0.id, status: 'COMPLETE' }) as never)
-      .mockResolvedValueOnce(makeStudentStepDoc({ status: 'UNLOCKED' }) as never)
+    // Prior step is COMPLETE → batched find returns it; target findOne returns UNLOCKED record
+    mockPriorStudentSteps([
+      makeStudentStepDoc({ stepId: step0.id, status: 'COMPLETE' }),
+    ])
+    vi.mocked(StudentStep.findOne).mockResolvedValueOnce(
+      makeStudentStepDoc({ status: 'UNLOCKED' }) as never,
+    )
     vi.mocked(User.findById).mockReturnValueOnce({
       lean: vi.fn().mockResolvedValue({ progressResetAt: null }),
     } as ReturnType<typeof User.findById>)
@@ -914,9 +936,12 @@ describe('Student step status — locked/unlocked logic', () => {
       sort: vi.fn().mockResolvedValue([step0, step1]),
     } as ReturnType<typeof SetupStep.find>)
     // Prior step is OVERRIDE_PASS (manual admin bypass)
-    vi.mocked(StudentStep.findOne)
-      .mockResolvedValueOnce(makeStudentStepDoc({ stepId: step0.id, status: 'OVERRIDE_PASS' }) as never)
-      .mockResolvedValueOnce(makeStudentStepDoc({ status: 'UNLOCKED' }) as never)
+    mockPriorStudentSteps([
+      makeStudentStepDoc({ stepId: step0.id, status: 'OVERRIDE_PASS' }),
+    ])
+    vi.mocked(StudentStep.findOne).mockResolvedValueOnce(
+      makeStudentStepDoc({ status: 'UNLOCKED' }) as never,
+    )
     vi.mocked(User.findById).mockReturnValueOnce({
       lean: vi.fn().mockResolvedValue({ progressResetAt: null }),
     } as ReturnType<typeof User.findById>)
@@ -974,6 +999,7 @@ describe('GET /api/student/steps/:stepId — latestSubmission filtered by progre
   beforeEach(async () => {
     vi.mocked(SetupStep.findById).mockReset()
     vi.mocked(SetupStep.find).mockReset()
+    vi.mocked(StudentStep.find).mockReset()
     vi.mocked(StudentStep.findOne).mockReset()
     vi.mocked(StepSubmission.findOne).mockReset()
     vi.mocked(User.findById).mockReset()

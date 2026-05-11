@@ -44,12 +44,31 @@ async function getStudentStepStatus(userId: string, stepId: string): Promise<{
   const targetStep = allSteps.find((s) => s.id === stepId)
   if (!targetStep) return { status: 'LOCKED', studentStepDoc: null, isLocked: true }
 
-  // Check all prior steps are complete
   const priorSteps = allSteps.filter((s) => s.order < targetStep.order)
-  for (const prior of priorSteps) {
-    const priorStudentStep = await StudentStep.findOne({ userId, stepId: prior._id })
-    if (!priorStudentStep || !['COMPLETE', 'OVERRIDE_PASS'].includes(priorStudentStep.status)) {
-      return { status: 'LOCKED', studentStepDoc: null, isLocked: true }
+
+  // Audit P1 #13 — previously did N `findOne` calls in a for-loop (one per
+  // prior step). Now a single batched query + in-memory check, so the
+  // student status endpoint cost is O(1) Mongo round-trips regardless of
+  // how many steps the course has.
+  if (priorSteps.length > 0) {
+    const priorIds = priorSteps.map((s) => s._id)
+    const priorRecords = await StudentStep.find({ userId, stepId: { $in: priorIds } })
+      .select('stepId status')
+      .lean()
+    const statusByStepId = new Map<string, string>(
+      priorRecords.map((r) => [
+        (r.stepId as { toString(): string }).toString(),
+        (r as { status: string }).status,
+      ]),
+    )
+
+    for (const prior of priorSteps) {
+      const priorStatus = statusByStepId.get(
+        (prior._id as unknown as { toString(): string }).toString(),
+      )
+      if (!priorStatus || !['COMPLETE', 'OVERRIDE_PASS'].includes(priorStatus)) {
+        return { status: 'LOCKED', studentStepDoc: null, isLocked: true }
+      }
     }
   }
 
