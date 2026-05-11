@@ -1,58 +1,58 @@
-// FIR-34 — Root app with AuthProvider and all auth/storefront routes
-import { useEffect } from 'react'
+// FIR-34 — Root app with AuthProvider and all auth/storefront routes.
+// Pages are loaded via React.lazy() so the initial bundle does not include
+// the admin CMS for unauthenticated visitors. The Suspense fallback uses
+// the canonical LoadingSpinner primitive.
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Link, Navigate } from 'react-router'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { registerAuthHelpers } from './lib/api'
-import { ProtectedRoute, StudentRoute, AdminRoute } from './components/ProtectedRoute'
+import { StudentRoute, AdminRoute } from './components/ProtectedRoute'
+// Auth + landing pages stay eager — they are on the first-paint critical path
+// and small. Everything else is code-split below.
 import HomePage from './pages/HomePage'
-import CatalogPage from './pages/CatalogPage'
-import CohortDetailPage from './pages/CohortDetailPage'
-import AboutPage from './pages/AboutPage'
 import StudentLoginPage from './pages/StudentLoginPage'
 import StudentSignupPage from './pages/StudentSignupPage'
 import AdminLoginPage from './pages/AdminLoginPage'
-import AdminOtpPage from './pages/AdminOtpPage'
-import AdminForgotPasswordPage from './pages/AdminForgotPasswordPage'
-import AdminResetPasswordPage from './pages/AdminResetPasswordPage'
-// FIR-157 — Checkout + enrollment success pages
-import CheckoutPage from './pages/CheckoutPage'
-import EnrollmentSuccessPage from './pages/EnrollmentSuccessPage'
-// FIR-158 — Manual payment student receipt upload page
-import ManualPaymentPage from './pages/ManualPaymentPage'
-// FIR-50 — Admin manual payment review queue
-import ManualPaymentsPage from './pages/admin/ManualPaymentsPage'
-// FIR-165 / FIR-166 / FIR-173 — Admin CMS (Epic 7)
-import AdminDashboardPage from './pages/admin/AdminDashboardPage'
-import CourseBuilderPage from './pages/admin/CourseBuilderPage'
-import StudentListPage from './pages/admin/StudentListPage'
-import ScreenshotReviewPage from './pages/admin/ScreenshotReviewPage'
-import SubAdminPage from './pages/admin/SubAdminPage'
-// FIR-51/52/53/57/58/164 — Student LMS (Epic 6)
-import DashboardPage from './pages/student/DashboardPage'
-import CoursePage from './pages/student/CoursePage'
-import LessonPage from './pages/student/LessonPage'
-import LiveSessionsPage from './pages/student/LiveSessionsPage'
-import CertificatePage from './pages/student/CertificatePage'
-import BadgesPage from './pages/student/BadgesPage'
-// FIR-169 — Notifications page
-import NotificationsPage from './pages/student/NotificationsPage'
-// FIR-171 — Student settings
-import SettingsPage from './pages/student/SettingsPage'
-// FIR-167 — Admin broadcast email
-import BroadcastEmailPage from './pages/admin/BroadcastEmailPage'
-// FIR-76/77/78/79 — Admin reporting
-import ReportingPage from './pages/admin/ReportingPage'
-// FIR-216/217/218 — Unified payment ledger
-import TransactionLedgerPage from './pages/admin/TransactionLedgerPage'
-// FIR-209 — Student detail page
-import StudentDetailPage from './pages/admin/StudentDetailPage'
-// FIR-213/214/215 — Enrollment management
-import EnrollmentManagementPage from './pages/admin/EnrollmentManagementPage'
-// Sprint 2 Story 7 — BRD-mandatory public certificate verification page
-import CertificateVerifyPage from './pages/CertificateVerifyPage'
-// FIR-74 — PWA install prompt
 import { PwaInstallPrompt } from './components/PwaInstallPrompt'
+import { LoadingSpinner } from './components/ui/LoadingSpinner'
 import { cn } from './lib/utils'
+
+// ── Storefront (public) ────────────────────────────────────────────────────
+const CatalogPage = lazy(() => import('./pages/CatalogPage'))
+const CohortDetailPage = lazy(() => import('./pages/CohortDetailPage'))
+const AboutPage = lazy(() => import('./pages/AboutPage'))
+const CertificateVerifyPage = lazy(() => import('./pages/CertificateVerifyPage'))
+const ManualPaymentPage = lazy(() => import('./pages/ManualPaymentPage'))
+
+// ── Auth (admin) ───────────────────────────────────────────────────────────
+const AdminOtpPage = lazy(() => import('./pages/AdminOtpPage'))
+const AdminForgotPasswordPage = lazy(() => import('./pages/AdminForgotPasswordPage'))
+const AdminResetPasswordPage = lazy(() => import('./pages/AdminResetPasswordPage'))
+
+// ── Student checkout + LMS ─────────────────────────────────────────────────
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
+const EnrollmentSuccessPage = lazy(() => import('./pages/EnrollmentSuccessPage'))
+const DashboardPage = lazy(() => import('./pages/student/DashboardPage'))
+const CoursePage = lazy(() => import('./pages/student/CoursePage'))
+const LessonPage = lazy(() => import('./pages/student/LessonPage'))
+const LiveSessionsPage = lazy(() => import('./pages/student/LiveSessionsPage'))
+const CertificatePage = lazy(() => import('./pages/student/CertificatePage'))
+const BadgesPage = lazy(() => import('./pages/student/BadgesPage'))
+const NotificationsPage = lazy(() => import('./pages/student/NotificationsPage'))
+const SettingsPage = lazy(() => import('./pages/student/SettingsPage'))
+
+// ── Admin CMS ──────────────────────────────────────────────────────────────
+const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'))
+const ManualPaymentsPage = lazy(() => import('./pages/admin/ManualPaymentsPage'))
+const CourseBuilderPage = lazy(() => import('./pages/admin/CourseBuilderPage'))
+const StudentListPage = lazy(() => import('./pages/admin/StudentListPage'))
+const ScreenshotReviewPage = lazy(() => import('./pages/admin/ScreenshotReviewPage'))
+const SubAdminPage = lazy(() => import('./pages/admin/SubAdminPage'))
+const BroadcastEmailPage = lazy(() => import('./pages/admin/BroadcastEmailPage'))
+const ReportingPage = lazy(() => import('./pages/admin/ReportingPage'))
+const TransactionLedgerPage = lazy(() => import('./pages/admin/TransactionLedgerPage'))
+const StudentDetailPage = lazy(() => import('./pages/admin/StudentDetailPage'))
+const EnrollmentManagementPage = lazy(() => import('./pages/admin/EnrollmentManagementPage'))
 
 // ---------------------------------------------------------------------------
 // Register auth helpers so authFetch can attach tokens + refresh silently.
@@ -69,9 +69,6 @@ function AuthHelperRegistrar() {
   return null
 }
 
-// ---------------------------------------------------------------------------
-// Placeholder pages for routes not yet built (Epic 4–9)
-// ---------------------------------------------------------------------------
 function PlaceholderPage({ title }: { title: string }) {
   return (
     <div
@@ -118,9 +115,14 @@ function NotFoundPage() {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Routes tree — wrapped in AuthProvider
-// ---------------------------------------------------------------------------
+function RouteFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#f8f9fb]">
+      <LoadingSpinner size="lg" label="Loading page" />
+    </div>
+  )
+}
+
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth()
   const isStudent = isAuthenticated && user?.role === 'STUDENT'
@@ -128,94 +130,62 @@ function AppRoutes() {
   return (
     <>
       <AuthHelperRegistrar />
-      {/* FIR-74 — Show PWA install prompt globally for logged-in students */}
       {isStudent && <PwaInstallPrompt />}
-      <Routes>
-        {/* Public storefront routes (Epic 2) */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/courses" element={<CatalogPage />} />
-        <Route path="/courses/:slug" element={<CohortDetailPage />} />
-        <Route path="/about" element={<AboutPage />} />
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          {/* Public storefront */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/courses" element={<CatalogPage />} />
+          <Route path="/courses/:slug" element={<CohortDetailPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/verify-certificate" element={<CertificateVerifyPage />} />
+          <Route path="/verify-certificate/:token" element={<CertificateVerifyPage />} />
+          <Route path="/manual-payment/:slug" element={<ManualPaymentPage />} />
 
-        {/* Sprint 2 Story 7 — Public certificate verification (no auth) */}
-        <Route path="/verify-certificate" element={<CertificateVerifyPage />} />
-        <Route
-          path="/verify-certificate/:token"
-          element={<CertificateVerifyPage />}
-        />
-        {/* FIR-158 / Sprint 2 Story 8 — public manual payment upload page */}
-        <Route path="/manual-payment/:slug" element={<ManualPaymentPage />} />
+          {/* Auth */}
+          <Route path="/login" element={<StudentLoginPage />} />
+          <Route path="/signup" element={<StudentSignupPage />} />
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="/admin/verify-otp" element={<AdminOtpPage />} />
+          <Route path="/admin/forgot-password" element={<AdminForgotPasswordPage />} />
+          <Route path="/admin/reset-password" element={<AdminResetPasswordPage />} />
 
-        {/* Auth routes (Epic 3) */}
-        <Route path="/login" element={<StudentLoginPage />} />
-        <Route path="/signup" element={<StudentSignupPage />} />
-        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-        <Route path="/admin/login" element={<AdminLoginPage />} />
-        <Route path="/admin/verify-otp" element={<AdminOtpPage />} />
-        <Route path="/admin/forgot-password" element={<AdminForgotPasswordPage />} />
-        <Route path="/admin/reset-password" element={<AdminResetPasswordPage />} />
-
-        {/* Student routes — Epic 4 + Epic 6 (protected: STUDENT role only) */}
-        {/* FIR-157 — Checkout and enrollment success (student auth required) */}
-        {/* FIR-158 — Manual payment receipt upload (student auth required) */}
-        {/* FIR-51/52/53/57/58/164 — Student LMS (Epic 6) */}
-        <Route element={<StudentRoute />}>
-          <Route path="/checkout/:slug" element={<CheckoutPage />} />
-          <Route path="/enrollment/success" element={<EnrollmentSuccessPage />} />
-
-          {/* FIR-51 — Student dashboard */}
-          <Route path="/student/dashboard" element={<DashboardPage />} />
-
-          {/* FIR-52/53/57 — LMS shell: curriculum + lesson player + live sessions */}
-          <Route path="/student/course/:slug" element={<CoursePage />}>
-            <Route path="lesson/:lessonId" element={<LessonPage />} />
-            <Route path="sessions" element={<LiveSessionsPage />} />
+          {/* Student-only */}
+          <Route element={<StudentRoute />}>
+            <Route path="/checkout/:slug" element={<CheckoutPage />} />
+            <Route path="/enrollment/success" element={<EnrollmentSuccessPage />} />
+            <Route path="/student/dashboard" element={<DashboardPage />} />
+            <Route path="/student/course/:slug" element={<CoursePage />}>
+              <Route path="lesson/:lessonId" element={<LessonPage />} />
+              <Route path="sessions" element={<LiveSessionsPage />} />
+            </Route>
+            <Route path="/student/certificate" element={<CertificatePage />} />
+            <Route path="/student/badges" element={<BadgesPage />} />
+            <Route path="/student/notifications" element={<NotificationsPage />} />
+            <Route path="/student/settings" element={<SettingsPage />} />
           </Route>
 
-          {/* FIR-58 — Certificates */}
-          <Route path="/student/certificate" element={<CertificatePage />} />
+          {/* Admin-only */}
+          <Route element={<AdminRoute />}>
+            <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+            <Route path="/admin/manual-payments" element={<ManualPaymentsPage />} />
+            <Route path="/admin/courses" element={<CourseBuilderPage />} />
+            <Route path="/admin/students" element={<StudentListPage />} />
+            <Route path="/admin/screenshot-review" element={<ScreenshotReviewPage />} />
+            <Route path="/admin/team" element={<SubAdminPage />} />
+            <Route path="/admin/broadcast-email" element={<BroadcastEmailPage />} />
+            <Route path="/admin/reporting" element={<ReportingPage />} />
+            <Route path="/admin/payments" element={<TransactionLedgerPage />} />
+            <Route path="/admin/students/:id" element={<StudentDetailPage />} />
+            <Route path="/admin/enrollments" element={<EnrollmentManagementPage />} />
+            <Route path="/admin/*" element={<PlaceholderPage title="Admin Portal" />} />
+          </Route>
 
-          {/* FIR-164 — Badges */}
-          <Route path="/student/badges" element={<BadgesPage />} />
-
-          {/* FIR-169 — Notifications */}
-          <Route path="/student/notifications" element={<NotificationsPage />} />
-
-          {/* FIR-171 — Student settings */}
-          <Route path="/student/settings" element={<SettingsPage />} />
-        </Route>
-
-        {/* Admin routes — Epics 5–9 (protected: ADMIN / SUPER_ADMIN role only) */}
-        {/* FIR-50 — Manual payment review queue */}
-        {/* FIR-165 — Screenshot review queue */}
-        {/* FIR-166 — Student list */}
-        {/* FIR-173 — Sub-admin management */}
-        <Route element={<AdminRoute />}>
-          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-          <Route path="/admin/manual-payments" element={<ManualPaymentsPage />} />
-          <Route path="/admin/courses" element={<CourseBuilderPage />} />
-          <Route path="/admin/students" element={<StudentListPage />} />
-          <Route path="/admin/screenshot-review" element={<ScreenshotReviewPage />} />
-          <Route path="/admin/team" element={<SubAdminPage />} />
-          {/* FIR-167 — Broadcast email */}
-          <Route path="/admin/broadcast-email" element={<BroadcastEmailPage />} />
-          {/* FIR-76/77/78/79 — Reporting */}
-          <Route path="/admin/reporting" element={<ReportingPage />} />
-          {/* FIR-216/217/218 — Payment ledger */}
-          <Route path="/admin/payments" element={<TransactionLedgerPage />} />
-          {/* FIR-209 — Student detail */}
-          <Route path="/admin/students/:id" element={<StudentDetailPage />} />
-          {/* FIR-213/214/215 — Enrollment management */}
-          <Route path="/admin/enrollments" element={<EnrollmentManagementPage />} />
-          <Route
-            path="/admin/*"
-            element={<PlaceholderPage title="Admin Portal" />}
-          />
-        </Route>
-
-        {/* Catch-all */}
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+          {/* Catch-all */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
     </>
   )
 }
