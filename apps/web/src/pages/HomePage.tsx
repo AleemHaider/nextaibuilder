@@ -115,6 +115,15 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
+      "I have run product teams for twenty years and this is the first course that actually changed how my engineers and I work together. PRDs that builder agents execute against, Jira epics that decompose themselves. The Reviewer agent is in every PR we ship now.",
+    name:   'Gregg Laroche',
+    role:   'VP Product Management, PreVeil',
+    cohort: 'AI Product Builders',
+    accent: 'neutral',
+    photo:  '/testimonials/gregg-laroche.jpg',
+  },
+  {
+    quote:
       "I got back three hours every Monday morning. The weekly brief Claude writes for me on Sundays at 10pm has replaced my entire prep ritual.",
     name:   'Sarah Chen',
     role:   'Founder, Lumen Studio',
