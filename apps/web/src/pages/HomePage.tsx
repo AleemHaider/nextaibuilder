@@ -89,9 +89,21 @@ interface Testimonial {
   role:    string
   cohort:  'Business Owners' | 'AI Product Builders' | 'AI Agent Builders'
   accent:  'primary' | 'mint' | 'neutral'
+  // Optional headshot served from /public/testimonials/. When omitted, the
+  // card falls back to a styled initials chip.
+  photo?:  string
 }
 
 const TESTIMONIALS: Testimonial[] = [
+  {
+    quote:
+      "I came in skeptical and left with a Jira epic, a Confluence PRD, and Figma flows for a product I had been stuck on for months. The spec-driven workflow is the part I keep coming back to. It is how I run every project now.",
+    name:   'Orsolya Meckl',
+    role:   'Product Owner, Orshe',
+    cohort: 'AI Product Builders',
+    accent: 'primary',
+    photo:  '/testimonials/orsolya-meckl.jpg',
+  },
   {
     quote:
       "I got back three hours every Monday morning. The weekly brief Claude writes for me on Sundays at 10pm has replaced my entire prep ritual.",
@@ -881,16 +893,25 @@ export default function HomePage() {
               </blockquote>
               {/* Author */}
               <figcaption className="flex items-center gap-3">
-                <span
-                  className={cn(
-                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
-                    'text-sm font-bold',
-                    accentChip[t.accent],
-                  )}
-                  aria-hidden="true"
-                >
-                  {initialsOf(t.name)}
-                </span>
+                {t.photo ? (
+                  <img
+                    src={t.photo}
+                    alt={`${t.name} headshot`}
+                    loading="lazy"
+                    className="h-11 w-11 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <span
+                    className={cn(
+                      'flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
+                      'text-sm font-bold',
+                      accentChip[t.accent],
+                    )}
+                    aria-hidden="true"
+                  >
+                    {initialsOf(t.name)}
+                  </span>
+                )}
                 <span className="flex flex-col">
                   <span className="text-sm font-bold text-[var(--color-wise-text)]">
                     {t.name}
