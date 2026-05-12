@@ -124,6 +124,15 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
+      "I support five small businesses as their outsourced IT. The n8n + LangGraph hybrid is now the backbone of three of those clients. What used to be a custom integration project is a one-week build. My clients think I doubled in size.",
+    name:   'Danny Chevilly',
+    role:   'IT Consultant, Inventio IT A/S',
+    cohort: 'AI Agent Builders',
+    accent: 'primary',
+    photo:  '/testimonials/danny-chevilly.jpg',
+  },
+  {
+    quote:
       "I got back three hours every Monday morning. The weekly brief Claude writes for me on Sundays at 10pm has replaced my entire prep ritual.",
     name:   'Sarah Chen',
     role:   'Founder, Lumen Studio',
