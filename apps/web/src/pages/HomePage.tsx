@@ -142,6 +142,14 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
+      "I came in with one annoying task I did every Friday. By Lesson 11 it was a scheduled agent and I had my Friday afternoons back. The thing nobody tells you is how much it changes the way you think about your own week. I now look at every recurring task and ask if a command can do it.",
+    name:   'Shamik',
+    role:   'Founder',
+    cohort: 'Business Owners',
+    accent: 'mint',
+  },
+  {
+    quote:
       "I got back three hours every Monday morning. The weekly brief Claude writes for me on Sundays at 10pm has replaced my entire prep ritual.",
     name:   'Sarah Chen',
     role:   'Founder, Lumen Studio',
