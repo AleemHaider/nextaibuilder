@@ -106,6 +106,15 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
+      "I built three agents in four weeks. The LangGraph module is what unlocked it for me. I used to write Python for hours; now I describe the graph on paper and Claude Code writes every line. My triage agent has been running on its own for two months.",
+    name:   'Giuseppe Spanò',
+    role:   'Software Engineer',
+    cohort: 'AI Agent Builders',
+    accent: 'mint',
+    photo:  '/testimonials/giuseppe-spano.jpg',
+  },
+  {
+    quote:
       "I got back three hours every Monday morning. The weekly brief Claude writes for me on Sundays at 10pm has replaced my entire prep ritual.",
     name:   'Sarah Chen',
     role:   'Founder, Lumen Studio',
