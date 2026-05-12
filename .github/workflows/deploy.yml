@@ -143,7 +143,7 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Build & push API image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile.api
@@ -155,7 +155,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build & push Frontend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile.frontend
