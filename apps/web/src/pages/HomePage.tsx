@@ -133,6 +133,15 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
+      "Certifications do not move careers. Shipped products do. This course is the first one I have recommended to my PMs without a caveat. By the Capstone they have a public repo, a live AI feature, and a release tag. That changes the conversation in every interview they take.",
+    name:   'Gabor Mayer',
+    role:   'Product Manager, Google',
+    cohort: 'AI Product Builders',
+    accent: 'neutral',
+    photo:  '/testimonials/gabor-mayer.jpg',
+  },
+  {
+    quote:
       "I got back three hours every Monday morning. The weekly brief Claude writes for me on Sundays at 10pm has replaced my entire prep ritual.",
     name:   'Sarah Chen',
     role:   'Founder, Lumen Studio',
