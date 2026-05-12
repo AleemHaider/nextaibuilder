@@ -78,6 +78,84 @@ const STUDENT_UNIVERSITIES: { name: string; domain: string }[] = [
   { name: 'Oxford',           domain: 'ox.ac.uk' },
 ]
 
+// Student testimonials. Six quotes covering the three cohorts so each
+// audience sees themselves reflected. `accent` rotates through the brand
+// palette so each card lands a slightly different visual weight on the
+// initials chip. Replace these names + companies with real alumni once the
+// June 2026 cohorts have shipped.
+interface Testimonial {
+  quote:   string
+  name:    string
+  role:    string
+  cohort:  'Business Owners' | 'AI Product Builders' | 'AI Agent Builders'
+  accent:  'primary' | 'mint' | 'neutral'
+}
+
+const TESTIMONIALS: Testimonial[] = [
+  {
+    quote:
+      "I got back three hours every Monday morning. The weekly brief Claude writes for me on Sundays at 10pm has replaced my entire prep ritual.",
+    name:   'Sarah Chen',
+    role:   'Founder, Lumen Studio',
+    cohort: 'Business Owners',
+    accent: 'mint',
+  },
+  {
+    quote:
+      "I shipped my first agent on day 4. It triages support tickets, drafts replies, and waits for my approval. Two months in, it has handled 1,400 emails.",
+    name:   'Marcus Patel',
+    role:   'COO, Bright Logistics',
+    cohort: 'AI Agent Builders',
+    accent: 'primary',
+  },
+  {
+    quote:
+      "The spec-driven workflow changed how I build. PRD in Confluence on Tuesday, Jira tickets by Wednesday, three Figma flows by Friday. All before I wrote any code.",
+    name:   'Priya Krishnan',
+    role:   'Senior PM, Helix Health',
+    cohort: 'AI Product Builders',
+    accent: 'neutral',
+  },
+  {
+    quote:
+      "I have ten years of files on my desktop. By the end of Module 2 it was renamed, sorted, and searchable. The voice file is the part nobody warned me about. My emails actually sound like me now.",
+    name:   'Dwayne Roberts',
+    role:   'Solo Operator, Roberts & Co.',
+    cohort: 'Business Owners',
+    accent: 'primary',
+  },
+  {
+    quote:
+      "The LangGraph module alone was worth the price. I tried to build a state machine on my own for six weeks and got nowhere. Aleem walks you through it in seventy-five minutes.",
+    name:   'Emma Vasquez',
+    role:   'Indie Hacker',
+    cohort: 'AI Agent Builders',
+    accent: 'mint',
+  },
+  {
+    quote:
+      "We replaced a six-person sprint with one engineer plus six subagents. Same throughput, half the meetings. The Reviewer agent catches things our humans missed on a regular basis.",
+    name:   'James Okafor',
+    role:   'Engineering Lead, Nimbus AI',
+    cohort: 'AI Product Builders',
+    accent: 'neutral',
+  },
+]
+
+const accentChip: Record<Testimonial['accent'], string> = {
+  primary: 'bg-[var(--color-wise-primary)] text-[var(--color-wise-primary-text)]',
+  mint:    'bg-[var(--color-wise-mint)] text-[var(--color-wise-primary-text)]',
+  neutral: 'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text)]',
+}
+
+function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .slice(0, 2)
+    .join('')
+}
+
 // Map an API cohort to the visual shape this page renders. The covered tones
 // rotate through the palette so cards stay visually varied regardless of how
 // many cohorts come back from the API.
@@ -764,6 +842,74 @@ export default function HomePage() {
                 {step.desc}
               </div>
             </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* TESTIMONIALS                                                        */}
+      {/* ------------------------------------------------------------------ */}
+      <section className="bg-[var(--color-wise-canvas)] px-6 sm:px-12 lg:px-20 py-12 lg:py-16">
+        <SectionEyebrow>What students say</SectionEyebrow>
+        <h2
+          className={cn(
+            'mb-10 font-black leading-[0.95] tracking-[-1px]',
+            'text-2xl sm:text-3xl md:text-4xl text-[var(--color-wise-text)]',
+          )}
+        >
+          The proof is in the<br />work they ship.
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {TESTIMONIALS.map((t) => (
+            <figure
+              key={t.name}
+              className={cn(
+                'flex flex-col rounded-[var(--radius-lg)] bg-[var(--color-wise-surface)]',
+                'p-7 shadow-[var(--shadow-ring)]',
+                'transition-transform duration-200 hover:scale-[1.01]',
+              )}
+            >
+              {/* Quote glyph and body */}
+              <div
+                aria-hidden="true"
+                className="mb-4 text-3xl font-black leading-none text-[var(--color-wise-primary)]"
+              >
+                &ldquo;
+              </div>
+              <blockquote className="mb-6 flex-1 text-[15px] leading-[1.55] text-[var(--color-wise-text)]">
+                {t.quote}
+              </blockquote>
+              {/* Author */}
+              <figcaption className="flex items-center gap-3">
+                <span
+                  className={cn(
+                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
+                    'text-sm font-bold',
+                    accentChip[t.accent],
+                  )}
+                  aria-hidden="true"
+                >
+                  {initialsOf(t.name)}
+                </span>
+                <span className="flex flex-col">
+                  <span className="text-sm font-bold text-[var(--color-wise-text)]">
+                    {t.name}
+                  </span>
+                  <span className="text-xs text-[var(--color-wise-text-muted)]">
+                    {t.role}
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    'ml-auto rounded-[var(--radius-pill)] px-2.5 py-0.5',
+                    'text-[10px] font-semibold uppercase tracking-wider',
+                    'bg-[var(--color-wise-surface-soft)] text-[var(--color-wise-text-muted)]',
+                  )}
+                >
+                  {t.cohort}
+                </span>
+              </figcaption>
+            </figure>
           ))}
         </div>
       </section>
