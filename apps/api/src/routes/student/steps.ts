@@ -24,6 +24,7 @@ import { StepSubmission } from '../../models/StepSubmission.js'
 import { ActivityLog } from '../../models/ActivityLog.js'
 import { User } from '../../models/User.js'
 import { s3, BUCKET_NAME, getPresignedReadUrl, buildS3Key, IS_S3_CONFIGURED } from '../../lib/s3.js'
+import { buildSignedLocalUploadUrl } from '../../lib/localUploadSigning.js'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { Queue } from 'bullmq'
@@ -196,10 +197,12 @@ export async function stepsRoutes(fastify: FastifyInstance) {
       const resolvedContentType =
         contentType && ALLOWED_TYPES.includes(contentType) ? contentType : 'image/jpeg'
 
-      // When S3 is not configured (dev), point to local upload endpoint
+      // When S3 is not configured (dev), point to local upload endpoint with a
+      // short-lived signature (mirrors the S3 presign — the raw endpoint is
+      // otherwise an open, unauthenticated write).
       if (!IS_S3_CONFIGURED) {
         const apiBase = process.env.API_BASE_URL ?? 'http://localhost:4000'
-        const presignedUrl = `${apiBase}/api/uploads/${s3Key}`
+        const presignedUrl = buildSignedLocalUploadUrl(apiBase, s3Key, 300)
         return reply.send({ presignedUrl, s3Key, contentType: resolvedContentType })
       }
 

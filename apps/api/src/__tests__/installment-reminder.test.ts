@@ -75,10 +75,11 @@ const stores = vi.hoisted(() => {
     }
   }
   return {
-    enrollment: makeStore(),
-    cohort:     makeStore(),
-    user:       makeStore(),
-    emailLog:   makeStore(),
+    enrollment:  makeStore(),
+    cohort:      makeStore(),
+    user:        makeStore(),
+    emailLog:    makeStore(),
+    paymentPlan: makeStore(),
   }
 })
 
@@ -103,6 +104,10 @@ vi.mock('../models/Enrollment.js', () => ({ Enrollment: stores.enrollment }))
 vi.mock('../models/Cohort.js', () => ({ Cohort: stores.cohort }))
 vi.mock('../models/User.js', () => ({ User: stores.user }))
 vi.mock('../models/EmailLog.js', () => ({ EmailLog: stores.emailLog }))
+vi.mock('../models/PaymentPlan.js', () => ({ PaymentPlan: stores.paymentPlan }))
+
+const sendEmailSpy = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
+vi.mock('../lib/mailer.js', () => ({ sendEmail: (...a: unknown[]) => sendEmailSpy(...a) }))
 
 // ── Imports after mocks ──────────────────────────────────────────────────
 import {
@@ -116,6 +121,7 @@ const DAY_MS = 24 * 60 * 60 * 1000
 describe('installment reminder worker (Sprint 2 Story 10 / GAP-037)', () => {
   beforeEach(() => {
     queueAddSpy.mockClear()
+    sendEmailSpy.mockClear().mockResolvedValue(undefined)
     Object.values(stores).forEach((s) => { s.docs.length = 0 })
   })
 
@@ -235,10 +241,39 @@ describe('installment reminder worker (Sprint 2 Story 10 / GAP-037)', () => {
       dueAt: new Date('2026-04-01').toISOString(),
     })
 
+    // The email is actually sent (previously it was only logged, never sent).
+    expect(sendEmailSpy).toHaveBeenCalledOnce()
+    const [to, subject, html] = sendEmailSpy.mock.calls[0]!
+    expect(to).toBe('student@example.com')
+    expect(subject).toContain('Test Cohort')
+    expect(html).toContain('installment 3 of 3')
+
     expect(stores.emailLog.docs).toHaveLength(1)
     const log = stores.emailLog.docs[0]!
     expect(log['idempotencyKey']).toBe(`reminder-${enrollmentId.toString()}-3`)
     expect(log['emailType']).toBe('URGENCY_REMINDER')
     expect(log['status']).toBe('SENT')
+  })
+
+  it('runInstallmentReminderJob does NOT stamp SENT when the send fails (so BullMQ can retry)', async () => {
+    const enrollmentId = new Types.ObjectId()
+    const cohortId     = new Types.ObjectId()
+    const studentId    = new Types.ObjectId()
+
+    stores.enrollment.docs.push({
+      _id: enrollmentId, studentId, cohortId, status: 'ACTIVE', stripeSubscriptionId: 'sub_fail',
+    })
+    stores.cohort.docs.push({ _id: cohortId, name: 'Cohort' })
+    stores.user.docs.push({ _id: studentId, email: 's@example.com' })
+    sendEmailSpy.mockRejectedValueOnce(new Error('SMTP down'))
+
+    await expect(
+      __testables.runInstallmentReminderJob({
+        enrollmentId: enrollmentId.toString(), installmentNumber: 1, dueAt: new Date().toISOString(),
+      }),
+    ).rejects.toThrow()
+
+    // No EmailLog written → a retry will re-attempt the send.
+    expect(stores.emailLog.docs).toHaveLength(0)
   })
 })

@@ -46,6 +46,10 @@ export const STRIPE_WEBHOOK_EVENT_ALLOWLIST = new Set<string>([
   'invoice.payment_succeeded',
   'invoice.payment_failed',
   'customer.subscription.deleted',
+  // Refunds issued from the Stripe dashboard + chargebacks — without these,
+  // access is never revoked and revenue reporting stays wrong.
+  'charge.refunded',
+  'charge.dispute.created',
 ])
 
 // ── Route plugin ────────────────────────────────────────────────────────────

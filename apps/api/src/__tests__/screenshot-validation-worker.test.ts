@@ -200,6 +200,24 @@ describe('screenshotValidationWorker — processValidationJob', () => {
     expect(sub.save).not.toHaveBeenCalled()
   })
 
+  it('reclaims a stalled ML_PROCESSING submission (redelivered after a crash) and finalizes it', async () => {
+    // Simulates a worker that crashed after the ML_PROCESSING transition; the
+    // redelivered job must reprocess, not no-op and strand the submission.
+    const sub = seedSubmission({ status: 'ML_PROCESSING' })
+    const stepId = seedStep()
+    mockClaudeResponse({ passed: true, confidence: 95, feedback: 'ok', reasoning: 'ok' })
+
+    await processValidationJob('job-reclaim', {
+      submissionId: sub._id.toString(),
+      s3Key:        'foo.png',
+      stepId:       stepId.toString(),
+      userId:       sub.userId.toString(),
+    })
+
+    expect(state.anthropicCreate).toHaveBeenCalled()
+    expect(sub.status).toBe('APPROVED')
+  })
+
   it('high-confidence pass → APPROVED + StudentStep upsert + email + badges + 2× ActivityLog + emit', async () => {
     const sub = seedSubmission()
     const stepId = seedStep()

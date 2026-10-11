@@ -47,6 +47,11 @@ export const PERMISSIONS = [
   'steps:read',
   'steps:write',
   'steps:delete',
+  // Content pages (SEO/LLM-facing guides & resources)
+  'content-pages:read',
+  'content-pages:write',
+  'content-pages:delete',
+  'content-pages:publish',
 ] as const
 
 export type Permission = (typeof PERMISSIONS)[number]

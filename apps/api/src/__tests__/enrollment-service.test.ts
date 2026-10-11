@@ -52,6 +52,14 @@ vi.mock('../models/Enrollment.js', () => ({
   },
 }))
 
+vi.mock('../models/CohortMembership.js', () => ({
+  CohortMembership: {
+    // Legacy-dashboard mirror upsert — fire-and-forget from the service's
+    // perspective; tests only need it to resolve.
+    findOneAndUpdate: vi.fn(() => Promise.resolve(null)),
+  },
+}))
+
 vi.mock('../models/EmailLog.js', () => ({
   EmailLog: {
     findOne: vi.fn((filter: unknown) => {

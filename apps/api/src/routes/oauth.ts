@@ -99,7 +99,7 @@ export async function oauthRoutes(fastify: FastifyInstance) {
       return reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'idToken is required.' })
     }
 
-    let payload: { sub?: string; email?: string; given_name?: string; family_name?: string; picture?: string }
+    let payload: { sub?: string; email?: string; email_verified?: boolean; given_name?: string; family_name?: string; picture?: string }
     try {
       const ticket = await googleClient.verifyIdToken({
         idToken: parsed.data.idToken,
@@ -114,6 +114,13 @@ export async function oauthRoutes(fastify: FastifyInstance) {
       return reply.code(401).send({ error: 'INVALID_TOKEN', message: 'Token missing required claims.' })
     }
 
+    // Require a Google-verified email. Account matching/activation below trusts
+    // the email claim to prove ownership, so an unverified email would allow
+    // account takeover.
+    if (payload.email_verified !== true) {
+      return reply.code(401).send({ error: 'EMAIL_NOT_VERIFIED', message: 'Google email is not verified.' })
+    }
+
     // Find existing user by OAuth ID, or by email
     let user = await User.findOne({
       $or: [
@@ -121,6 +128,16 @@ export async function oauthRoutes(fastify: FastifyInstance) {
         { email: payload.email.toLowerCase() },
       ],
     })
+
+    // OAuth SSO is student-only. Admins / super-admins must sign in through the
+    // admin portal (password + mandatory OTP). Issuing tokens here for an admin
+    // account would bypass that second factor entirely.
+    if (user && user.role !== 'STUDENT') {
+      return reply.code(403).send({
+        error:   'OAUTH_NOT_ALLOWED',
+        message: 'Please sign in through the admin portal.',
+      })
+    }
 
     // PBA-336 — Invite activation + PBA-285 OAuth collision guard
     if (user && user.oauthId === null) {
@@ -229,7 +246,7 @@ export async function oauthRoutes(fastify: FastifyInstance) {
       return reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'idToken is required.' })
     }
 
-    let decoded: { sub?: string; email?: string }
+    let decoded: { sub?: string; email?: string; email_verified?: boolean | string }
     try {
       const appleKeys = await fetchApplePublicKeys()
       const header = JSON.parse(
@@ -255,6 +272,13 @@ export async function oauthRoutes(fastify: FastifyInstance) {
       return reply.code(401).send({ error: 'INVALID_TOKEN', message: 'Token missing required claims.' })
     }
 
+    // Apple sends email_verified as a boolean or the string "true". Reject only
+    // when it's explicitly not verified (Apple-issued emails are otherwise
+    // always verified, including private-relay addresses).
+    if (decoded.email_verified === false || decoded.email_verified === 'false') {
+      return reply.code(401).send({ error: 'EMAIL_NOT_VERIFIED', message: 'Apple email is not verified.' })
+    }
+
     // Apple only sends user name on FIRST sign-in
     const firstName = parsed.data.user?.firstName ?? 'User'
     const lastName = parsed.data.user?.lastName ?? ''
@@ -265,6 +289,15 @@ export async function oauthRoutes(fastify: FastifyInstance) {
         { email: decoded.email.toLowerCase() },
       ],
     })
+
+    // OAuth SSO is student-only (see the Google handler) — admins must use the
+    // admin portal so mandatory OTP isn't bypassed.
+    if (user && user.role !== 'STUDENT') {
+      return reply.code(403).send({
+        error:   'OAUTH_NOT_ALLOWED',
+        message: 'Please sign in through the admin portal.',
+      })
+    }
 
     // OAuth collision guard for Apple email-matched accounts
     if (user && user.oauthId === null) {

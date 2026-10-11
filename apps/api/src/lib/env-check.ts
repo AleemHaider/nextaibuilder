@@ -34,5 +34,13 @@ export function checkEnv(): EnvCheckResult {
     errors.push('STRIPE_WEBHOOK_SECRET is not set — Stripe webhook verification will fail')
   }
 
+  // Paddle (optional second payment provider)
+  if (!process.env.PADDLE_API_KEY) {
+    warnings.push('PADDLE_API_KEY not set — Paddle checkout will be unavailable')
+  }
+  if (process.env.PADDLE_API_KEY && !process.env.PADDLE_WEBHOOK_SECRET) {
+    warnings.push('PADDLE_WEBHOOK_SECRET not set — Paddle webhook verification will fail')
+  }
+
   return { valid: errors.length === 0, warnings, errors }
 }

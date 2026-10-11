@@ -316,7 +316,7 @@ describe('POST /stripe (webhook receiver)', () => {
 
   // ── e2) Allowlist: signed but unhandled event types → 200 skipped, no enqueue ──
   it('returns 200 skipped without enqueuing for event types not on the allowlist', async () => {
-    const event = makeEvent('charge.refunded', 'evt_unhandled_001')
+    const event = makeEvent('customer.created', 'evt_unhandled_001')
     const payload = JSON.stringify(event)
     const sig = signPayload(payload)
 

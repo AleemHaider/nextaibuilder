@@ -146,6 +146,9 @@ vi.mock('../lib/redis.js', () => ({
 }))
 
 vi.mock('../models/Enrollment.js', () => ({ Enrollment: stores.enrollment }))
+vi.mock('../models/CohortMembership.js', () => ({
+  CohortMembership: { findOneAndUpdate: vi.fn(() => Promise.resolve(null)) },
+}))
 vi.mock('../models/StripePayment.js', () => ({ StripePayment: stores.stripePayment }))
 vi.mock('../models/SlackInvite.js', () => ({ SlackInvite: stores.slackInvite }))
 vi.mock('../models/EmailLog.js', () => ({ EmailLog: stores.emailLog }))

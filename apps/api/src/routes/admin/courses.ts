@@ -395,7 +395,7 @@ export async function adminCoursesRoutes(fastify: FastifyInstance) {
       ])
 
       return reply.send({
-        cohorts: cohorts.map((c) => ({
+        courses: cohorts.map((c) => ({
           id:          (c as unknown as { _id: Types.ObjectId })._id.toString(),
           title:       c.name,
           slug:        c.slug,

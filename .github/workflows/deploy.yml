@@ -164,11 +164,11 @@ jobs:
             ${{ steps.meta.outputs.image_base }}/nextaibuilder-frontend:${{ steps.meta.outputs.image_tag }}
             ${{ steps.meta.outputs.image_base }}/nextaibuilder-frontend:latest
           build-args: |
-            VITE_API_URL=${{ secrets.VITE_API_URL }}
-            VITE_APP_URL=${{ secrets.VITE_APP_URL }}
-            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
-            VITE_APPLE_CLIENT_ID=${{ secrets.VITE_APPLE_CLIENT_ID }}
-            VITE_APPLE_REDIRECT_URI=${{ secrets.VITE_APPLE_REDIRECT_URI }}
+            NEXT_PUBLIC_API_URL=${{ secrets.VITE_API_URL }}
+            NEXT_PUBLIC_APP_URL=${{ secrets.VITE_APP_URL }}
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+            NEXT_PUBLIC_APPLE_CLIENT_ID=${{ secrets.VITE_APPLE_CLIENT_ID }}
+            NEXT_PUBLIC_APPLE_REDIRECT_URI=${{ secrets.VITE_APPLE_REDIRECT_URI }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

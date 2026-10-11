@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   stripePayments:  new Map<string, Record<string, unknown> & { save: () => Promise<void>; toJSON: () => Record<string, unknown> }>(),
   manualPayments:  new Map<string, Record<string, unknown> & { save: () => Promise<void>; toJSON: () => Record<string, unknown> }>(),
   stripeCreate:    vi.fn(),
+  revokeEnrollment: vi.fn().mockResolvedValue({}),
   originalSecret:  process.env.STRIPE_SECRET_KEY,
 }))
 
@@ -26,6 +27,12 @@ vi.mock('../models/StripePayment.js', () => ({
 vi.mock('../models/ManualPaymentRequest.js', () => ({
   ManualPaymentRequest: {
     findById: (id: unknown) => Promise.resolve(state.manualPayments.get(String(id)) ?? null),
+  },
+}))
+
+vi.mock('../models/Enrollment.js', () => ({
+  Enrollment: {
+    findByIdAndUpdate: (...args: unknown[]) => state.revokeEnrollment(...args),
   },
 }))
 
@@ -46,11 +53,13 @@ import { issueRefund, REFUND_FAILURE_STATUS } from '../services/paymentService.j
 
 // ── Test helpers ──────────────────────────────────────────────────────────
 
-function seedStripePayment(opts: { status?: string; paymentIntentId?: string | null } = {}) {
+function seedStripePayment(opts: { status?: string; paymentIntentId?: string | null; amount?: number; enrollmentId?: Types.ObjectId } = {}) {
   const _id = new Types.ObjectId()
   const doc = {
     _id,
     status: opts.status ?? 'SUCCEEDED',
+    amount: opts.amount ?? 100_000, // cents ($1000) — large enough for the cap
+    enrollmentId: opts.enrollmentId,
     stripePaymentIntentId: opts.paymentIntentId === null
       ? null
       : (opts.paymentIntentId ?? 'pi_test_abc'),
@@ -83,6 +92,7 @@ beforeEach(() => {
   state.stripePayments.clear()
   state.manualPayments.clear()
   state.stripeCreate.mockReset()
+  state.revokeEnrollment.mockReset().mockResolvedValue({})
   process.env.STRIPE_SECRET_KEY = 'sk_test_present'
 })
 
@@ -141,7 +151,7 @@ describe('paymentService — issueRefund', () => {
     })
   })
 
-  it('stripe: SDK throws → DB still flipped, no error bubbles (best-effort)', async () => {
+  it('stripe: SDK throws → fails loudly, DB NOT flipped (no phantom refund)', async () => {
     const p = seedStripePayment({ paymentIntentId: 'pi_BAD' })
     state.stripeCreate.mockRejectedValueOnce(new Error('Stripe down'))
 
@@ -150,9 +160,53 @@ describe('paymentService — issueRefund', () => {
     })
 
     expect(state.stripeCreate).toHaveBeenCalledOnce()
-    expect(p.status).toBe('REFUNDED')
-    expect(p.save).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({ ok: false, code: 'STRIPE_REFUND_FAILED' })
+    expect(REFUND_FAILURE_STATUS['STRIPE_REFUND_FAILED']).toBe(502)
+    // row untouched so the operator can retry
+    expect(p.status).toBe('SUCCEEDED')
+    expect(p.save).not.toHaveBeenCalled()
+    expect(state.revokeEnrollment).not.toHaveBeenCalled()
+  })
+
+  it('stripe: refund exceeding the original charge → INVALID_AMOUNT (over-refund guard)', async () => {
+    // charge is $50 (5000 cents); admin fat-fingers the cents value as dollars
+    const p = seedStripePayment({ amount: 5000 })
+
+    const result = await issueRefund({
+      type: 'stripe', paymentId: p._id.toString(), amount: 5000, reason: 'oops',
+    })
+
+    expect(result).toMatchObject({ ok: false, code: 'INVALID_AMOUNT' })
+    expect(REFUND_FAILURE_STATUS['INVALID_AMOUNT']).toBe(400)
+    expect(state.stripeCreate).not.toHaveBeenCalled()
+    expect(p.save).not.toHaveBeenCalled()
+  })
+
+  it('stripe: full refund revokes the linked enrollment', async () => {
+    const enrollmentId = new Types.ObjectId()
+    const p = seedStripePayment({ amount: 5000, enrollmentId })
+    state.stripeCreate.mockResolvedValueOnce({ id: 're_full' })
+
+    const result = await issueRefund({
+      type: 'stripe', paymentId: p._id.toString(), amount: 50, reason: 'full refund',
+    })
+
     expect(result.ok).toBe(true)
+    expect(p.status).toBe('REFUNDED')
+    expect(state.revokeEnrollment).toHaveBeenCalledWith(enrollmentId, { $set: { status: 'REVOKED' } })
+  })
+
+  it('stripe: partial refund does NOT revoke access', async () => {
+    const enrollmentId = new Types.ObjectId()
+    const p = seedStripePayment({ amount: 5000, enrollmentId })
+    state.stripeCreate.mockResolvedValueOnce({ id: 're_partial' })
+
+    await issueRefund({
+      type: 'stripe', paymentId: p._id.toString(), amount: 10, reason: 'partial',
+    })
+
+    expect(p.status).toBe('REFUNDED')
+    expect(state.revokeEnrollment).not.toHaveBeenCalled()
   })
 
   it('stripe: no paymentIntentId → DB flipped without SDK call (legacy rows)', async () => {

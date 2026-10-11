@@ -14,6 +14,7 @@ import { UserBadge } from '../models/UserBadge.js'
 import { Certificate } from '../models/Certificate.js'
 import { StudentStep } from '../models/StudentStep.js'
 import { SetupStep } from '../models/SetupStep.js'
+import { CohortMembership } from '../models/CohortMembership.js'
 import { createNotification } from './notificationService.js'
 
 /** Statuses that count as "completed" for badge criteria evaluation */
@@ -133,6 +134,17 @@ export async function checkAndAwardCertificate(userId: string): Promise<boolean>
       userId: new Types.ObjectId(userId),
       issuedAt: new Date(),
     })
+
+    // Mark the cohort membership COMPLETE — this is the authoritative
+    // "all steps done" moment. Without it, `completionStatus` stayed
+    // NOT_STARTED forever and the reminder-email worker kept nudging
+    // finished students (and the dashboard flagged them DEADLINE_MISSED).
+    await CohortMembership.updateOne(
+      { userId: new Types.ObjectId(userId) },
+      { $set: { completionStatus: 'COMPLETE' } },
+    ).catch((err: unknown) =>
+      console.error(`[BadgeService] failed to mark membership COMPLETE for ${userId}:`, err),
+    )
 
     console.info(`[BadgeService] Certificate issued to user ${userId}`)
     return true

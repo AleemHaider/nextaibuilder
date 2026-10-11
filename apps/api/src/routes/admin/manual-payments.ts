@@ -10,6 +10,7 @@ import { requirePermission } from '../../middleware/require-permission.js'
 import type { JwtPayload } from '../../middleware/authenticate.js'
 import { ManualPaymentRequest } from '../../models/ManualPaymentRequest.js'
 import { User } from '../../models/User.js'
+import { Enrollment } from '../../models/Enrollment.js'
 import { activateEnrollment } from '../../services/enrollmentService.js'
 import { getPresignedReadUrl } from '../../lib/s3.js'
 import { bullMQConnection } from '../../lib/redis.js'
@@ -122,11 +123,24 @@ export async function adminManualPaymentsRoutes(fastify: FastifyInstance) {
 
       const { note } = parsed.data
 
-      // Load the request — must exist and be PENDING
-      const manualRequest = await ManualPaymentRequest.findOne({
-        _id:    new Types.ObjectId(id),
-        status: 'PENDING',
-      })
+      const now          = new Date()
+      const adminObjectId = new Types.ObjectId(adminId)
+
+      // Atomically claim the request: flip PENDING→APPROVED in a single op so
+      // two concurrent approvals can't both proceed (the second finds it no
+      // longer PENDING and 404s).
+      const manualRequest = await ManualPaymentRequest.findOneAndUpdate(
+        { _id: new Types.ObjectId(id), status: 'PENDING' },
+        {
+          $set: {
+            status:     'APPROVED',
+            reviewedBy: adminObjectId,
+            reviewedAt: now,
+            ...(note ? { rejectionReason: note } : {}), // reuse field for optional admin note
+          },
+        },
+        { new: true },
+      )
 
       if (!manualRequest) {
         return reply.code(404).send({
@@ -135,14 +149,28 @@ export async function adminManualPaymentsRoutes(fastify: FastifyInstance) {
         })
       }
 
-      const now          = new Date()
-      const adminObjectId = new Types.ObjectId(adminId)
-
-      // Update ManualPaymentRequest to APPROVED
-      manualRequest.status      = 'APPROVED'
-      manualRequest.reviewedBy  = adminObjectId
-      manualRequest.reviewedAt  = now
-      if (note) manualRequest.rejectionReason = note  // reuse field for optional admin note
+      // Guard against double-enrollment: if the student already has an ACTIVE,
+      // PAID enrollment for this cohort (e.g. they also paid via Stripe, or a
+      // second receipt was approved), link to it instead of re-activating.
+      // Re-activation would overwrite paymentMethod (STRIPE→MANUAL_RECEIPT) and
+      // fire duplicate Slack-invite + welcome-email side effects.
+      const existingEnrollment = await Enrollment.findOne({
+        studentId: manualRequest.studentId,
+        cohortId:  manualRequest.cohortId,
+      })
+      if (existingEnrollment && existingEnrollment.status === 'ACTIVE' && existingEnrollment.paymentStatus === 'PAID') {
+        manualRequest.enrollmentId = existingEnrollment._id as Types.ObjectId
+        await manualRequest.save()
+        fastify.log.info(
+          { requestId: id, enrollmentId: existingEnrollment._id.toString() },
+          '[FIR-48] Manual payment approved — student already enrolled, linked to existing enrollment',
+        )
+        return reply.code(200).send({
+          success:        true,
+          enrollmentId:   existingEnrollment._id.toString(),
+          alreadyEnrolled: true,
+        })
+      }
 
       // Look up the student's email up front — the service uses it for the
       // Slack invite job. A user without an email skips that step gracefully.

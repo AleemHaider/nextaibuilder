@@ -1,0 +1,37 @@
+# nextaibuilder — Agentic AI Engineer
+
+> An in-person, cohort-based program in Sadiqabad, Punjab, Pakistan that trains
+> builders to become Agentic AI Engineers. Available as a 6-month (accelerated)
+> or 1-year (comprehensive) track, both covering the same curriculum: Python,
+> LangChain, LangGraph, and n8n, ending in a capstone project where each
+> student ships one real, deployed AI agent reviewed live by instructors.
+
+## About
+
+- Program name: Agentic AI Engineer
+- Format: in-person, on-site studio (not a recorded or online-only course)
+- Location: Plaza No. 11, Al-Haram City, Near New Bus Stand, Sadiqabad, Punjab, Pakistan
+- Tracks: 6-month (accelerated) or 1-year (comprehensive, same curriculum spread over more time)
+- Cohort size: small, by design, for direct instructor time
+- Outcome: one real AI agent, designed and deployed by each student, reviewed live
+- Price: PKR 15,000/month on both tracks. First 10 students get 20% off, PKR 12,000/month
+
+## Curriculum (six steps, same order on both tracks)
+
+1. Python for AI Engineers — Python fundamentals for AI work: environments, APIs, async code, calling LLMs directly
+2. LangChain: Fundamentals — prompts, chains, memory, retrieval-augmented generation (RAG)
+3. LangChain: In Production — tool calling, structured output, vector stores, evaluation
+4. LangGraph — stateful, multi-step, multi-agent orchestration
+5. n8n — workflow automation, webhooks, connecting agents to real tools and systems
+6. Capstone: Ship Your Agent — one real, deployed AI agent, reviewed live by instructors
+
+## Admissions
+
+- Applications are reviewed on a rolling basis; apply at https://sdk.nextaibuilder.com/#apply
+- Process: apply, then a review, then admission with cohort dates and setup details
+- This is the first cohort of the in-person Sadiqabad program
+
+## Contact
+
+- WhatsApp: https://wa.me/923456655181
+- Website: https://sdk.nextaibuilder.com/

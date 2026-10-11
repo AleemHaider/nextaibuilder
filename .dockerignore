@@ -1,0 +1,37 @@
+# Git
+.git
+.gitignore
+.github
+
+# Dependencies — rebuilt inside the image
+node_modules
+**/node_modules
+
+# Next.js build outputs
+apps/web/.next
+apps/web/out
+
+# API build output
+apps/api/dist
+
+# Dev tooling
+**/.DS_Store
+**/*.log
+**/npm-debug.log*
+
+# Test artifacts
+**/coverage
+**/__snapshots__
+
+# Env files — never bake secrets into the image
+**/.env
+**/.env.local
+**/.env.development
+**/.env.test
+
+# Old Vite app (not needed for Docker builds)
+nextaibuilder-app
+
+# Editor
+**/.vscode
+**/.idea

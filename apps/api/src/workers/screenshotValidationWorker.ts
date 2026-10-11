@@ -166,12 +166,17 @@ export async function processValidationJob(
     fastify_log(`[ML Worker] Submission ${submissionId} not found — skipping`)
     return
   }
-  if (submission.status !== 'PENDING') {
-    fastify_log(`[ML Worker] Submission ${submissionId} no longer PENDING (${submission.status}) — skipping`)
+  // Reclaim stalled ML_PROCESSING jobs. If the worker crashed after the
+  // ML_PROCESSING transition below, BullMQ redelivers the job; without allowing
+  // reprocessing here the redelivery would hit this guard, no-op, and the
+  // submission would be stranded in ML_PROCESSING forever (student and admin
+  // both 409-blocked). Only genuinely terminal states are skipped.
+  if (submission.status !== 'PENDING' && submission.status !== 'ML_PROCESSING') {
+    fastify_log(`[ML Worker] Submission ${submissionId} in terminal state (${submission.status}) — skipping`)
     return
   }
 
-  // 2. Update to ML_PROCESSING
+  // 2. Update to ML_PROCESSING (idempotent on a reclaimed job)
   submission.status = 'ML_PROCESSING'
   await submission.save()
 

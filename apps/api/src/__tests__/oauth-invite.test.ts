@@ -124,11 +124,12 @@ const GOOGLE_SUB    = 'google-sub-123'
 const USER_EMAIL    = 'student@example.com'
 
 const BASE_PAYLOAD = {
-  sub:         GOOGLE_SUB,
-  email:       USER_EMAIL,
-  given_name:  'Jane',
-  family_name: 'Doe',
-  picture:     'https://example.com/photo.jpg',
+  sub:            GOOGLE_SUB,
+  email:          USER_EMAIL,
+  email_verified: true,
+  given_name:     'Jane',
+  family_name:    'Doe',
+  picture:        'https://example.com/photo.jpg',
 }
 
 function setValidGoogleToken(emailOverride?: string) {

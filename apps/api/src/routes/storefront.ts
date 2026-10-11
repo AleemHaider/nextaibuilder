@@ -4,15 +4,32 @@
 // GET  /api/v1/storefront/certificate/:credentialId — public certificate verification (FIR-154)
 
 import type { FastifyInstance } from 'fastify'
+import { getFlashPromo } from '../lib/flashPromo.js'
 import { Types } from 'mongoose'
 import { Cohort } from '../models/Cohort.js'
 import { Module } from '../models/Module.js'
 import { Lesson } from '../models/Lesson.js'
+import { Enrollment } from '../models/Enrollment.js'
 import { PaymentPlan } from '../models/PaymentPlan.js'
 import { Certificate } from '../models/Certificate.js'
 import { User } from '../models/User.js'
 // NAB-P0-3 — populate the primary instructor profile on the cohort detail.
 import { InstructorProfile } from '../models/InstructorProfile.js'
+import { getPresignedReadUrl } from '../lib/s3.js'
+
+// Public cover images use a long-lived (7-day) presigned URL, recomputed on
+// every storefront request — avoids needing the S3 bucket (which also holds
+// private student screenshots) configured for public-read.
+const COVER_IMAGE_URL_TTL_SECONDS = 7 * 24 * 60 * 60
+
+async function resolveCoverImageUrl(coverImageKey: string | null | undefined): Promise<string | null> {
+  if (!coverImageKey) return null
+  try {
+    return await getPresignedReadUrl(coverImageKey, COVER_IMAGE_URL_TTL_SECONDS)
+  } catch {
+    return null
+  }
+}
 
 // ── Route plugin ───────────────────────────────────────────────────────────
 
@@ -21,7 +38,13 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
   // ── GET /cohorts ── Published cohort listing ──────────────────────────
   fastify.get('/cohorts', async (_request, reply) => {
     const cohorts = await Cohort.find(
-      { isPublished: true },
+      {
+        isPublished: true,
+        // Don't list cohorts that already ended — they can't be purchased
+        // (checkout returns COHORT_ENDED) so showing them is a dead end.
+        // Null liveEndDate (self-paced / recorded) is always listed.
+        $or: [{ liveEndDate: null }, { liveEndDate: { $gte: new Date() } }],
+      },
       {
         name:             1,
         slug:             1,
@@ -52,6 +75,16 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
       return reply.send([])
     }
 
+    // Real enrolled counts per cohort. The stored `enrollmentCount` field is
+    // never maintained (stuck at its default 0), so seats-left / sold-out /
+    // founding-promo math must be computed from actual active enrollments.
+    const cohortIds = cohorts.map((c) => (c as typeof c & { _id: Types.ObjectId })._id)
+    const enrolledAgg = await Enrollment.aggregate<{ _id: Types.ObjectId; n: number }>([
+      { $match: { cohortId: { $in: cohortIds }, status: { $nin: ['REVOKED'] } } },
+      { $group: { _id: '$cohortId', n: { $sum: 1 } } },
+    ])
+    const enrolledMap = new Map(enrolledAgg.map((e) => [e._id.toString(), e.n]))
+
     // Collect all referenced payment plan IDs across all cohorts
     const allPlanIds = cohorts.flatMap(
       (c) => (c.paymentPlanIds ?? []) as Types.ObjectId[],
@@ -71,8 +104,9 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
       ]),
     )
 
-    const result = cohorts.map((c) => {
+    const result = await Promise.all(cohorts.map(async (c) => {
       const cohortWithId = c as typeof c & { _id: Types.ObjectId }
+      const enrolled = enrolledMap.get(cohortWithId._id.toString()) ?? 0
       const cohortPlans = (c.paymentPlanIds ?? []).map(
         (id) => planMap.get(id.toString()),
       ).filter(Boolean)
@@ -80,15 +114,19 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
       const oneTimePlan = cohortPlans.find((p) => p!.type === 'ONE_TIME')
       const installmentPlan = cohortPlans.find((p) => p!.type === 'INSTALLMENT')
 
-      const price = oneTimePlan?.totalAmount ?? installmentPlan?.totalAmount ?? 0
+      // PaymentPlan.totalAmount is in cents (Stripe's unit) — the storefront
+      // display fields are whole dollars, so convert here rather than at
+      // each of the half-dozen frontend call sites that format this as
+      // currency directly.
+      const price = Math.round((oneTimePlan?.totalAmount ?? installmentPlan?.totalAmount ?? 0) / 100)
       const installmentCount = installmentPlan ? 3 : undefined
       const installmentPrice = installmentPlan
-        ? Math.ceil(installmentPlan.totalAmount / 3)
+        ? Math.ceil(installmentPlan.totalAmount / 300)
         : undefined
 
       const soldOut =
         c.maxSeats != null &&
-        (c.enrollmentCount ?? 0) >= c.maxSeats
+        enrolled >= c.maxSeats
 
       // Build human-readable meta string
       let meta = ''
@@ -100,7 +138,7 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         })
         meta = `📅 Starts ${dateStr}`
         if (c.maxSeats != null) {
-          const remaining = c.maxSeats - (c.enrollmentCount ?? 0)
+          const remaining = c.maxSeats - enrolled
           meta += ` · ${Math.max(0, remaining)} seats left`
         }
       }
@@ -112,9 +150,9 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
       const promoActive =
         c.regularPrice != null &&
         c.promoSeats != null &&
-        (c.enrollmentCount ?? 0) < c.promoSeats
+        enrolled < c.promoSeats
       const seatsRemainingPromo = promoActive
-        ? Math.max(0, (c.promoSeats ?? 0) - (c.enrollmentCount ?? 0))
+        ? Math.max(0, (c.promoSeats ?? 0) - enrolled)
         : null
 
       return {
@@ -122,11 +160,16 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         slug:             c.slug ?? '',
         title:            c.name,
         tagline:          c.tagline ?? '',
-        type:             (c.type ?? 'recorded') as 'recorded' | 'live' | 'combined',
+        // DB stores type uppercase ('LIVE'/'RECORDED'/'COMBINED') — actually
+        // lowercase it here, not just assert the type, or every consumer
+        // that keys a lookup map by this value (e.g. CohortCard's
+        // TYPE_CONFIG) gets `undefined` and throws.
+        type:             (c.type ?? 'recorded').toLowerCase() as 'recorded' | 'live' | 'combined',
         price,
         installmentPrice,
         installmentCount,
         coverGradient:    null,
+        coverImageUrl:    await resolveCoverImageUrl(c.coverImageKey),
         meta,
         soldOut,
         published:        true,
@@ -136,12 +179,21 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         requirements:     c.requirements     ?? [],
         targetAudience:   c.targetAudience   ?? [],
         // Founding discount. regularPrice is null when no promo is configured.
-        regularPrice:        promoActive ? c.regularPrice : null,
+        // c.regularPrice is stored in cents like PaymentPlan.totalAmount.
+        regularPrice:        promoActive && c.regularPrice != null ? Math.round(c.regularPrice / 100) : null,
         promoSeatsRemaining: seatsRemainingPromo,
       }
-    })
+    }))
 
     return reply.send(result)
+  })
+
+  // ── GET /promo ── Flash-promo state for this browser session ───────────
+  // Starts the countdown on first call (signed session cookie). The checkout
+  // routes read the same cookie, so what the ticker shows is what gets charged.
+  fastify.get('/promo', async (request, reply) => {
+    const promo = getFlashPromo(request, reply, { start: true })
+    return reply.send(promo)
   })
 
   // ── GET /cohorts/:slug ── Published cohort detail ─────────────────────
@@ -258,15 +310,23 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
       const oneTimePlan = paymentPlans.find((p) => p.type === 'ONE_TIME')
       const installmentPlan = paymentPlans.find((p) => p.type === 'INSTALLMENT')
 
-      const price = oneTimePlan?.totalAmount ?? installmentPlan?.totalAmount ?? 0
+      // See list endpoint above — totalAmount is cents, storefront fields are dollars.
+      const price = Math.round((oneTimePlan?.totalAmount ?? installmentPlan?.totalAmount ?? 0) / 100)
       const installmentCount = installmentPlan ? 3 : undefined
       const installmentPrice = installmentPlan
-        ? Math.ceil(installmentPlan.totalAmount / 3)
+        ? Math.ceil(installmentPlan.totalAmount / 300)
         : undefined
+
+      // Real enrolled count (the stored enrollmentCount field is never
+      // maintained, so it can't drive seats-left / sold-out / promo math).
+      const enrolled = await Enrollment.countDocuments({
+        cohortId,
+        status: { $nin: ['REVOKED'] },
+      })
 
       const soldOut =
         cohort.maxSeats != null &&
-        (cohort.enrollmentCount ?? 0) >= cohort.maxSeats
+        enrolled >= cohort.maxSeats
 
       let meta = ''
       if (cohort.type === 'RECORDED') {
@@ -277,7 +337,7 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         })
         meta = `📅 Starts ${dateStr}`
         if (cohort.maxSeats != null) {
-          const remaining = cohort.maxSeats - (cohort.enrollmentCount ?? 0)
+          const remaining = cohort.maxSeats - enrolled
           meta += ` · ${Math.max(0, remaining)} seats left`
         }
       }
@@ -285,9 +345,9 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
       const promoActive =
         cohort.regularPrice != null &&
         cohort.promoSeats != null &&
-        (cohort.enrollmentCount ?? 0) < cohort.promoSeats
+        enrolled < cohort.promoSeats
       const seatsRemainingPromo = promoActive
-        ? Math.max(0, (cohort.promoSeats ?? 0) - (cohort.enrollmentCount ?? 0))
+        ? Math.max(0, (cohort.promoSeats ?? 0) - enrolled)
         : null
 
       return reply.send({
@@ -295,25 +355,27 @@ export async function storefrontRoutes(fastify: FastifyInstance) {
         slug:             cohort.slug ?? '',
         title:            cohort.name,
         tagline:          cohort.tagline ?? '',
-        type:             (cohort.type ?? 'recorded') as 'recorded' | 'live' | 'combined',
+        type:             (cohort.type ?? 'recorded').toLowerCase() as 'recorded' | 'live' | 'combined',
         description:      cohort.description ?? '',
         price,
         installmentPrice,
         installmentCount,
         coverGradient:    null,
+        coverImageUrl:    await resolveCoverImageUrl(cohort.coverImageKey),
         meta,
         soldOut,
         published:        true,
         lessonCount:      totalLessonCount,
         hoursOfContent,
         // Founding discount. regularPrice null when no promo active.
-        regularPrice:        promoActive ? cohort.regularPrice : null,
+        // cohort.regularPrice is stored in cents like PaymentPlan.totalAmount.
+        regularPrice:        promoActive && cohort.regularPrice != null ? Math.round(cohort.regularPrice / 100) : null,
         promoSeatsRemaining: seatsRemainingPromo,
         startDate:        cohort.liveStartDate?.toISOString() ?? undefined,
         seatsRemaining:   cohort.maxSeats != null
-          ? Math.max(0, cohort.maxSeats - (cohort.enrollmentCount ?? 0))
+          ? Math.max(0, cohort.maxSeats - enrolled)
           : undefined,
-        enrolledCount:    cohort.enrollmentCount ?? 0,
+        enrolledCount:    enrolled,
         modules:          modulesResult,
         // NAB-P0-2 — `includes` was hardcoded to [] before this story. The
         // legacy alias is kept so consumers that haven't migrated yet still

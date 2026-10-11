@@ -30,3 +30,9 @@ export * from './SlackInvite.js'
 export * from './ProcessedStripeEvent.js'
 // NAB-P0-3 — instructor profile
 export * from './InstructorProfile.js'
+// sdk.nextaibuilder.com — physical course admission form
+export * from './AdmissionApplication.js'
+// Admin-managed SEO/LLM content pages (guides & resources)
+export * from './ContentPage.js'
+// Paddle — transaction ledger
+export * from './PaddlePayment.js'

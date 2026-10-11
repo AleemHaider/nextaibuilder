@@ -8,6 +8,7 @@ import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
+import { buildSignedLocalUploadUrl } from './localUploadSigning.js'
 
 const REGION      = process.env.AWS_REGION      ?? 'eu-west-2'
 const BUCKET_NAME = process.env.S3_BUCKET_NAME  ?? 'pba-screenshots'
@@ -93,7 +94,7 @@ export async function getPresignedPutUrl(
 ): Promise<string> {
   if (!IS_S3_CONFIGURED) {
     const apiBase = process.env.API_BASE_URL ?? 'http://localhost:4000'
-    return `${apiBase}/api/uploads/${s3Key}`
+    return buildSignedLocalUploadUrl(apiBase, s3Key, expiresInSeconds)
   }
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
