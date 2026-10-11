@@ -1,0 +1,25 @@
+<!-- wp:template-part {"slug":"header","area":"header"} /-->
+<!-- wp:group {"tagName":"main","style":{"spacing":{"margin":{"top":"0"},"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|70"}}},"layout":{"type":"constrained","contentSize":"880px"}} -->
+<main class="wp-block-group" style="margin-top:0;padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--70)">
+	<!-- wp:query-title {"type":"archive","showPrefix":false,"fontSize":"2xl"} /-->
+	<!-- wp:term-description {"fontSize":"md","style":{"color":{"text":"#5d6475"},"spacing":{"margin":{"bottom":"var:preset|spacing|50"}}}} /-->
+	<!-- wp:query {"queryId":1,"query":{"inherit":true,"perPage":20},"layout":{"type":"default"}} -->
+	<div class="wp-block-query">
+		<!-- wp:post-template {"className":"nab-archive-list","layout":{"type":"default"}} -->
+			<!-- wp:post-title {"level":2,"isLink":true} /-->
+			<!-- wp:post-excerpt {"excerptLength":40,"moreText":""} /-->
+		<!-- /wp:post-template -->
+		<!-- wp:query-pagination {"layout":{"type":"flex","justifyContent":"space-between"},"style":{"spacing":{"margin":{"top":"var:preset|spacing|50"}}}} -->
+			<!-- wp:query-pagination-previous /-->
+			<!-- wp:query-pagination-next /-->
+		<!-- /wp:query-pagination -->
+		<!-- wp:query-no-results -->
+			<!-- wp:paragraph -->
+			<p>Nothing published here yet. New guides are added regularly.</p>
+			<!-- /wp:paragraph -->
+		<!-- /wp:query-no-results -->
+	</div>
+	<!-- /wp:query -->
+</main>
+<!-- /wp:group -->
+<!-- wp:template-part {"slug":"footer","area":"footer"} /-->

@@ -1,0 +1,12 @@
+{
+  "name": "nab-ui-audit",
+  "private": true,
+  "type": "module",
+  "description": "Responsive, accessibility (axe) and keyboard-focus audit for the local WordPress site.",
+  "scripts": {
+    "audit": "node audit.mjs"
+  },
+  "dependencies": {
+    "axe-core": "4.10.2"
+  }
+}

@@ -1,0 +1,3 @@
+plugins/nab-core/vendor/
+.wp-env.override.json
+plugins/nab-core/import-data/

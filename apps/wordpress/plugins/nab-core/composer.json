@@ -1,0 +1,13 @@
+{
+	"name": "nextaibuilder/nab-core",
+	"description": "nextaibuilder site plugin",
+	"type": "wordpress-plugin",
+	"require": {
+		"php": ">=8.1",
+		"anthropic-ai/sdk": "*"
+	},
+	"config": {
+		"optimize-autoloader": true,
+		"platform": { "php": "8.2" }
+	}
+}

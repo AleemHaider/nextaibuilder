@@ -1,0 +1,822 @@
+/*
+ * nextaibuilder — premium light design system (Stripe-style, in brand colors).
+ *
+ * Inter at light display weights with tight tracking, navy ink on white,
+ * a soft gradient wash built from the logo's blues (plus a touch of the warm
+ * orange), pill buttons in brand blue, hairline borders and very soft shadows.
+ * Real product screenshots carry the visual weight.
+ */
+
+:root {
+	--ink: #14213d;
+	--ink-2: #33415c;
+	--muted: #5f6b80;
+	--blue: #2a6fa8;
+	--blue-hover: #1f5a8c;
+	--sky: #4a9ad4;
+	--pale: #e8f2fb;
+	--orange: #ff8c5a;
+	--soft: #f6f9fc;
+	--line: #e3e8ee;
+	--navy: #0b1735;
+	--shadow-1: 0 1px 3px rgba(0, 55, 112, 0.08);
+	--shadow-2: 0 8px 24px rgba(0, 55, 112, 0.08), 0 2px 6px rgba(0, 55, 112, 0.04);
+	--shadow-3: 0 30px 60px -20px rgba(0, 40, 90, 0.25), 0 12px 30px -15px rgba(0, 40, 90, 0.15);
+	--r-sm: 6px;
+	--r-md: 8px;
+	--r-lg: 12px;
+	--r-xl: 16px;
+	--gutter: var(--wp--style--root--padding-left, clamp(1rem, 5vw, 5rem));
+	--band: clamp(4.5rem, 9vw, 7.5rem);
+}
+
+body {
+	font-feature-settings: "cv11" 1, "ss01" 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	color: var(--ink);
+}
+
+.wp-site-blocks { display: flex; flex-direction: column; min-height: 100vh; }
+.wp-site-blocks > main, .wp-site-blocks > .nab-main { flex: 1 0 auto; }
+.wp-site-blocks > * + * { margin-block-start: 0; }
+
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+:where(a, button, summary, input, select, textarea):focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 6px; }
+::selection { background: #cfe3f6; }
+.nab-num, .nab-price__amount, .nab-buy__price, .nab-compare__price { font-variant-numeric: tabular-nums; }
+
+/* Admin-only demo notice */
+.nab-demo-bar { position: relative; z-index: 60; padding: 0.5rem 1rem; background: #fff4e5; color: #8a4b08; font-size: 13px; text-align: center; border-bottom: 1px solid #f6d9b0; }
+
+/* ================================================================ Header */
+
+.nab-header { position: sticky; top: 0; z-index: 50; padding-block: 0.85rem !important; background: rgba(255, 255, 255, 0.85) !important; backdrop-filter: saturate(1.6) blur(12px); border-bottom: 1px solid transparent; transition: border-color 0.2s; }
+.nab-header:hover, body:not(.home) .nab-header { border-bottom-color: var(--line); }
+.admin-bar .nab-header { top: var(--wp-admin--admin-bar--height, 32px); }
+
+.nab-logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none !important; flex-shrink: 0; }
+.nab-logo__text { display: flex; flex-direction: column; line-height: 1.05; }
+.nab-logo__pill { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; margin-bottom: 3px; padding: 2px 7px; border-radius: 20px; background: var(--pale); color: var(--blue); font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+.nab-logo__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ink); }
+.nab-logo__word { color: var(--ink); font-size: 21px; font-weight: 700; letter-spacing: -0.035em; }
+
+.nab-nav .wp-block-navigation-item__content { color: var(--ink-2); text-decoration: none !important; white-space: nowrap; transition: color 0.15s; }
+.nab-nav .wp-block-navigation-item__content:hover { color: var(--blue); }
+.nab-header__cta .wp-block-button__link { padding: 0.5rem 1.05rem !important; font-size: 0.9375rem !important; white-space: nowrap; }
+@media (max-width: 781px) { .nab-header__cta { display: none; } }
+
+/* ================================================================ Buttons */
+
+.wp-element-button, .wp-block-button__link { transition: background-color 0.15s, color 0.15s, box-shadow 0.15s; }
+.is-style-outline > .wp-block-button__link:hover { background: var(--pale) !important; }
+.nab-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.7rem 1.35rem; border: 0; border-radius: 9999px; background: var(--blue); color: #fff !important; font: inherit; font-size: 1rem; font-weight: 500; line-height: 1.25; text-decoration: none !important; cursor: pointer; box-sizing: border-box; transition: background-color 0.15s; }
+.nab-btn:hover { background: var(--blue-hover); }
+.nab-btn--block { width: 100%; }
+.nab-btn--outline, .nab-btn--quiet { background: #fff; color: var(--blue) !important; box-shadow: inset 0 0 0 1px var(--blue); }
+.nab-btn--outline:hover, .nab-btn--quiet:hover { background: var(--pale); }
+.nab-btn--light { background: #fff; color: var(--ink) !important; }
+.nab-btn--light:hover { background: var(--pale); }
+
+/* ================================================================ Gradient mesh */
+
+.nab-mesh { position: absolute !important; inset: 0 0 auto 0; width: auto !important; max-width: none !important; margin: 0 !important; height: min(760px, 100%); overflow: hidden; pointer-events: none; z-index: 0; -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+.nab-mesh i { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.75; }
+.nab-mesh i:nth-child(1) { width: 52vw; height: 420px; left: -12vw; top: -180px; background: #a8d4f0; }
+.nab-mesh i:nth-child(2) { width: 46vw; height: 380px; left: 26vw; top: -230px; background: #7bb8e0; }
+.nab-mesh i:nth-child(3) { width: 38vw; height: 360px; right: -10vw; top: -120px; background: #b9c8ff; }
+.nab-mesh i:nth-child(4) { width: 30vw; height: 260px; right: 12vw; top: 140px; background: #ffc9ad; opacity: 0.55; }
+@media (max-width: 781px) { .nab-mesh i { filter: blur(50px); } .nab-mesh i:nth-child(4) { display: none; } }
+
+/* ================================================================ Bands + section heads */
+
+.nab-band { padding-block: var(--band); }
+.nab-band--soft { background: var(--soft); }
+.nab-band__head { margin-bottom: 3.5rem !important; }
+.nab-band__head > * { max-width: 720px; }
+.nab-band__head h2 { margin: 0.4rem 0 1rem; font-size: var(--wp--preset--font-size--xl); }
+.nab-kicker { margin: 0 !important; color: var(--blue); font-size: var(--wp--preset--font-size--sm); font-weight: 500; }
+.nab-lede { margin: 0 !important; color: var(--muted); font-size: var(--wp--preset--font-size--md); line-height: 1.55; }
+
+/* ================================================================ Hero */
+
+.nab-hero { position: relative; isolation: isolate; padding-block: clamp(3.5rem, 8vw, 6.5rem) clamp(2.5rem, 5vw, 4rem); overflow: hidden; }
+.nab-hero > *:not(.nab-mesh) { position: relative; z-index: 1; }
+.nab-hero__grid { gap: clamp(2.5rem, 5vw, 4.5rem) !important; }
+.nab-hero__badge { margin: 0 0 1.5rem !important; }
+.nab-hero__badge a { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.85rem 0.35rem 0.6rem; border-radius: 9999px; background: rgba(255, 255, 255, 0.75); box-shadow: var(--shadow-1); color: var(--ink-2); font-size: var(--wp--preset--font-size--xs); font-weight: 500; text-decoration: none; }
+.nab-hero__badge a::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 3px rgba(255, 140, 90, 0.25); }
+.nab-hero__badge a:hover { color: var(--blue); }
+.nab-hero__title { margin: 0 0 1.5rem !important; font-weight: 300 !important; letter-spacing: -0.035em !important; line-height: 1.02 !important; }
+.nab-hero__lede { max-width: 34rem; margin: 0 0 2.25rem !important; color: var(--ink-2); font-size: var(--wp--preset--font-size--md); line-height: 1.55; }
+.nab-hero__actions { gap: 0.75rem !important; }
+
+/* Product composite */
+.nab-visual { position: relative; min-height: 470px; }
+.nab-visual__term { position: relative; z-index: 2; width: 88%; overflow: hidden; border-radius: var(--r-xl); background: var(--navy); box-shadow: var(--shadow-3); font-family: var(--wp--preset--font-family--mono); font-size: 12.5px; line-height: 1.7; }
+.nab-visual__bar { display: flex; align-items: center; gap: 6px; padding: 0.7rem 0.9rem; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
+.nab-visual__bar span { width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, 0.16); }
+.nab-visual__bar b { margin-left: auto; color: rgba(255, 255, 255, 0.4); font-weight: 400; }
+.nab-visual__code { padding: 1rem 1.1rem 1.15rem; color: #c9d6ea; }
+.nab-visual__code p { margin: 0 0 0.35rem; }
+.nab-visual__code .p { color: #6f88ad; }
+.nab-visual__code .u { color: #fff; }
+.nab-visual__code .a { color: #9fb1cc; }
+.nab-visual__code .ok { color: #7ee2a8; }
+.nab-visual__shot { position: absolute; z-index: 1; right: 0; top: 34%; width: 72%; margin: 0; overflow: hidden; border-radius: var(--r-lg); background: #fff; box-shadow: var(--shadow-3); }
+.nab-visual__shot img { display: block; width: 100%; height: auto; }
+.nab-visual__progress { position: absolute; z-index: 3; left: 6%; bottom: -6px; width: 270px; padding: 1rem 1.1rem; border-radius: var(--r-lg); background: #fff; box-shadow: var(--shadow-2); font-size: 13px; }
+.nab-visual__label { margin: 0 0 0.6rem; color: var(--muted); font-size: 12px; font-weight: 500; }
+.nab-visual__progress p:not(.nab-visual__label) { display: flex; align-items: center; gap: 0.6rem; margin: 0.35rem 0 0; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nab-visual__progress span { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); font-size: 11px; }
+.nab-visual__progress .done span { background: #1f7a45; color: #fff; box-shadow: none; font-size: 0; }
+.nab-visual__progress .done span::before { content: "✓"; font-size: 11px; }
+.nab-visual__progress .now span { background: var(--blue); color: #fff; box-shadow: 0 0 0 3px var(--pale); }
+@media (max-width: 781px) {
+	.nab-visual { min-height: 0; }
+	.nab-visual__term { width: 100%; }
+	.nab-visual__shot, .nab-visual__progress { display: none; }
+}
+
+/* Logos */
+.nab-logos { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 2.5rem; margin-top: clamp(3rem, 6vw, 4.5rem) !important; padding-top: 2rem; border-top: 1px solid var(--line); }
+.nab-logos p { margin: 0; color: var(--muted); font-size: var(--wp--preset--font-size--xs); }
+.nab-logos ul { display: flex; flex-wrap: wrap; gap: 0.75rem 2.75rem; margin: 0; padding: 0; list-style: none; }
+.nab-logos li { color: #8a95a8; font-size: 1.375rem; font-weight: 600; letter-spacing: -0.03em; }
+
+/* ================================================================ Projects */
+
+.nab-projects { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.5rem 2rem; }
+.nab-project { margin: 0; }
+.nab-project__img { overflow: hidden; border-radius: var(--r-lg); background: var(--soft); box-shadow: 0 0 0 1px var(--line), var(--shadow-2); aspect-ratio: 3 / 2; }
+.nab-project__img img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: left top; transition: transform 0.4s ease; }
+.nab-project:hover .nab-project__img img { transform: scale(1.02); }
+.nab-project figcaption { padding-top: 1.1rem; }
+.nab-project h3 { margin: 0 0 0.35rem; font-size: 1.1875rem; font-weight: 500; letter-spacing: -0.01em; }
+.nab-project p { margin: 0 0 0.5rem; color: var(--muted); font-size: var(--wp--preset--font-size--sm); line-height: 1.5; }
+.nab-project span { color: var(--ink-2); font-size: var(--wp--preset--font-size--xs); }
+@media (max-width: 900px) { .nab-projects { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .nab-projects { grid-template-columns: 1fr; } }
+
+/* ================================================================ Timeline */
+
+.nab-timeline { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.nab-timeline > li { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 2rem; padding: 1.75rem 0; border-bottom: 1px solid var(--line); }
+.nab-timeline__when b { display: block; font-weight: 500; }
+.nab-timeline__when span { color: var(--muted); font-size: var(--wp--preset--font-size--sm); }
+.nab-timeline__what h3 { margin: 0 0 0.6rem; font-size: var(--wp--preset--font-size--lg); font-weight: 400; }
+.nab-timeline__what ul { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.nab-timeline__what li { padding: 0.3rem 0.75rem; border-radius: 9999px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); color: var(--ink-2); font-size: var(--wp--preset--font-size--xs); }
+@media (max-width: 700px) { .nab-timeline > li { grid-template-columns: 1fr; gap: 0.5rem; } .nab-timeline__when { display: flex; gap: 0.75rem; align-items: baseline; } }
+
+/* ================================================================ Instructor */
+
+.nab-instructor { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(2rem, 6vw, 5rem); align-items: center; }
+.nab-instructor__photo { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--r-xl); box-shadow: var(--shadow-2); }
+.nab-instructor__text h2 { margin: 0.4rem 0 0.25rem; font-size: var(--wp--preset--font-size--xl); }
+.nab-instructor__role { margin: 0 0 1.5rem; color: var(--muted); }
+.nab-instructor__bio { margin: 0 0 1.75rem; color: var(--ink-2); font-size: var(--wp--preset--font-size--md); line-height: 1.6; }
+.nab-instructor__facts { display: grid; gap: 0.75rem; margin: 0; padding: 1.5rem 0 0; border-top: 1px solid var(--line); list-style: none; }
+.nab-instructor__facts li { position: relative; padding-left: 1.75rem; color: var(--ink-2); }
+.nab-instructor__facts li::before { content: ""; position: absolute; left: 0; top: 0.45em; width: 10px; height: 10px; border-radius: 50%; background: var(--sky); box-shadow: 0 0 0 4px var(--pale); }
+@media (max-width: 781px) { .nab-instructor { grid-template-columns: 1fr; } .nab-instructor__photo { max-width: 360px; } }
+
+/* ================================================================ Pricing */
+
+.nab-pricing { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+.nab-price { display: flex; flex-direction: column; padding: 2.25rem; border-radius: var(--r-lg); background: #fff; box-shadow: 0 0 0 1px var(--line), var(--shadow-1); }
+.nab-price--featured { background: var(--navy); color: #fff; box-shadow: var(--shadow-3); }
+.nab-price__name { margin: 0; font-size: var(--wp--preset--font-size--lg); font-weight: 400; letter-spacing: -0.015em; }
+.nab-price__when { margin: 0.35rem 0 1.75rem; color: var(--muted); font-size: var(--wp--preset--font-size--sm); }
+.nab-price--featured .nab-price__when { color: rgba(255, 255, 255, 0.7); }
+.nab-price__amount { margin: 0; font-size: 3rem; font-weight: 300; letter-spacing: -0.03em; line-height: 1; }
+.nab-price__plan { margin: 0.6rem 0 1.75rem; color: var(--muted); font-size: var(--wp--preset--font-size--sm); }
+.nab-price--featured .nab-price__plan { color: rgba(255, 255, 255, 0.7); }
+.nab-price .nab-btn { width: 100%; }
+.nab-price ul { margin: 1.75rem 0 0; padding: 1.5rem 0 0; border-top: 1px solid var(--line); list-style: none; font-size: var(--wp--preset--font-size--sm); }
+.nab-price--featured ul { border-top-color: rgba(255, 255, 255, 0.14); }
+.nab-price li { position: relative; margin-bottom: 0.65rem; padding-left: 1.6rem; }
+.nab-price li::before { content: ""; position: absolute; left: 0; top: 0.3em; width: 14px; height: 14px; border-radius: 50%; background: var(--pale) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='%232a6fa8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 11px no-repeat; }
+.nab-price--featured li::before { background-color: rgba(255, 255, 255, 0.14); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+@media (max-width: 700px) { .nab-pricing { grid-template-columns: 1fr; } }
+
+/* ================================================================ Reviews */
+
+.nab-rating { display: flex; align-items: center; gap: 0.6rem; margin: -2rem 0 2.5rem; color: var(--ink-2); font-size: var(--wp--preset--font-size--sm); }
+.nab-rating__stars { color: #f5a524; letter-spacing: 0.1em; }
+.nab-reviews { columns: 3 300px; column-gap: 1.5rem; }
+.nab-review { break-inside: avoid; margin: 0 0 1.5rem; padding: 1.75rem; border-radius: var(--r-lg); background: #fff; box-shadow: 0 0 0 1px var(--line), var(--shadow-1); }
+.nab-review blockquote { margin: 0 0 1.25rem; padding: 0; border: 0; color: var(--ink); font-size: 1rem; line-height: 1.6; }
+.nab-review figcaption { display: flex; align-items: center; gap: 0.75rem; }
+.nab-review img, .nab-reviews__initial { width: 40px; height: 40px; flex: none; border-radius: 50%; object-fit: cover; }
+.nab-reviews__initial { display: flex; align-items: center; justify-content: center; background: var(--pale); color: var(--blue); font-weight: 600; }
+.nab-review b { display: block; font-weight: 500; font-size: var(--wp--preset--font-size--sm); }
+.nab-review small { display: block; color: var(--muted); font-size: var(--wp--preset--font-size--xs); }
+
+/* ================================================================ FAQ */
+
+.nab-faq__grid { gap: clamp(2rem, 6vw, 5rem) !important; }
+.nab-faq h2 { margin: 0.4rem 0 0; font-size: var(--wp--preset--font-size--xl); }
+.nab-faq .wp-block-details { margin: 0; padding: 1.35rem 0; border-bottom: 1px solid var(--line); }
+.nab-faq .wp-block-details:first-child { border-top: 1px solid var(--line); }
+.nab-faq summary { display: flex; align-items: baseline; justify-content: space-between; gap: 1.5rem; font-size: 1.125rem; font-weight: 500; cursor: pointer; list-style: none; }
+.nab-faq summary::-webkit-details-marker { display: none; }
+.nab-faq summary::after { content: "+"; flex: none; color: var(--blue); font-size: 1.5rem; font-weight: 300; line-height: 1; transition: transform 0.2s; }
+.nab-faq details[open] summary::after { transform: rotate(45deg); }
+.nab-faq .wp-block-details p { max-width: 62ch; margin: 0.75rem 0 0; color: var(--muted); }
+
+/* ================================================================ CTA band */
+
+.nab-cta { position: relative; isolation: isolate; overflow: hidden; padding-block: clamp(4rem, 8vw, 6rem); background: var(--navy); color: #fff; text-align: center; }
+.nab-cta::before { content: ""; position: absolute; inset: -40% -10% auto; height: 120%; z-index: -1; background: radial-gradient(40% 50% at 30% 60%, rgba(74, 154, 212, 0.55), transparent 70%), radial-gradient(35% 45% at 70% 40%, rgba(123, 92, 255, 0.35), transparent 70%), radial-gradient(25% 35% at 60% 90%, rgba(255, 140, 90, 0.35), transparent 70%); filter: blur(30px); }
+.nab-cta__inner { max-width: 640px; margin-inline: auto !important; }
+.nab-cta__title { margin: 0 0 1rem !important; color: #fff !important; font-size: var(--wp--preset--font-size--xl) !important; }
+.nab-cta__text { margin: 0 0 2rem !important; color: rgba(255, 255, 255, 0.75); font-size: var(--wp--preset--font-size--md); }
+.nab-cta .wp-block-buttons { justify-content: center; }
+.nab-cta .wp-block-button__link { background: #fff !important; color: var(--ink) !important; }
+.nab-cta .wp-block-button__link:hover { background: var(--pale) !important; }
+
+/* ================================================================ Footer (light) */
+
+.nab-footer { padding-block: 4.5rem 2.5rem !important; border-top: 1px solid var(--line); }
+.nab-footer a { color: var(--ink-2) !important; text-decoration: none !important; }
+.nab-footer a:hover { color: var(--blue) !important; }
+.nab-footer > .wp-block-columns > .wp-block-column:first-child > p:first-child { color: var(--ink); font-weight: 600 !important; }
+.nab-footer__about, .nab-footer__legal { color: var(--muted); }
+.nab-footer__heading { margin: 0 0 0.9rem !important; color: var(--ink) !important; font-size: var(--wp--preset--font-size--sm) !important; font-weight: 500 !important; letter-spacing: 0 !important; }
+.nab-footer__links { margin: 0; padding: 0; list-style: none; font-size: var(--wp--preset--font-size--sm); }
+.nab-footer__links li { margin-bottom: 0.6rem; }
+
+/* ================================================================ Cards, badges, catalog */
+
+.nab-card { border-radius: var(--r-lg); background: #fff; box-shadow: 0 0 0 1px var(--line), var(--shadow-1); }
+.nab-badge { display: inline-block; padding: 0.2rem 0.65rem; border-radius: 9999px; background: var(--pale); color: var(--blue-hover); font-size: 0.75rem; font-weight: 600; line-height: 1.5; }
+.nab-badge--live { background: #fff0e8; color: #a8461a; }
+
+.nab-catalog-hero { position: relative; isolation: isolate; overflow: hidden; }
+.nab-course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 2rem; }
+.nab-course-card { display: flex; flex-direction: column; overflow: hidden; border-radius: var(--r-lg); background: #fff; box-shadow: 0 0 0 1px var(--line), var(--shadow-1); transition: box-shadow 0.2s, transform 0.2s; }
+.nab-course-card:hover { box-shadow: 0 0 0 1px var(--line), var(--shadow-3); transform: translateY(-2px); }
+.nab-course-card__cover { display: block; aspect-ratio: 16 / 9; background: var(--soft); }
+.nab-course-card__cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.nab-course-card__body { display: flex; flex: 1; flex-direction: column; gap: 0.55rem; padding: 1.5rem 1.6rem 1.6rem; }
+.nab-course-card__meta-top { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; color: var(--muted); font-size: var(--wp--preset--font-size--xs); }
+.nab-course-card__title { margin: 0.2rem 0 0; font-size: 1.375rem; font-weight: 400; line-height: 1.2; letter-spacing: -0.015em; }
+.nab-course-card__title a { color: var(--ink); text-decoration: none; }
+.nab-course-card__title a::after { content: ""; position: absolute; inset: 0; }
+.nab-course-card { position: relative; }
+.nab-course-card__tagline { margin: 0; color: var(--muted); font-size: var(--wp--preset--font-size--sm); }
+.nab-course-card__foot { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-top: auto; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+.nab-course-card__amount { font-size: 1.5rem; font-weight: 400; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.nab-course-card__installment { color: var(--muted); font-size: var(--wp--preset--font-size--xs); }
+.nab-course-card__go { color: var(--blue); font-size: var(--wp--preset--font-size--sm); font-weight: 500; }
+
+.nab-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 2rem 0 0; }
+.nab-filters a { padding: 0.45rem 1rem; border-radius: 9999px; background: rgba(255, 255, 255, 0.8); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); font-size: var(--wp--preset--font-size--sm); font-weight: 500; text-decoration: none; }
+.nab-filters a:hover { color: var(--blue); }
+.nab-filters a[aria-current="page"] { background: var(--ink); color: #fff; box-shadow: none; }
+.nab-filters span { margin-left: 0.35rem; opacity: 0.6; }
+
+/* ================================================================ Course page */
+
+.nab-wrap { max-width: calc(1200px + 2 * var(--gutter)); margin: 0 auto; padding-inline: var(--gutter); box-sizing: border-box; }
+.nab-cp-hero { position: relative; isolation: isolate; overflow: hidden; padding-block: clamp(2.5rem, 6vw, 4.5rem) clamp(3rem, 6vw, 4.5rem); border-bottom: 1px solid var(--line); }
+.nab-cp-hero > .nab-wrap { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(2rem, 5vw, 4rem); align-items: center; }
+.nab-crumbs { margin: 0 0 1.5rem; color: var(--muted); font-size: var(--wp--preset--font-size--xs); }
+.nab-crumbs a { color: var(--ink-2); text-decoration: none; }
+.nab-crumbs a:hover { color: var(--blue); }
+.nab-cp-hero h1 { margin: 0.9rem 0 1rem; font-size: var(--wp--preset--font-size--2-xl); font-weight: 300; letter-spacing: -0.035em; line-height: 1.04; }
+.nab-cp-tagline { margin: 0 0 1.75rem; max-width: 36rem; color: var(--ink-2); font-size: var(--wp--preset--font-size--md); }
+.nab-cp-meta { display: flex; flex-wrap: wrap; gap: 0.75rem 1.75rem; margin: 0 0 2rem; padding: 0; list-style: none; color: var(--ink-2); font-size: var(--wp--preset--font-size--sm); }
+.nab-cp-meta li { display: flex; align-items: center; gap: 0.5rem; }
+.nab-cp-meta svg { width: 18px; height: 18px; color: var(--blue); }
+.nab-cp-meta img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+.nab-cp-stars { color: #f5a524; }
+.nab-cp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.25rem; }
+.nab-cp-actions small { color: var(--muted); font-size: var(--wp--preset--font-size--xs); }
+.nab-cp-cover { overflow: hidden; border-radius: var(--r-xl); box-shadow: var(--shadow-3); background: #fff; }
+.nab-cp-cover img { display: block; width: 100%; height: auto; }
+
+.nab-cp-body { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: clamp(2rem, 5vw, 4.5rem); align-items: start; padding-block: 3.5rem 5rem; }
+.nab-cp-main > section { padding-bottom: 3rem; margin-bottom: 3rem; border-bottom: 1px solid var(--line); }
+.nab-cp-main > section:last-child { border-bottom: 0; }
+.nab-cp-main h2 { margin: 0 0 1.5rem; font-size: 2rem; font-weight: 300; letter-spacing: -0.025em; }
+.nab-cp-main .nab-prose { color: var(--ink-2); font-size: 1.0625rem; line-height: 1.7; }
+.nab-checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 2rem; margin: 0; padding: 0; list-style: none; }
+.nab-checks li { position: relative; padding-left: 1.85rem; color: var(--ink-2); }
+.nab-checks li::before { content: ""; position: absolute; left: 0; top: 0.2em; width: 18px; height: 18px; border-radius: 50%; background: var(--pale) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='%232a6fa8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 13px no-repeat; }
+@media (max-width: 640px) { .nab-checks { grid-template-columns: 1fr; } }
+
+.nab-syllabus details { border-bottom: 1px solid var(--line); }
+.nab-syllabus details:first-of-type { border-top: 1px solid var(--line); }
+.nab-syllabus summary { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 1rem; align-items: baseline; padding: 1.15rem 0; cursor: pointer; list-style: none; }
+.nab-syllabus summary::-webkit-details-marker { display: none; }
+.nab-syllabus summary b { font-weight: 500; }
+.nab-syllabus summary span { color: var(--ink); font-size: 1.0625rem; }
+.nab-syllabus summary em { color: var(--muted); font-size: var(--wp--preset--font-size--xs); font-style: normal; white-space: nowrap; }
+.nab-syllabus summary small { display: block; color: var(--muted); font-size: var(--wp--preset--font-size--xs); }
+.nab-syllabus ol { margin: 0 0 1.25rem 126px; padding: 0; list-style: none; }
+.nab-syllabus ol li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.55rem 0; border-top: 1px dashed var(--line); color: var(--ink-2); font-size: var(--wp--preset--font-size--sm); }
+.nab-syllabus ol li small { color: var(--muted); white-space: nowrap; }
+@media (max-width: 640px) { .nab-syllabus summary { grid-template-columns: 1fr auto; } .nab-syllabus summary b { grid-column: 1 / -1; } .nab-syllabus ol { margin-left: 0; } }
+
+.nab-cp-main .nab-projects { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.nab-cp-main .nab-instructor { grid-template-columns: 200px minmax(0, 1fr); gap: 2rem; align-items: start; }
+.nab-cp-main .nab-instructor__text h2 { font-size: 1.75rem; }
+.nab-cp-main .nab-instructor .nab-kicker { display: none; }
+.nab-cp-main .nab-reviews { columns: 2 260px; }
+
+.nab-buy { position: sticky; top: 6rem; padding: 1.75rem; border-radius: var(--r-lg); background: #fff; box-shadow: 0 0 0 1px var(--line), var(--shadow-2); }
+.nab-buy__price { margin: 0; font-size: 2.5rem; font-weight: 300; letter-spacing: -0.03em; line-height: 1; }
+.nab-buy__alt { margin: 0.5rem 0 1.5rem; color: var(--muted); font-size: var(--wp--preset--font-size--sm); }
+.nab-buy .nab-btn { width: 100%; margin-bottom: 0.6rem; }
+.nab-buy__policy { margin: 0.9rem 0 0; color: var(--muted); font-size: var(--wp--preset--font-size--xs); line-height: 1.5; text-align: center; }
+.nab-buy__list { margin: 1.5rem 0 0; padding: 1.5rem 0 0; border-top: 1px solid var(--line); list-style: none; font-size: var(--wp--preset--font-size--sm); }
+.nab-buy__list li { position: relative; margin-bottom: 0.6rem; padding-left: 1.6rem; color: var(--ink-2); }
+.nab-buy__list li::before { content: ""; position: absolute; left: 0; top: 0.25em; width: 15px; height: 15px; border-radius: 50%; background: var(--pale) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='%232a6fa8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 11px no-repeat; }
+.nab-buy__head { margin: 0 0 0.25rem; color: var(--ink); font-size: var(--wp--preset--font-size--sm); font-weight: 500; }
+
+.nab-cp-bar { display: none; }
+@media (max-width: 960px) {
+	.nab-cp-hero > .nab-wrap, .nab-cp-body { grid-template-columns: 1fr; }
+	.nab-cp-cover { max-width: 560px; }
+	.nab-buy { position: static; }
+	.nab-cp-aside { order: -1; }
+	.nab-cp-bar { position: fixed; z-index: 40; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem var(--gutter); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); box-shadow: 0 -1px 0 var(--line), 0 -8px 24px rgba(0, 55, 112, 0.08); }
+	.nab-cp-bar b { font-size: 1.25rem; font-weight: 400; }
+	.nab-cp-bar small { display: block; color: var(--muted); font-size: 12px; }
+	.single-courses .nab-footer { padding-bottom: 6rem !important; }
+}
+
+/* ================================================================ Articles & archives */
+
+.single .wp-block-post-title { letter-spacing: -0.03em; }
+.single .wp-block-post-excerpt { color: var(--muted); font-size: var(--wp--preset--font-size--md); }
+.single .wp-block-post-content { color: var(--ink-2); font-size: 1.0625rem; line-height: 1.75; }
+.single .wp-block-post-content h2 { margin-top: 2.75rem; color: var(--ink); font-size: 1.75rem; }
+.single .wp-block-post-content h3 { margin-top: 2rem; color: var(--ink); }
+.single .wp-block-post-content li { margin-bottom: 0.35rem; }
+.wp-block-post-content code, .nab-prose code { padding: 0.12em 0.4em; border-radius: 5px; background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); font-family: var(--wp--preset--font-family--mono); font-size: 0.86em; }
+.wp-block-post-content pre, .nab-step__body pre { overflow-x: auto; padding: 1rem 1.15rem; border-radius: var(--r-lg); background: var(--navy); color: #e3edf9; font-family: var(--wp--preset--font-family--mono); font-size: 0.875rem; line-height: 1.65; }
+.wp-block-post-content pre code, .nab-step__body pre code { padding: 0; background: none; box-shadow: none; color: inherit; }
+
+.nab-archive-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.nab-archive-list .wp-block-post { padding: 1.75rem 0; border-bottom: 1px solid var(--line); }
+.nab-archive-list .wp-block-post-title { margin: 0 0 0.5rem; font-size: 1.5rem; font-weight: 400; letter-spacing: -0.015em; }
+.nab-archive-list .wp-block-post-title a { color: var(--ink); text-decoration: none; }
+.nab-archive-list .wp-block-post-title a:hover { color: var(--blue); }
+.nab-archive-list .wp-block-post-excerpt { max-width: 70ch; margin: 0; color: var(--muted); }
+.nab-archive-list .wp-block-post-excerpt__more-text { display: none; }
+
+/* Page titles on plain pages */
+.page .wp-block-post-title, .archive .wp-block-query-title { font-weight: 300; letter-spacing: -0.035em; }
+
+/* ================================================================ Forms, notices */
+
+.nab-notice { padding: 0.85rem 1rem; border-radius: var(--r-md); background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); font-size: var(--wp--preset--font-size--sm); }
+.nab-notice--error { background: #fdf2f3; box-shadow: inset 0 0 0 1px #f5d0d4; color: #a3122f; }
+.nab-notice--success { background: #eff8f2; box-shadow: inset 0 0 0 1px #cfe8d8; color: #1f6332; }
+.nab-receipt__form { display: grid; gap: 0.5rem; max-width: 480px; }
+input[type="email"], input[type="text"], input[type="password"], input[type="file"], textarea, select { border-radius: var(--r-sm); }
+.nab-receipt__form textarea, .nab-receipt__form input[type="file"], .nab-receipt__form input[type="email"] { padding: 0.65rem 0.8rem; border: 1px solid #a8c3de; background: #fff; font: inherit; }
+.nab-receipt__form .nab-btn { justify-self: start; margin-top: 0.5rem; }
+
+/* ================================================================ Setup steps, badges, certificate */
+
+.nab-steps { display: flex; flex-direction: column; gap: 0.75rem; }
+.nab-steps__progress p { margin: 0 0 0.5rem; }
+.nab-steps__bar { display: block; height: 6px; border-radius: 9999px; background: var(--line); overflow: hidden; }
+.nab-steps__bar span { display: block; height: 100%; background: var(--blue); }
+.nab-step { padding: 0 1.5rem; }
+.nab-step summary { display: flex; align-items: center; gap: 1rem; padding: 1.15rem 0; cursor: pointer; list-style: none; }
+.nab-step summary::-webkit-details-marker { display: none; }
+.nab-step[open] summary { border-bottom: 1px solid var(--line); margin-bottom: 1rem; }
+.nab-step > :last-child { margin-bottom: 1.5rem; }
+.nab-step__num { display: flex; flex: none; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); font-size: 14px; font-weight: 500; }
+.nab-step__title { flex: 1; font-weight: 500; }
+.nab-step__title small { margin-left: 0.4rem; color: var(--muted); font-weight: 400; }
+.nab-step__status { padding: 0.2rem 0.65rem; border-radius: 9999px; background: var(--soft); font-size: var(--wp--preset--font-size--xs); font-weight: 500; white-space: nowrap; }
+.nab-step--complete .nab-step__num, .nab-step--override_pass .nab-step__num { background: #1f7a45; color: #fff; box-shadow: none; }
+.nab-step--complete .nab-step__status, .nab-step--override_pass .nab-step__status { background: #eff8f2; color: #1f6332; }
+.nab-step--rejected .nab-step__status, .nab-step--override_fail .nab-step__status { background: #fdf2f3; color: #a3122f; }
+.nab-step--locked { opacity: 0.55; }
+.nab-step__why { color: var(--ink-2); }
+.nab-badges { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.nab-badges__item { display: inline-flex; gap: 0.35rem; padding: 0.3rem 0.75rem; border-radius: 9999px; background: var(--soft); color: var(--muted); font-size: var(--wp--preset--font-size--xs); font-weight: 500; }
+.nab-badges__item.is-earned { background: var(--pale); color: var(--blue-hover); }
+.nab-cert { max-width: 720px; margin: 0 auto; padding: 3rem; text-align: center; border-radius: var(--r-xl); background: #fff; box-shadow: 0 0 0 1px var(--line), var(--shadow-2); }
+.nab-cert h1 { margin: 0.5rem 0 1rem; font-size: var(--wp--preset--font-size--2-xl); font-weight: 300; }
+.nab-eyebrow { margin: 0 0 0.5rem !important; color: var(--blue); font-size: var(--wp--preset--font-size--sm); font-weight: 500; }
+@media print { .nab-header, .nab-footer, .nab-cert .nab-btn, .nab-demo-bar { display: none !important; } }
+
+/* ================================================================ Sign in */
+
+.nab-signin { max-width: 420px; margin-left: 0 !important; padding: 2rem; }
+.nab-signin__google { display: flex; gap: 0.6rem; width: 100%; }
+.nab-signin__or { display: flex; align-items: center; gap: 0.75rem; margin: 1.25rem 0; color: var(--muted); font-size: var(--wp--preset--font-size--xs); }
+.nab-signin__or::before, .nab-signin__or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.nab-signin input[type="email"], .nab-signin input[type="text"], .nab-signin input[type="password"] { width: 100%; box-sizing: border-box; padding: 0.65rem 0.8rem; border: 1px solid #a8c3de; font: inherit; }
+.nab-signin input:focus { border-color: var(--blue); outline: none; box-shadow: 0 0 0 3px var(--pale); }
+.nab-signin__password { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.nab-signin__password summary { color: var(--blue); cursor: pointer; font-size: var(--wp--preset--font-size--sm); }
+.nab-signin #wp-submit { padding: 0.65rem 1.3rem; border: 0; border-radius: 9999px; background: var(--blue); color: #fff; font: inherit; font-weight: 500; cursor: pointer; }
+
+/* ================================================================ Tutor LMS (student area) in the site's style */
+
+.tutor-wrap, .tutor-dashboard, .tutor-course-single-content-wrapper, .tutor-learning-area, body.tutor-lms {
+	--tutor-color-primary: var(--blue);
+	--tutor-color-primary-rgb: 42, 111, 168;
+	--tutor-color-primary-hover: var(--blue-hover);
+	--tutor-body-color: var(--ink-2);
+	--tutor-color-black: var(--ink);
+	--tutor-color-secondary: var(--muted);
+	--tutor-border-color: var(--line);
+	--tutor-color-gray: var(--soft);
+	--tutor-radius: var(--r-lg);
+	font-family: var(--wp--preset--font-family--sans) !important;
+}
+body.tutor-lms, body.tutor-lms * { font-family: var(--wp--preset--font-family--sans); }
+body.tutor-lms code, body.tutor-lms pre { font-family: var(--wp--preset--font-family--mono); }
+.tutor-btn-primary, .tutor-btn.tutor-btn-primary { border-radius: 9999px !important; background: var(--blue) !important; border-color: var(--blue) !important; }
+.tutor-btn-primary:hover { background: var(--blue-hover) !important; }
+.tutor-btn-outline-primary { border-radius: 9999px !important; color: var(--blue) !important; border-color: var(--blue) !important; }
+.tutor-card, .tutor-dashboard-content-inner .tutor-card { border-radius: var(--r-lg) !important; border-color: var(--line) !important; box-shadow: var(--shadow-1) !important; }
+.tutor-dashboard .tutor-dashboard-title, .tutor-fs-3, .tutor-fs-4 { font-weight: 400 !important; letter-spacing: -0.015em; }
+.nab-buy__list li.nab-buy__head::before { display: none; }
+
+/* Unused Tutor features in the student course list. */
+.tutor-nav a[href$="/courses/wishlist"], .tutor-nav a[href$="/courses/my-quiz-attempts"] { display: none !important; }
+
+/* Demo lesson body */
+.nab-lesson-demo { max-width: 760px; margin: 0 auto; padding: 1rem 0 3rem; }
+.nab-lesson-demo__video { display: grid; place-items: center; aspect-ratio: 16 / 9; margin-bottom: 2rem; border-radius: var(--r-lg); background: radial-gradient(60% 80% at 30% 30%, #2a4f7a, var(--navy)); color: #fff; box-shadow: var(--shadow-2); }
+.nab-lesson-demo__video span { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); font-size: 26px; }
+.nab-lesson-demo h2 { margin: 2rem 0 0.75rem; font-size: 1.5rem; font-weight: 400; }
+.nab-lesson-demo p, .nab-lesson-demo li { color: var(--ink-2); line-height: 1.7; }
+.nab-lesson-demo pre { overflow-x: auto; padding: 1rem 1.15rem; border-radius: var(--r-lg); background: var(--navy); color: #e3edf9; font-family: var(--wp--preset--font-family--mono); font-size: 0.875rem; }
+.nab-lesson-demo .nab-notice { margin-top: 1.5rem; }
+.nab-catalog-hero .nab-lede { padding-inline-end: max(0px, calc(100% - 40rem)); box-sizing: border-box; }
+
+/* ================================================================ Company logos (v2) */
+
+.nab-logos { flex-direction: column; align-items: flex-start; gap: 1.1rem; }
+.nab-logos ul { gap: 0.75rem; }
+.nab-logos li { display: inline-flex; align-items: center; gap: 0.65rem; padding: 0.6rem 1.1rem 0.6rem 0.65rem; border-radius: 9999px; background: rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 1px var(--line), var(--shadow-1); color: var(--ink); font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+.nab-logos__mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.nab-logos__mark svg, .nab-logos__mark img { width: 20px; height: 20px; object-fit: contain; }
+.nab-logos__mark--mono { background: var(--c); box-shadow: none; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0; }
+
+/* ================================================================ Reviews (v2) */
+
+.nab-rv__top { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 1.5rem; margin-bottom: 1.5rem; }
+.nab-rv__top:has(> :only-child) { grid-template-columns: 1fr; }
+.nab-rv__spot { display: flex; flex-direction: column; justify-content: space-between; gap: 1.5rem; margin: 0; padding: clamp(1.75rem, 4vw, 2.75rem); border-radius: var(--r-xl); background: var(--navy); color: #fff; box-shadow: var(--shadow-3); position: relative; overflow: hidden; }
+.nab-rv__spot::after { content: "”"; position: absolute; right: 2rem; top: -1.5rem; color: rgba(255, 255, 255, 0.06); font-size: 16rem; line-height: 1; font-weight: 300; pointer-events: none; }
+.nab-rv__spot blockquote { margin: 0; padding: 0; border: 0; font-size: clamp(1.25rem, 2.2vw, 1.75rem); font-weight: 300; line-height: 1.4; letter-spacing: -0.015em; }
+.nab-rv__spot small { color: rgba(255, 255, 255, 0.7) !important; }
+.nab-rv__summary { display: flex; flex-direction: column; justify-content: center; padding: 2rem; border-radius: var(--r-xl); background: #fff; box-shadow: 0 0 0 1px var(--line), var(--shadow-1); }
+.nab-rv__score { margin: 0; font-size: 4rem; font-weight: 300; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.nab-rv__count { margin: 0.5rem 0 1.25rem; color: var(--muted); font-size: var(--wp--preset--font-size--sm); }
+.nab-rv__bars { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; font-size: var(--wp--preset--font-size--xs); color: var(--muted); }
+.nab-rv__bars li { display: grid; grid-template-columns: 2rem 1fr 2.5rem; align-items: center; gap: 0.6rem; }
+.nab-rv__bars i { height: 6px; border-radius: 9999px; background: var(--line); overflow: hidden; }
+.nab-rv__bars b { display: block; height: 100%; background: #f5a524; }
+.nab-rv__bars span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.nab-rv__stars { display: inline-flex; gap: 2px; }
+.nab-rv__stars svg { width: 16px; height: 16px; fill: #f5a524; }
+.nab-rv__summary .nab-rv__stars svg { width: 18px; height: 18px; }
+
+.nab-rv__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 1.5rem; }
+.nab-rv__card { display: flex; flex-direction: column; gap: 1rem; margin: 0; padding: 1.6rem; border-radius: var(--r-lg); background: #fff; box-shadow: 0 0 0 1px var(--line), var(--shadow-1); transition: box-shadow 0.2s; }
+.nab-rv__card:hover { box-shadow: 0 0 0 1px var(--line), var(--shadow-2); }
+.nab-rv__card blockquote { flex: 1; margin: 0; padding: 0; border: 0; color: var(--ink); font-size: 0.975rem; line-height: 1.6; }
+.nab-rv figcaption { display: flex; align-items: center; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.nab-rv__spot figcaption { border-top-color: rgba(255, 255, 255, 0.14); }
+.nab-rv figcaption b { display: block; font-weight: 600; font-size: var(--wp--preset--font-size--sm); }
+.nab-rv figcaption small { display: block; color: var(--muted); font-size: var(--wp--preset--font-size--xs); }
+.nab-rv__avatar { flex: none; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--line); }
+.nab-rv__avatar--initials { display: grid; place-items: center; width: 44px; height: 44px; background: linear-gradient(135deg, var(--pale), #cfe0f3); color: var(--blue-hover); font-size: 14px; font-weight: 600; }
+.nab-rv__spot .nab-rv__avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25); }
+.nab-cp-main .nab-rv__top { grid-template-columns: 1fr; }
+.nab-cp-main .nab-rv__summary { display: none; }
+@media (max-width: 900px) { .nab-rv__top { grid-template-columns: 1fr; } }
+
+/* ================================================================ Bell, notifications */
+
+.nab-bell { position: relative; display: inline-grid; place-items: center; width: 40px; height: 40px; margin-right: 0.35rem; border-radius: 50%; color: var(--ink-2); text-decoration: none !important; transition: background 0.15s; }
+.nab-bell:hover { background: var(--pale); color: var(--blue); }
+.nab-bell svg { width: 20px; height: 20px; }
+.nab-bell span { position: absolute; top: 4px; right: 3px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9999px; background: var(--orange); color: #fff; font-size: 10.5px; font-weight: 700; line-height: 17px; text-align: center; box-shadow: 0 0 0 2px #fff; box-sizing: border-box; }
+.nab-header__cta { align-items: center; }
+.nab-link-btn { padding: 0; border: 0; background: none; color: var(--blue); font: inherit; font-size: var(--wp--preset--font-size--sm); cursor: pointer; }
+.nab-link-btn:hover { text-decoration: underline; }
+.nab-notes { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.nab-notes li { display: flex; justify-content: space-between; gap: 1rem; padding: 1.1rem 0 1.1rem 1.1rem; border-bottom: 1px solid var(--line); position: relative; }
+.nab-notes li.is-unread::before { content: ""; position: absolute; left: 0; top: 1.55rem; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+.nab-notes__title { margin: 0; font-weight: 500; }
+.nab-notes__link { color: var(--ink) !important; font-size: 1rem !important; font-weight: 500; text-align: left; }
+.nab-notes__body { margin: 0.25rem 0 0; color: var(--muted); font-size: var(--wp--preset--font-size--sm); }
+.nab-notes time { display: block; margin-top: 0.25rem; color: var(--muted); font-size: var(--wp--preset--font-size--xs); }
+
+/* ================================================================ Live sessions */
+
+.nab-sessions { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.nab-sessions li { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 1.25rem; align-items: center; padding: 1.1rem 0; border-bottom: 1px solid var(--line); }
+.nab-sessions li.is-past { opacity: 0.7; }
+.nab-sessions__when b { display: block; font-weight: 500; }
+.nab-sessions__when span, .nab-sessions__what small { color: var(--muted); font-size: var(--wp--preset--font-size--xs); }
+.nab-sessions__what p { margin: 0; }
+.nab-sessions__tag { color: var(--muted); font-size: var(--wp--preset--font-size--xs); }
+.nab-sessions .nab-btn { padding: 0.5rem 1rem; font-size: 0.9rem; }
+@media (max-width: 640px) { .nab-sessions li { grid-template-columns: 1fr; gap: 0.35rem; } }
+
+/* ================================================================ Certificates, previews */
+
+.nab-certs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 1.5rem; }
+.nab-cert-card { padding: 2rem; border-radius: var(--r-xl); background: linear-gradient(160deg, #fff 55%, var(--pale)); box-shadow: 0 0 0 1px var(--line), var(--shadow-2); }
+.nab-cert-card h2 { margin: 0.4rem 0 0.4rem; font-size: 1.5rem; font-weight: 400; }
+.nab-cert-card__meta { margin: 0 0 1.5rem; color: var(--muted); font-size: var(--wp--preset--font-size--sm); }
+.nab-cert-card__actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.nab-preview-link { margin-left: 0.5rem; padding: 0.1rem 0.55rem; border-radius: 9999px; background: var(--pale); color: var(--blue-hover) !important; font-size: 12px; font-weight: 600; text-decoration: none !important; white-space: nowrap; }
+.nab-preview__video { overflow: hidden; margin-bottom: 2rem; border-radius: var(--r-lg); box-shadow: var(--shadow-2); }
+.nab-preview__video iframe { display: block; width: 100%; aspect-ratio: 16 / 9; height: auto; }
+
+/* ================================================================ AI troubleshooter */
+
+.nab-ts { margin-top: 1.5rem; border-radius: var(--r-lg); background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); }
+.nab-ts summary { display: flex; align-items: center; gap: 0.5rem; padding: 0.9rem 1.1rem; color: var(--blue); font-weight: 500; cursor: pointer; list-style: none; }
+.nab-ts summary::-webkit-details-marker { display: none; }
+.nab-ts summary::before { content: "✦"; color: var(--orange); }
+.nab-ts__log { display: flex; flex-direction: column; gap: 0.6rem; max-height: 380px; overflow-y: auto; padding: 0 1.1rem; }
+.nab-ts__log:empty { display: none; }
+.nab-ts__msg { max-width: 88%; padding: 0.7rem 0.95rem; border-radius: 14px; font-size: var(--wp--preset--font-size--sm); line-height: 1.55; }
+.nab-ts__msg p { margin: 0 0 0.4rem; } .nab-ts__msg p:last-child { margin: 0; }
+.nab-ts__msg--user { align-self: flex-end; background: var(--ink); color: #fff; border-bottom-right-radius: 4px; }
+.nab-ts__msg--assistant { align-self: flex-start; background: #fff; box-shadow: 0 0 0 1px var(--line); border-bottom-left-radius: 4px; }
+.nab-ts__msg.is-thinking { color: var(--muted); }
+.nab-ts__msg.is-error { color: #a3122f; }
+.nab-ts__form { display: grid; gap: 0.6rem; padding: 1rem 1.1rem 1.1rem; }
+.nab-ts__form textarea { width: 100%; box-sizing: border-box; padding: 0.65rem 0.8rem; border: 1px solid #a8c3de; border-radius: var(--r-md); background: #fff; font: inherit; resize: vertical; }
+.nab-ts__row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.nab-ts__file { color: var(--muted); font-size: var(--wp--preset--font-size--xs); cursor: pointer; }
+.nab-ts__file input { display: block; margin-top: 0.25rem; font-size: 12px; }
+
+/* ================================================================ Promos, availability, calls */
+
+.nab-strike { color: var(--muted); font-size: 0.6em; font-weight: 300; text-decoration-thickness: 1px; }
+.nab-tag { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 9999px; font-size: 12px; font-weight: 600; }
+.nab-tag--hot { background: #fff0e8; color: #a8461a; }
+.nab-tag--out { background: var(--soft); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+.nab-buy .nab-tag { margin: -0.75rem 0 1.25rem; }
+.nab-btn[aria-disabled="true"] { cursor: not-allowed; opacity: 0.6; }
+
+.nab-flash { position: relative; z-index: 55; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.4rem 1rem; padding: 0.55rem 1rem; background: linear-gradient(90deg, #0b1735, #1f3f6d 55%, #0b1735); color: #fff; font-size: 14px; }
+.nab-flash b { color: #ffc29f; font-weight: 600; }
+.nab-flash time { font-variant-numeric: tabular-nums; font-weight: 600; }
+.nab-flash a { color: #fff; text-decoration: underline; }
+
+.nab-agents { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 1.5rem; }
+.nab-agent { display: flex; flex-direction: column; gap: 0.75rem; padding: 1.75rem; border-radius: var(--r-lg); background: #fff; box-shadow: 0 0 0 1px var(--line), var(--shadow-1); }
+.nab-agent header { display: flex; align-items: center; gap: 0.9rem; }
+.nab-agent header img { border-radius: 50%; }
+.nab-agent h2 { margin: 0; font-size: 1.25rem; font-weight: 500; }
+.nab-agent header p, .nab-agent__off { margin: 0; color: var(--muted); font-size: var(--wp--preset--font-size--sm); }
+.nab-agent__blurb { margin: 0; color: var(--ink-2); font-size: var(--wp--preset--font-size--sm); }
+.nab-agent__rating { margin: 0; color: var(--ink-2); font-size: var(--wp--preset--font-size--sm); }
+.nab-agent__rating span { color: #f5a524; }
+.nab-agent__review { margin: 0; padding: 0.75rem 0 0; border-top: 1px solid var(--line); color: var(--ink-2); font-size: var(--wp--preset--font-size--sm); }
+.nab-agent__review cite { display: block; margin-top: 0.3rem; color: var(--muted); font-size: 12px; font-style: normal; }
+.nab-stars-input { display: inline-flex; flex-direction: row-reverse; gap: 0.15rem; }
+.nab-stars-input input { position: absolute; opacity: 0; }
+.nab-stars-input label { color: #d5dbe3; font-size: 1.75rem; cursor: pointer; }
+.nab-stars-input input:checked ~ label, .nab-stars-input label:hover, .nab-stars-input label:hover ~ label { color: #f5a524; }
+.nab-stars-input input:focus-visible + label { outline: 2px solid var(--blue); border-radius: 4px; }
+.nab-check { display: flex; align-items: center; gap: 0.6rem; margin: 0.45rem 0; color: var(--ink-2); font-size: var(--wp--preset--font-size--sm); }
+
+/* ================================================================ Batch 3–4: admissions, account, setup done */
+
+.nab-apply { display: grid; gap: 1rem; padding: 2rem; max-width: 560px; margin-left: 0 !important; box-sizing: border-box; }
+.nab-apply label { display: grid; gap: 0.375rem; font-size: 0.9375rem; font-weight: 500; color: var(--ink); }
+.nab-apply input, .nab-apply select, .nab-apply textarea, .nab-danger input { padding: 0.65rem 0.8rem; border: 1px solid #a8c3de; border-radius: var(--r-sm); background: #fff; font: inherit; font-weight: 400; box-sizing: border-box; }
+.nab-apply .nab-btn { justify-self: start; }
+.nab-danger { box-shadow: 0 0 0 1px #f5d0d4, var(--shadow-1); }
+.nab-btn--danger { background: #b4233c; }
+.nab-btn--danger:hover { background: #8f1a2f; }
+.nab-setup-done { padding: 1.75rem; margin-bottom: 1.5rem; background: linear-gradient(135deg, #f3f8fd, #fff 60%); }
+.nab-setup-done h2 { margin: 0 0 0.25rem; font-size: 1.375rem; font-weight: 400; letter-spacing: -0.015em; }
+.nab-setup-done p { margin: 0; color: var(--muted); }
+.nab-setup-done .nab-setup-done__next { margin-top: 0.75rem; color: var(--ink); font-weight: 500; }
+.nab-setup-done .nab-setup-done__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+.nab-instructor__links { display: flex; flex-wrap: wrap; gap: 1.25rem; margin: 1.5rem 0 0; }
+.nab-instructor__links a { color: var(--blue); font-weight: 500; text-decoration: none; }
+.nab-instructor__links a:hover { text-decoration: underline; }
+
+/* ================================================================ Landing: conversion pass */
+
+/* Hero visual: terminal + two floating cards, no overlapping screenshot. */
+.nab-visual { min-height: 440px; padding: 1.5rem 0 0 2rem; }
+.nab-visual__term { width: 100%; }
+.nab-visual__progress { left: -0.5rem; bottom: 0; }
+.nab-visual__toast { position: absolute; z-index: 3; right: -0.75rem; bottom: 4.5rem; display: flex; gap: 0.75rem; align-items: flex-start; max-width: 270px; padding: 0.9rem 1rem; border-radius: var(--r-lg); background: #fff; box-shadow: var(--shadow-2); font-size: 13px; }
+.nab-visual__toast span { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #e3f4ea; color: #1f7a45; font-size: 12px; font-weight: 700; }
+.nab-visual__toast p { margin: 0; color: var(--ink-2); line-height: 1.45; }
+.nab-visual__toast b { display: block; color: var(--ink); font-weight: 600; }
+@media (max-width: 781px) { .nab-visual { padding: 0; } .nab-visual__toast { display: none; } }
+
+/* Hero reassurance. */
+.nab-proof { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; margin-top: 1.75rem; }
+.nab-proof__faces { display: flex; }
+.nab-proof__faces img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px #fff; }
+.nab-proof__faces img + img { margin-left: -10px; }
+.nab-proof__rating { display: inline-flex; flex-direction: column; gap: 0.15rem; color: var(--ink-2); font-size: var(--wp--preset--font-size--xs); font-weight: 500; }
+.nab-proof__rating .nab-rv__stars svg { width: 14px; height: 14px; }
+.nab-proof__notes { display: flex; flex-wrap: wrap; gap: 0.35rem 1.25rem; width: 100%; margin: 0.25rem 0 0; padding: 0; list-style: none; color: var(--muted); font-size: var(--wp--preset--font-size--xs); }
+.nab-proof__notes li { display: inline-flex; align-items: center; gap: 0.4rem; }
+.nab-proof__notes li::before { content: "✓"; color: #1f7a45; font-weight: 700; }
+
+/* How you learn: bento of small product UIs. */
+.nab-xp { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
+.nab-xp__tile { display: flex; flex-direction: column; gap: 1.5rem; padding: 1.75rem; border-radius: var(--r-xl); background: #fff; box-shadow: 0 0 0 1px var(--line), var(--shadow-1); }
+.nab-xp__tile--wide { grid-column: span 2; flex-direction: row; align-items: center; gap: 2rem; background: linear-gradient(135deg, #f3f8fd 0%, #fff 65%); }
+.nab-xp__tile--wide > * { flex: 1 1 0; min-width: 0; }
+.nab-xp__text h3 { margin: 0 0 0.4rem; font-size: 1.1875rem; font-weight: 500; letter-spacing: -0.015em; }
+.nab-xp__text p { margin: 0; color: var(--muted); font-size: 0.9375rem; line-height: 1.55; }
+.nab-xp__ui { margin: 0; padding: 1rem; border-radius: var(--r-lg); background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); font-size: 13px; }
+.nab-xp__ui p { margin: 0; }
+.nab-ui-steps { display: grid; gap: 0.5rem; background: #fff; }
+.nab-ui-steps p { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.7rem; border-radius: var(--r-md); background: var(--soft); color: var(--ink-2); }
+.nab-ui-steps i { flex: none; width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #b9c4d3; }
+.nab-ui-steps .is-done i { background: #1f7a45; box-shadow: none; }
+.nab-ui-steps .is-now i { box-shadow: inset 0 0 0 4px var(--blue); }
+.nab-ui-steps b { margin-left: auto; font-size: 11.5px; font-weight: 600; color: #1f7a45; }
+.nab-ui-steps .is-now b { color: var(--blue); }
+.nab-ui-steps .is-now { background: var(--pale); }
+.nab-ui-steps .nab-ui-steps__note { display: block; padding: 0.2rem 0.7rem 0; background: none; color: var(--muted); font-size: 12px; }
+.nab-ui-session { background: var(--navy); box-shadow: none; color: #fff; }
+.nab-ui-session__when { color: #9fb1cc; font-size: 12px; }
+.nab-ui-session__title { margin: 0.25rem 0 0.9rem !important; font-size: 14px; font-weight: 500; }
+.nab-ui-session__btn, .nab-ui-cert__btn { display: inline-block; padding: 0.35rem 0.8rem; border-radius: 9999px; background: #fff; color: var(--ink); font-size: 12px; font-weight: 600; }
+.nab-ui-chat { display: grid; gap: 0.5rem; }
+.nab-ui-chat p { max-width: 90%; padding: 0.55rem 0.75rem; border-radius: 12px; line-height: 1.45; }
+.nab-ui-chat .me { justify-self: end; background: var(--blue); color: #fff; border-bottom-right-radius: 4px; }
+.nab-ui-chat .ai { background: #fff; color: var(--ink-2); box-shadow: 0 0 0 1px var(--line); border-bottom-left-radius: 4px; }
+.nab-ui-chat code { font-size: 11.5px; color: var(--ink); background: var(--pale); padding: 0 0.25rem; border-radius: 4px; }
+.nab-ui-review { background: #fff; }
+.nab-ui-review__file { padding-bottom: 0.5rem; border-bottom: 1px solid var(--line); font-family: var(--wp--preset--font-family--mono); font-size: 11.5px; color: var(--muted); }
+.nab-ui-review__note { margin-top: 0.65rem !important; padding: 0.55rem 0.7rem; border-left: 3px solid var(--sky); background: var(--soft); color: var(--ink-2); line-height: 1.45; }
+.nab-ui-review__note b { display: block; color: var(--ink); }
+.nab-ui-cert { text-align: center; background: #fff; box-shadow: inset 0 0 0 1px var(--line), inset 0 0 0 6px var(--soft); padding: 1.25rem 1rem; }
+.nab-ui-cert__kicker { color: var(--muted); font-size: 11px; letter-spacing: 0.02em; }
+.nab-ui-cert__name { margin: 0.25rem 0 0.8rem !important; font-size: 18px; font-weight: 300; letter-spacing: -0.02em; color: var(--ink); }
+.nab-ui-cert__btn { background: #0a66c2; color: #fff; }
+@media (max-width: 960px) { .nab-xp { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .nab-xp { grid-template-columns: 1fr; } .nab-xp__tile--wide { grid-column: auto; flex-direction: column; align-items: stretch; } }
+
+/* Refund guarantee under pricing. */
+.nab-guarantee { display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem !important; padding: 1.1rem 1.4rem; border-radius: var(--r-lg); background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); }
+.nab-guarantee svg { flex: none; width: 32px; height: 32px; color: #1f7a45; }
+.nab-guarantee p { margin: 0; color: var(--ink-2); font-size: 0.9375rem; }
+.nab-guarantee b { color: var(--ink); font-weight: 600; }
+.nab-guarantee a { color: var(--blue); white-space: nowrap; }
+
+/* Closing CTA buttons. */
+.nab-cta__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; margin: 0 !important; }
+.nab-btn--clear { background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45); }
+.nab-btn--clear:hover { background: rgba(255, 255, 255, 0.1); }
+
+/* Sticky join bar. */
+.nab-sticky { position: fixed; z-index: 50; left: 50%; bottom: 1rem; width: min(760px, calc(100% - 2rem)); transform: translateX(-50%); animation: nab-sticky-in 0.25s ease-out; }
+.nab-sticky[hidden] { display: none; }
+.nab-sticky__short { display: none; }
+.nab-sticky__inner { display: flex; align-items: center; gap: 1rem; padding: 0.6rem 0.6rem 0.6rem 1.25rem; border-radius: 9999px; background: rgba(11, 23, 53, 0.96); box-shadow: var(--shadow-3); color: #fff; backdrop-filter: blur(8px); }
+.nab-sticky__inner p { flex: 1; margin: 0; font-size: 0.9375rem; color: rgba(255, 255, 255, 0.85); }
+.nab-sticky__inner .nab-btn { flex: none; padding: 0.6rem 1.15rem; background: #fff; color: var(--ink) !important; }
+.nab-sticky__close { flex: none; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: rgba(255, 255, 255, 0.6); font-size: 20px; line-height: 1; cursor: pointer; }
+.nab-sticky__close:hover, .nab-sticky__close:focus-visible { background: rgba(255, 255, 255, 0.1); color: #fff; }
+@keyframes nab-sticky-in { from { opacity: 0; transform: translate(-50%, 12px); } }
+@media (prefers-reduced-motion: reduce) { .nab-sticky { animation: none; } }
+@media (max-width: 640px) {
+	.nab-sticky { bottom: 0; width: 100%; }
+	.nab-sticky__inner { border-radius: 16px 16px 0 0; padding: 0.75rem 0.75rem 0.75rem 1rem; }
+	.nab-sticky__inner p { font-size: 0.8125rem; }
+	.nab-sticky__sep { display: none; }
+	.nab-sticky__bit { display: block; white-space: nowrap; }
+	.nab-sticky__long { display: none; }
+	.nab-sticky__short { display: inline !important; }
+	.nab-sticky__close { width: 28px; }
+}
+.nab-visual { min-height: 420px; }
+.nab-visual__progress { top: 215px; bottom: auto; }
+.nab-visual__toast { top: 300px; bottom: auto; }
+.nab-band--xp { padding-top: clamp(3rem, 6vw, 4.5rem); }
+.nab-guarantee { box-sizing: border-box; }
+@media (max-width: 781px) { .nab-visual { min-height: 0; } }
+
+/* ================================================================ Responsive fixes (audit 2026-10-11) */
+
+/* Upload forms: the file input's intrinsic width stretched the grid track past the card on phones. */
+.nab-receipt__form { grid-template-columns: minmax(0, 1fr); }
+.nab-receipt__form input[type="file"] { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+/* Step header: keep the time estimate under the title instead of wrapping mid-phrase. */
+@media (max-width: 640px) {
+	.nab-step { padding: 0 1.1rem; }
+	.nab-step summary { gap: 0.75rem; }
+	.nab-step__title small { display: block; margin: 0.15rem 0 0; }
+}
+/* Hero visual: the two floating cards only fit side by side on wide screens. */
+@media (max-width: 1199px) { .nab-visual__toast { display: none; } }
+/* Lesson bodies: match the site's lighter heading weights inside Tutor. */
+.tutor-lesson-wrapper h2, .tutor-lesson-wrapper h3 { font-weight: 500; letter-spacing: -0.015em; }
+/* Course page instructor card: stack the photo above the text on small phones. */
+@media (max-width: 560px) { .nab-cp-main .nab-instructor { grid-template-columns: 1fr; } .nab-cp-main .nab-instructor__photo { max-width: 200px; } }
+/* AI helper form: same grid-track fix as the upload form. */
+.nab-ts__form { grid-template-columns: minmax(0, 1fr); }
+.nab-ts__form textarea, .nab-ts__form input { width: 100%; max-width: 100%; box-sizing: border-box; }
+/* Mobile header: logo on the left, actions and the menu button together on the right. */
+@media (max-width: 781px) {
+	.nab-header .nab-nav { order: 3; margin-left: 0.25rem; }
+	.nab-header__cta { margin-left: auto; }
+}
+@media (max-width: 380px) {
+	.nab-header__cta .wp-block-button__link { padding: 0.45rem 0.8rem !important; font-size: 0.875rem !important; }
+	.nab-bell { width: 34px; height: 34px; margin-right: 0; }
+	.nab-header .nab-logo svg, .nab-header .nab-logo img { width: 26px; height: 26px; }
+}
+@media (max-width: 380px) {
+	.nab-header > .wp-block-group { gap: 0.4rem !important; }
+	.nab-header .nab-logo { gap: 0.4rem; }
+	.nab-header .nab-logo__text { transform: scale(0.88); transform-origin: left center; margin-right: -10px; }
+	.nab-header .nab-nav { margin-left: 0; }
+}
+
+/* ================================================================ UI audit fixes (Web Interface Guidelines + axe, 2026-10-11) */
+
+html {
+	/* Anchor jumps and keyboard focus land below the sticky header and above the sticky join bar. */
+	scroll-padding-top: 88px;
+	scroll-padding-bottom: 96px;
+	touch-action: manipulation;
+	-webkit-tap-highlight-color: rgba(42, 111, 168, 0.15);
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+
+/* One visible, on-brand keyboard focus ring everywhere (mouse clicks don't show it). */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+:where(.nab-cta, .nab-price--featured, .nab-sticky, .nab-ui-session, .nab-rv__spot, .nab-visual__term) :where(a, button):focus-visible { outline-color: #fff; }
+.nab-btn:focus-visible, .wp-block-button__link:focus-visible { outline-offset: 3px; }
+.nab-signin input:focus { outline: none; }
+.nab-signin input:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offset: 1px; }
+
+/* Native selects: explicit colours so Windows dark mode doesn't invert them. */
+select { background-color: #fff; color: var(--ink); }
+
+/* Busy forms (assets/js/ui.js). */
+form[aria-busy="true"] .nab-btn:disabled { opacity: 0.7; cursor: progress; }
+
+/* Contrast. */
+.nab-visual__bar b { color: rgba(255, 255, 255, 0.62); }
+.nab-crumbs span[aria-current="page"] { color: var(--ink-2); }
+.nab-crumbs a, .nab-guarantee a { text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(42, 111, 168, 0.45); }
+.nab-crumbs a:hover, .nab-guarantee a:hover { text-decoration-color: currentColor; }
+/* Locked steps: dim with colour, not opacity, so text stays readable (4.5:1). */
+.nab-step--locked { opacity: 1; }
+.nab-step--locked .nab-step__title, .nab-step--locked .nab-step__status { color: var(--muted); }
+.nab-step--locked .nab-step__title small { color: var(--muted); }
+.nab-step--locked .nab-step__num { color: var(--muted); background: #fff; }
+/* Tutor ships its own blue and greys; html:root beats its inline :root block. */
+html:root, html[data-tutor-theme]:root, html[data-tutor-theme="light"] {
+	--tutor-color-primary: #2a6fa8;
+	--tutor-color-primary-rgb: 42, 111, 168;
+	--tutor-color-primary-hover: #1f5a8c;
+	--tutor-color-primary-hover-rgb: 31, 90, 140;
+}
+.tutor-text-subdued, .tutor-color-muted, .tutor-learning-nav-item .tutor-tiny-2 { color: var(--muted) !important; }
+/* Sticky header: stick the template-part wrapper (the .nab-header group inside it
+   is exactly its parent's height, so sticking it alone had no effect). */
+.wp-block-template-part:has(> .nab-header) { position: sticky; top: 0; z-index: 50; }
+.admin-bar .wp-block-template-part:has(> .nab-header) { top: var(--wp-admin--admin-bar--height, 32px); }
+.wp-block-template-part > .nab-header { position: relative; top: auto; }
+/* Tutor 4 design tokens → brand blue scale (600 = --blue). Makes every Tutor
+   screen use the site's blue and fixes its 4.3:1 active-menu contrast. */
+html:root, html[data-tutor-theme="light"] {
+	--tutor-brand-100: #f1f6fb;
+	--tutor-brand-200: #e8f2fb;
+	--tutor-brand-300: #d4e6f5;
+	--tutor-brand-400: #a8c9e6;
+	--tutor-brand-450: #7fb0dc;
+	--tutor-brand-500: #3f82bd;
+	--tutor-brand-600: #2a6fa8;
+	--tutor-brand-700: #1f5a8c;
+	--tutor-brand-800: #1a4a73;
+	--tutor-brand-900: #14395a;
+	--tutor-brand-950: #0b1735;
+	--tutor-text-subdued: #5f6b80;
+	--tutor-icon-secondary: #5f6b80;
+}
+/* Tutor removes outlines in 34 places; restore the site focus ring inside its screens. */
+[class*="tutor-"] :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--blue) !important; outline-offset: 2px; }
+html body .tutor-dashboard-sidebar .tutor-dashboard-sidebar-nav ul li a:focus-visible,
+html body .tutor-dashboard-menu-item a:focus-visible,
+html body [class*="tutor-dashboard-menu"] a:focus-visible { outline: 2px solid var(--blue) !important; outline-offset: -2px; }
