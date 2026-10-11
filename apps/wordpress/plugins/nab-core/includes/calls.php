@@ -181,8 +181,8 @@ add_action(
 		}
 
 		$staff = get_users( array( 'meta_key' => '_nab_takes_calls', 'meta_value' => '1' ) ); // phpcs:ignore WordPress.DB.SlowDBQuery
-		if ( ! $staff && nab_demo_on() && get_user_by( 'login', 'aleem' ) ) {
-			$staff = array( get_user_by( 'login', 'aleem' ) ); // DEMO: show the lead instructor as bookable.
+		if ( ! $staff && nab_demo_on() && nab_instructor_user() ) {
+			$staff = array( nab_instructor_user() ); // DEMO: show the lead instructor as bookable.
 		}
 		if ( ! $staff ) {
 			$html .= '<div class="nab-card" style="padding:2rem"><p style="margin:0">' . esc_html__( 'No instructors are taking calls right now. Check back soon or ask in the cohort channel.', 'nab-core' ) . '</p></div>';

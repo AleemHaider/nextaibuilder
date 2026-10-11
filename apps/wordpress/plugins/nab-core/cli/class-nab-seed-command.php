@@ -104,7 +104,13 @@ class NAB_Seed_Command {
 	 * @return int User ID.
 	 */
 	private function instructor() {
+		// Reuse the account that already owns the instructor email (on a fresh host
+		// that's usually the site admin) instead of failing on a duplicate email.
 		$user = get_user_by( 'login', 'aleem' );
+		$user = $user ? $user : get_user_by( 'email', 'aleem@nextaibuilder.com' );
+		if ( $user && $user->display_name === $user->user_login ) {
+			wp_update_user( array( 'ID' => $user->ID, 'display_name' => 'Aleem Haider', 'first_name' => 'Aleem', 'last_name' => 'Haider' ) );
+		}
 		$id   = $user ? $user->ID : wp_insert_user(
 			array(
 				'user_login'   => 'aleem',

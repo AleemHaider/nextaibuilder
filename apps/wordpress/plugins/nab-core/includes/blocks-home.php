@@ -19,7 +19,7 @@ function nab_next_start() {
 	if ( $c && $c['start_date'] && $c['start_date'] >= strtotime( 'today' ) ) {
 		return $c['start_date'];
 	}
-	return nab_demo_on() ? nab_demo()['next_start'] : 0;
+	return nab_demo_claims() ? nab_demo()['next_start'] : 0;
 }
 
 /**
@@ -70,7 +70,7 @@ function nab_render_hero_visual() {
  * @return string HTML.
  */
 function nab_render_projects() {
-	if ( ! nab_demo_on() ) {
+	if ( ! nab_demo_claims() ) {
 		return '';
 	}
 	$html = '<div class="nab-projects">';
@@ -122,9 +122,9 @@ function nab_render_timeline() {
  * @return string HTML.
  */
 function nab_render_instructor_block() {
-	$author = get_user_by( 'login', 'aleem' );
+	$author = nab_instructor_user();
 	$real   = $author ? (string) get_user_meta( $author->ID, '_tutor_profile_bio', true ) : '';
-	$demo   = nab_demo_on() ? nab_demo()['instructor'] : null;
+	$demo   = nab_demo_claims() ? nab_demo()['instructor'] : null;
 	$name   = $author ? $author->display_name : 'Aleem Haider';
 	$role   = $author ? (string) get_user_meta( $author->ID, '_tutor_profile_job_title', true ) : '';
 	$bio    = $demo ? $demo['bio'] : $real;
@@ -246,7 +246,7 @@ function nab_stars() {
  */
 function nab_render_reviews() {
 	$quotes = nab_real_testimonials();
-	if ( nab_demo_on() ) {
+	if ( nab_demo_claims() ) {
 		foreach ( nab_demo()['reviews'] as $r ) {
 			$quotes[] = array( $r[0], $r[1], '', $r[3] );
 		}
@@ -256,7 +256,7 @@ function nab_render_reviews() {
 	$html  = '<div class="nab-rv">';
 	$html .= '<div class="nab-rv__top">';
 	$html .= '<figure class="nab-rv__spot">' . nab_stars() . '<blockquote>' . esc_html( $feature[3] ) . '</blockquote><figcaption>' . nab_review_avatar( $feature, 56 ) . '<span><b>' . esc_html( $feature[0] ) . '</b><small>' . esc_html( $feature[1] ) . '</small></span></figcaption></figure>';
-	if ( nab_demo_on() ) {
+	if ( nab_demo_claims() ) {
 		[ $rating, $count ] = nab_demo()['rating'];
 		$bars = array( 5 => 92, 4 => 6, 3 => 2, 2 => 0, 1 => 0 );
 		$html .= '<div class="nab-rv__summary"><p class="nab-rv__score">' . esc_html( number_format_i18n( $rating, 1 ) ) . '</p>' . nab_stars() . '<p class="nab-rv__count">' . esc_html( sprintf( /* translators: %d: count. */ __( 'Average from %d student reviews', 'nab-core' ), $count ) ) . '</p><ul class="nab-rv__bars">';

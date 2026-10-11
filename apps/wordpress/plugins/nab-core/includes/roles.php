@@ -68,3 +68,14 @@ add_action(
 		update_option( 'nab_roles_version', NAB_ROLES_VERSION );
 	}
 );
+
+/**
+ * The lead instructor's account: the `aleem` user, or whoever owns the
+ * instructor email (on hosted installs that is the site admin).
+ *
+ * @return WP_User|false
+ */
+function nab_instructor_user() {
+	$u = get_user_by( 'login', 'aleem' );
+	return $u ? $u : get_user_by( 'email', 'aleem@nextaibuilder.com' );
+}

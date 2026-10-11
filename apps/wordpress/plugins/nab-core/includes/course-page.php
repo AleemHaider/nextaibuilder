@@ -70,7 +70,7 @@ function nab_render_course_page( $course_id ) {
 	$demo     = nab_demo_on() ? nab_demo() : null;
 	$enrolled = nab_user_enrolled( $course_id );
 	$live     = 'recorded' !== $c['format'];
-	$start    = $c['start_date'] ? $c['start_date'] : ( $live && $demo ? $demo['next_start'] : 0 );
+	$start    = $c['start_date'] ? $c['start_date'] : ( $live && $demo && nab_demo_claims() ? $demo['next_start'] : 0 );
 	$outcomes = $c['outcomes'] ? $c['outcomes'] : ( $demo ? $demo['outcomes'] : array() );
 	$audience = $c['audience'] ? $c['audience'] : ( $demo ? $demo['audience'] : array() );
 	$cover    = nab_course_cover( $c );
@@ -101,7 +101,7 @@ function nab_render_course_page( $course_id ) {
 					<?php if ( $author ) : ?>
 						<li><?php echo $demo ? '<img src="' . esc_url( $demo['instructor']['photo'] ) . '" alt="" width="28" height="28" />' : ''; ?><?php echo esc_html( sprintf( /* translators: %s: name. */ __( 'With %s', 'nab-core' ), $author->display_name ) ); ?></li>
 					<?php endif; ?>
-					<?php if ( $demo ) : ?>
+					<?php if ( $demo && nab_demo_claims() ) : ?>
 						<li><span class="nab-cp-stars" aria-hidden="true">★★★★★</span><?php echo esc_html( sprintf( /* translators: 1: rating, 2: count. */ __( '%1$s (%2$d reviews)', 'nab-core' ), number_format_i18n( $demo['rating'][0], 1 ), $demo['rating'][1] ) ); ?></li>
 					<?php endif; ?>
 				</ul>
@@ -171,7 +171,7 @@ function nab_render_course_page( $course_id ) {
 				</section>
 			<?php endif; ?>
 
-			<?php if ( $demo ) : ?>
+			<?php if ( $demo && nab_demo_claims() ) : ?>
 				<section>
 					<h2><?php esc_html_e( 'What students have built', 'nab-core' ); ?></h2>
 					<div class="nab-projects">

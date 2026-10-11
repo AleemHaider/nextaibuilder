@@ -23,6 +23,19 @@ function nab_demo_on() {
 }
 
 /**
+ * Whether demo *claims* may show: invented reviews and rating, made-up student
+ * projects, the placeholder instructor bio and facts, and the placeholder
+ * cohort date. Placeholder images and sample lesson text are not claims.
+ * A publicly reachable site must run with claims off (`wp nab demo claims off`),
+ * so visitors never see fabricated social proof presented as real.
+ *
+ * @return bool
+ */
+function nab_demo_claims() {
+	return nab_demo_on() && 'off' !== get_option( 'nab_demo_claims', 'on' );
+}
+
+/**
  * URL of a bundled demo image.
  *
  * @param string $file File in themes/nextaibuilder/assets/images/demo/.
@@ -95,14 +108,22 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	 *
 	 * ## OPTIONS
 	 *
-	 * <state>
-	 * : on or off
+	 * <state>...
+	 * : on | off, or `claims on` | `claims off`
 	 *
 	 * @param array $args Args.
 	 */
 	WP_CLI::add_command(
 		'nab demo',
 		static function ( $args ) {
+			// `wp nab demo claims on|off` toggles only the invented reviews, rating,
+			// projects, instructor bio and cohort date (off for any public site).
+			if ( 'claims' === ( $args[0] ?? '' ) ) {
+				$state = 'on' === ( $args[1] ?? '' ) ? 'on' : 'off';
+				update_option( 'nab_demo_claims', $state );
+				WP_CLI::success( 'Demo claims ' . $state . '.' );
+				return;
+			}
 			$state = 'on' === ( $args[0] ?? '' ) ? 'on' : 'off';
 			update_option( 'nab_demo_content', $state );
 			WP_CLI::success( 'Demo content ' . $state . '.' );

@@ -125,7 +125,7 @@ function nab_course_sessions( $course_id ) {
 		);
 	}
 	// DEMO: a weekly schedule for live cohorts until real sessions are added.
-	if ( ! $out && function_exists( 'nab_demo_on' ) && nab_demo_on() && 'recorded' !== nab_course_format( $course_id ) ) {
+	if ( ! $out && function_exists( 'nab_demo_claims' ) && nab_demo_claims() && 'recorded' !== nab_course_format( $course_id ) ) {
 		$start = nab_demo()['next_start'] + 18 * HOUR_IN_SECONDS;
 		foreach ( nab_course_modules( $course_id ) as $i => $m ) {
 			$out[] = array(

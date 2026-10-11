@@ -50,7 +50,7 @@ function nab_render_hero_proof() {
 		}
 		$html .= '</span>';
 	}
-	if ( nab_demo_on() ) {
+	if ( nab_demo_claims() ) {
 		[ $rating, $count ] = nab_demo()['rating'];
 		/* translators: 1: rating, 2: count. */
 		$line = sprintf( __( '%1$s from %2$d student reviews', 'nab-core' ), number_format_i18n( $rating, 1 ), $count );
