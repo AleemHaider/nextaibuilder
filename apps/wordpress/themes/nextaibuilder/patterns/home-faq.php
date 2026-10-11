@@ -8,15 +8,7 @@
  * @package nextaibuilder
  */
 
-$nab_faq = array(
-	array( 'What is the difference between recorded and live cohorts?', 'Recorded courses are self-paced: watch the video lessons any time and rewatch as often as you like. Live cohorts run on a fixed schedule with real-time instructor sessions, Q&A and peer collaboration. Both follow the same curriculum.' ),
-	array( 'Can I pay in installments?', 'Yes. Every course offers a 3-installment plan at no extra cost. The first payment is taken at checkout and the other two 30 and 60 days later.' ),
-	array( 'Can I pay by bank transfer?', 'Yes. Choose bank transfer at checkout and upload your payment receipt. We confirm it and activate your enrollment, usually within one business day.' ),
-	array( 'Do I get lifetime access to course materials?', 'Yes. Once enrolled you keep access to all course materials, including updates to the curriculum.' ),
-	array( 'What if I miss a live session?', 'Every live session is recorded and posted to your student dashboard within 24 hours.' ),
-	array( 'What tools do I need to get started?', 'A computer and an internet connection. The guided setup steps walk you through installing everything else, and our AI checks each step from a screenshot.' ),
-	array( 'Is there a refund policy?', 'Yes. You get a full refund within 2 weeks of the cohort start date, no questions asked. See the refund policy page for details.' ),
-);
+$nab_faq = function_exists( 'nab_faq_items' ) ? nab_faq_items() : array();
 ?>
 <!-- wp:group {"tagName":"section","className":"nab-band nab-faq","layout":{"type":"constrained","contentSize":"1180px"}} -->
 <section class="wp-block-group nab-band nab-faq">

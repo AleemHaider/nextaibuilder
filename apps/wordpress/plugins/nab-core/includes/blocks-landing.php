@@ -156,7 +156,7 @@ function nab_render_sticky_cta() {
 	}
 	$start = nab_next_start();
 	$bits  = array();
-	$bits[] = $start ? sprintf( /* translators: %s: date. */ __( 'Next cohort starts %s', 'nab-core' ), wp_date( 'F j', $start ) ) : get_the_title( $c['id'] );
+	$bits[] = $start ? sprintf( /* translators: %s: date. */ __( 'Next cohort starts %s', 'nab-core' ), wp_date( 'F j', $start ) ) : __( 'Live cohort', 'nab-core' );
 	if ( $c['price'] ) {
 		$bits[] = $c['installment_count'] ? sprintf( /* translators: 1: price, 2: count, 3: amount. */ __( '%1$s or %2$d × %3$s', 'nab-core' ), nab_money( $c['price'] ), $c['installment_count'], nab_money( $c['installment_amount'] ) ) : nab_money( $c['price'] );
 	}

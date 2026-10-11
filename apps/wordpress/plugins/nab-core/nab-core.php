@@ -50,6 +50,7 @@ require_once NAB_CORE_DIR . 'includes/admissions.php';
 require_once NAB_CORE_DIR . 'includes/security.php';
 require_once NAB_CORE_DIR . 'includes/account.php';
 require_once NAB_CORE_DIR . 'includes/blocks-landing.php';
+require_once NAB_CORE_DIR . 'includes/seo-plus.php';
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once NAB_CORE_DIR . 'cli/class-nab-seed-command.php';

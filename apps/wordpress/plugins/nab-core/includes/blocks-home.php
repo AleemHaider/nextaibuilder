@@ -100,20 +100,53 @@ function nab_render_timeline() {
 		return '';
 	}
 	$start = nab_next_start();
-	$html  = '<ol class="nab-timeline">';
+	$last  = count( $c['modules'] ) - 1;
+	$html  = '<ol class="nab-tl">';
 	foreach ( $c['modules'] as $i => $m ) {
-		$title = preg_replace( '/^(Week|Module)\s+\d+\s*[.:—–-]?\s*/u', '', $m['title'] );
-		$when  = $start ? wp_date( 'M j', strtotime( '+' . ( $i * 7 ) . ' days', $start ) ) : '';
+		$title    = preg_replace( '/^(Week|Module)\s+\d+\s*[.:—–-]?\s*/u', '', $m['title'] );
+		$when     = $start ? wp_date( 'M j', strtotime( '+' . ( $i * 7 ) . ' days', $start ) ) : '';
+		$sessions = '';
+		foreach ( $m['lessons'] as $l ) {
+			$mins      = (int) ( $l['minutes'] ?? 0 );
+			$len       = $mins ? ( $mins >= 60 && 0 === $mins % 60 ? sprintf( /* translators: %d: hours. */ __( '%d h', 'nab-core' ), $mins / 60 ) : sprintf( /* translators: %d: minutes. */ __( '%d min', 'nab-core' ), $mins ) ) : '';
+			$sessions .= '<li><span>' . esc_html( preg_replace( '/^Session\s+\d+\s*[—–-]\s*/u', '', $l['title'] ) ) . '</span>' . ( $len ? '<span class="nab-tl__len">' . esc_html( $len ) . '</span>' : '' ) . '</li>';
+		}
 		$html .= sprintf(
-			'<li><div class="nab-timeline__when"><b>%s</b>%s</div><div class="nab-timeline__what"><h3>%s</h3><ul>%s</ul></div></li>',
+			'<li class="nab-tl__week%1$s"><span class="nab-tl__node" aria-hidden="true">%2$d</span><div class="nab-tl__card"><p class="nab-tl__meta">%3$s</p><h3>%4$s</h3><ul class="nab-tl__sessions">%5$s</ul>%6$s</div></li>',
+			$i === $last ? ' is-final' : '',
+			$i + 1,
 			/* translators: %d: week number. */
-			esc_html( sprintf( __( 'Week %d', 'nab-core' ), $i + 1 ) ),
-			$when ? '<span>' . esc_html( $when ) . '</span>' : '',
+			esc_html( sprintf( __( 'Week %d', 'nab-core' ), $i + 1 ) . ( $when ? ' · ' . $when : '' ) ),
 			esc_html( $title ),
-			implode( '', array_map( static fn( $l ) => '<li>' . esc_html( preg_replace( '/^Session\s+\d+\s*[—–-]\s*/u', '', $l['title'] ) ) . '</li>', $m['lessons'] ) )
+			$sessions,
+			$i === $last ? '<p class="nab-tl__finish">' . esc_html__( 'You ship your product', 'nab-core' ) . '</p>' : ''
 		);
 	}
 	return $html . '</ol>';
+}
+
+/**
+ * nab/timeline-intro: pinned summary + join button beside the timeline.
+ *
+ * @return string HTML.
+ */
+function nab_render_timeline_intro() {
+	$c = nab_flagship_course();
+	if ( ! $c ) {
+		return '';
+	}
+	$facts = array(
+		/* translators: %d: weeks. */
+		sprintf( _n( '%d week', '%d weeks', count( $c['modules'] ), 'nab-core' ), count( $c['modules'] ) ),
+		/* translators: %d: sessions. */
+		sprintf( _n( '%d session', '%d sessions', (int) $c['lesson_count'], 'nab-core' ), (int) $c['lesson_count'] ),
+	);
+	if ( $c['hours'] ) {
+		/* translators: %d: hours. */
+		$facts[] = sprintf( __( 'about %d hours', 'nab-core' ), (int) $c['hours'] );
+	}
+	$join = function_exists( 'nab_primary_join' ) ? nab_primary_join() : array( 'label' => __( 'Browse courses', 'nab-core' ), 'url' => home_url( '/courses/' ) );
+	return '<ul class="nab-tl-facts">' . implode( '', array_map( static fn( $f ) => '<li>' . esc_html( $f ) . '</li>', $facts ) ) . '</ul><p class="nab-tl-cta"><a class="nab-btn" href="' . esc_url( $join['url'] ) . '">' . esc_html( $join['label'] ) . '</a> <a class="nab-tl-syllabus" href="' . esc_url( $c['url'] ) . '#syllabus">' . esc_html__( 'Full syllabus', 'nab-core' ) . '</a></p>';
 }
 
 /**
@@ -194,11 +227,11 @@ function nab_render_pricing_cards() {
  */
 function nab_real_testimonials() {
 	return array(
-		array( 'Gregg Laroche', 'VP Product Management, PreVeil', 'gregg-laroche.jpg', 'I have run product teams for twenty years and this is the first course that actually changed how my engineers and I work together. The Reviewer agent is in every PR we ship now.' ),
-		array( 'Gabor Mayer', 'Product Manager, Google', 'gabor-mayer.jpg', 'Certifications do not move careers. Shipped products do. By the Capstone you have a public repo, a live AI feature and a release tag.' ),
-		array( 'Orsolya Meckl', 'Product Owner, Orshe', 'orsolya-meckl.jpg', 'I came in skeptical and left with a Jira epic, a Confluence PRD and Figma flows for a product I had been stuck on for months.' ),
-		array( 'Giuseppe Spanò', 'Software Engineer', 'giuseppe-spano.jpg', 'I built three agents in four weeks. My triage agent has been running on its own for two months.' ),
-		array( 'Danny Chevilly', 'IT Consultant, Inventio IT A/S', 'danny-chevilly.jpg', 'The n8n + LangGraph hybrid is now the backbone of three of my clients. What used to be a custom integration project is a one-week build.' ),
+		array( 'Gregg Laroche', 'VP Product Management, PreVeil', 'gregg-laroche.webp', 'I have run product teams for twenty years and this is the first course that actually changed how my engineers and I work together. The Reviewer agent is in every PR we ship now.' ),
+		array( 'Gabor Mayer', 'Product Manager, Google', 'gabor-mayer.webp', 'Certifications do not move careers. Shipped products do. By the Capstone you have a public repo, a live AI feature and a release tag.' ),
+		array( 'Orsolya Meckl', 'Product Owner, Orshe', 'orsolya-meckl.webp', 'I came in skeptical and left with a Jira epic, a Confluence PRD and Figma flows for a product I had been stuck on for months.' ),
+		array( 'Giuseppe Spanò', 'Software Engineer', 'giuseppe-spano.webp', 'I built three agents in four weeks. My triage agent has been running on its own for two months.' ),
+		array( 'Danny Chevilly', 'IT Consultant, Inventio IT A/S', 'danny-chevilly.webp', 'The n8n + LangGraph hybrid is now the backbone of three of my clients. What used to be a custom integration project is a one-week build.' ),
 		array( 'Shamik', 'Founder', '', 'By Lesson 11 my one annoying Friday task was a scheduled agent, and I had my Friday afternoons back.' ),
 	);
 }
@@ -279,6 +312,7 @@ add_action(
 			'hero-visual'   => array( 'nab_render_hero_visual', __( 'Hero product visual', 'nab-core' ) ),
 			'projects'      => array( 'nab_render_projects', __( 'Student projects', 'nab-core' ) ),
 			'timeline'      => array( 'nab_render_timeline', __( 'Curriculum timeline', 'nab-core' ) ),
+			'timeline-intro' => array( 'nab_render_timeline_intro', __( 'Curriculum summary', 'nab-core' ) ),
 			'instructor'    => array( 'nab_render_instructor_block', __( 'Instructor', 'nab-core' ) ),
 			'pricing-cards' => array( 'nab_render_pricing_cards', __( 'Pricing cards', 'nab-core' ) ),
 			'reviews'       => array( 'nab_render_reviews', __( 'Reviews', 'nab-core' ) ),

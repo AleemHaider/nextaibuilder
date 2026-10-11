@@ -10,7 +10,7 @@
 
 ?>
 <!-- wp:html -->
-<a class="nab-logo" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php esc_attr_e( 'nextaibuilder home', 'nextaibuilder' ); ?>">
+<a class="nab-logo" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php esc_attr_e( 'Next aibuilder home', 'nextaibuilder' ); ?>">
 	<svg class="nab-logo__mark" width="28" height="28" viewBox="0 0 56 56" fill="none" aria-hidden="true">
 		<defs>
 			<linearGradient id="nabDeep" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1a2744"/><stop offset="100%" stop-color="#4a90c4"/></linearGradient>

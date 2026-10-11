@@ -113,7 +113,7 @@ function nab_render_course_page( $course_id ) {
 				</div>
 			</div>
 			<?php if ( $cover ) : ?>
-				<div class="nab-cp-cover"><img src="<?php echo esc_url( $cover ); ?>" alt="" width="1200" height="675" /></div>
+				<div class="nab-cp-cover"><img src="<?php echo esc_url( $cover ); ?>" alt="" width="1200" height="675" fetchpriority="high" decoding="async" /></div>
 			<?php endif; ?>
 		</div>
 	</section>
@@ -139,7 +139,7 @@ function nab_render_course_page( $course_id ) {
 			<?php endif; ?>
 
 			<?php if ( $c['modules'] ) : ?>
-				<section class="nab-syllabus">
+				<section id="syllabus" class="nab-syllabus">
 					<h2><?php esc_html_e( 'Syllabus', 'nab-core' ); ?></h2>
 					<?php foreach ( $c['modules'] as $i => $m ) : ?>
 						<?php

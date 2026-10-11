@@ -73,9 +73,9 @@ function nab_course_cover( $c ) {
 		return '';
 	}
 	if ( str_contains( $c['url'], 'build-production-ready' ) ) {
-		return nab_demo_img( 'recorded' === $c['format'] ? 'cover-recorded.png' : 'cover-live.png' );
+		return nab_demo_img( 'recorded' === $c['format'] ? 'cover-recorded.webp' : 'cover-live.webp' );
 	}
-	return nab_demo_img( 'cover-generic.png' );
+	return nab_demo_img( 'cover-generic.webp' );
 }
 
 /**

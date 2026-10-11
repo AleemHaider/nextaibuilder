@@ -49,7 +49,7 @@ function nab_meta_description() {
  */
 function nab_output_head_meta() {
 	$title       = wp_get_document_title();
-	$description = nab_meta_description();
+	$description = function_exists( 'nab_seo_description' ) ? nab_seo_description( nab_meta_description() ) : nab_meta_description();
 	$url         = is_singular() ? get_permalink() : home_url( add_query_arg( array() ) );
 	$image       = is_singular() && has_post_thumbnail() ? get_the_post_thumbnail_url( null, 'large' ) : get_theme_file_uri( 'assets/images/og-image.png' );
 
@@ -123,7 +123,8 @@ function nab_output_head_meta() {
 			),
 		);
 	}
-	if ( $graph ) {
+	$graph = function_exists( 'nab_enrich_graph' ) ? nab_enrich_graph( $graph ) : $graph;
+	if ( $graph && ( ! function_exists( 'nab_should_noindex' ) || ! nab_should_noindex() ) ) {
 		printf(
 			'<script type="application/ld+json">%s</script>' . "\n",
 			wp_json_encode(
@@ -162,18 +163,38 @@ function nab_maybe_render_llms() {
 		return;
 	}
 	header( 'Content-Type: text/plain; charset=utf-8' );
-	$lines   = array( '# nextaibuilder', '', '> ' . NAB_SITE_DESCRIPTION, '', 'Home: ' . home_url( '/' ), '' );
+	header( 'X-Robots-Tag: noindex' );
+	$lines   = array( '# nextaibuilder', '', '> ' . NAB_SITE_DESCRIPTION, '' );
+	$lines[] = 'nextaibuilder teaches founders, product managers and engineers to plan, build and deploy their own AI product with Claude Code and the Anthropic Claude API, in a five-week live cohort or a self-paced course. Every student works on their own product; setup steps are checked by AI from screenshots, and an instructor reviews work every week.';
+	$lines[] = '';
 	$lines[] = '## Courses';
 	foreach ( nab_get_course_ids() as $id ) {
-		$c       = nab_get_course( $id );
-		$lines[] = sprintf( '- [%s (%s)](%s): %s', $c['title'], $c['format_label'], $c['url'], $c['tagline'] );
+		$c     = nab_get_course( $id );
+		$facts = array( $c['format_label'] );
+		if ( $c['modules'] ) {
+			$facts[] = count( $c['modules'] ) . ' weeks, ' . (int) $c['lesson_count'] . ' sessions';
+		}
+		if ( $c['price'] ) {
+			$facts[] = nab_money( $c['price'] ) . ( $c['installment_count'] ? ' or ' . $c['installment_count'] . ' monthly payments' : '' );
+		}
+		if ( $c['start_date'] ) {
+			$facts[] = 'starts ' . wp_date( 'F j, Y', $c['start_date'] );
+		}
+		$lines[] = sprintf( '- [%s](%s): %s. %s', $c['title'], $c['url'], implode( ', ', $facts ), $c['tagline'] );
+		foreach ( $c['modules'] as $i => $m ) {
+			$lines[] = sprintf( '  - Week %d: %s (%s)', $i + 1, preg_replace( '/^(Week|Module)\s+\d+\s*[.:—–-]?\s*/u', '', $m['title'] ), implode( '; ', array_map( static fn( $l ) => preg_replace( '/^Session\s+\d+\s*[—–-]\s*/u', '', $l['title'] ), $m['lessons'] ) ) );
+		}
 	}
-	$posts = get_posts(
-		array(
-			'post_type'      => 'post',
-			'posts_per_page' => 100,
-		)
-	);
+	$lines[] = '';
+	$lines[] = '## Key pages';
+	$lines[] = '- [All courses](' . get_post_type_archive_link( 'courses' ) . '): live cohorts and self-paced courses';
+	foreach ( array( 'about' => 'About nextaibuilder and the instructor', 'apply' => 'Apply to the Agentic AI Engineer program', 'refund-policy' => 'Refund policy: full refund within 2 weeks' ) as $slug => $label ) {
+		$page = get_page_by_path( $slug );
+		if ( $page && 'publish' === $page->post_status ) {
+			$lines[] = sprintf( '- [%s](%s)', $label, get_permalink( $page ) );
+		}
+	}
+	$posts = get_posts( array( 'post_type' => 'post', 'posts_per_page' => 100 ) );
 	if ( $posts ) {
 		$lines[] = '';
 		$lines[] = '## Guides and resources';
@@ -181,7 +202,14 @@ function nab_maybe_render_llms() {
 			$lines[] = sprintf( '- [%s](%s): %s', get_the_title( $post ), get_permalink( $post ), wp_strip_all_tags( get_the_excerpt( $post ) ) );
 		}
 	}
-	echo wp_strip_all_tags( implode( "\n", $lines ) ) . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput -- text/plain response.
+	if ( function_exists( 'nab_faq_items' ) ) {
+		$lines[] = '';
+		$lines[] = '## FAQ';
+		foreach ( nab_faq_items() as $q ) {
+			$lines[] = '- ' . $q[0] . ' ' . $q[1];
+		}
+	}
+	echo html_entity_decode( wp_strip_all_tags( implode( "\n", $lines ) ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput -- text/plain response.
 	exit;
 }
 add_action( 'template_redirect', 'nab_maybe_render_llms' );

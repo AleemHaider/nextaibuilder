@@ -56,7 +56,7 @@ function nab_demo() {
 		'instructor'  => array(
 			'name'   => 'Aleem Haider',
 			'role'   => 'Founder & lead instructor',
-			'photo'  => nab_demo_img( 'instructor.png' ),
+			'photo'  => nab_demo_img( 'instructor.webp' ),
 			'bio'    => 'Aleem has spent fifteen years shipping software products, most recently leading teams that put AI features in front of millions of users. He started nextaibuilder to teach the workflow he uses every day: plan with a spec, let agents do the building, and hold everything to production quality.',
 			'facts'  => array( '15 years building software products', '400+ students taught', 'Builds with Claude Code daily' ),
 		),
