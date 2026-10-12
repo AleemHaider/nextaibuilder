@@ -263,6 +263,9 @@ function nab_render_sign_in() {
 		'google_failed' => array( 'error', __( 'Google sign-in didn’t complete. Please try again.', 'nab-core' ) ),
 		'google_off'    => array( 'error', __( 'Google sign-in isn’t available right now. Use an email link instead.', 'nab-core' ) ),
 		'disabled'      => array( 'error', __( 'This account has been deactivated. Contact us if you think this is a mistake.', 'nab-core' ) ),
+		'failed'        => array( 'error', __( 'That email and password don’t match. Try again, use an email link, or reset your password.', 'nab-core' ) ),
+		'empty'         => array( 'error', __( 'Enter your email and password.', 'nab-core' ) ),
+		'locked'        => array( 'error', sprintf( /* translators: %d: minutes. */ __( 'Too many failed sign-in attempts. Try again in %d minutes, or reset your password.', 'nab-core' ), NAB_LOGIN_LOCK_MIN ) ),
 	);
 	ob_start();
 	echo '<div class="nab-card nab-signin">';
@@ -286,9 +289,11 @@ function nab_render_sign_in() {
 		<input id="nab-magic-email" type="email" name="email" autocomplete="email" spellcheck="false" required placeholder="you@example.com" />
 		<button class="nab-btn" type="submit"><?php esc_html_e( 'Send link', 'nab-core' ); ?></button>
 	</form>
-	<details class="nab-signin__password">
+	<details class="nab-signin__password"<?php echo in_array( $flag, array( 'failed', 'empty', 'locked' ), true ) ? ' open' : ''; ?>>
 		<summary><?php esc_html_e( 'Sign in with a password instead', 'nab-core' ); ?></summary>
 		<?php
+		$from_signin = static fn( $html ) => $html . '<input type="hidden" name="nab_signin_form" value="1" />';
+		add_filter( 'login_form_bottom', $from_signin );
 		wp_login_form(
 			array(
 				'redirect'       => $redirect,
@@ -296,6 +301,7 @@ function nab_render_sign_in() {
 				'remember'       => true,
 			)
 		);
+		remove_filter( 'login_form_bottom', $from_signin );
 		?>
 		<p><a href="<?php echo esc_url( wp_lostpassword_url() ); ?>"><?php esc_html_e( 'Forgot your password?', 'nab-core' ); ?></a></p>
 	</details>
@@ -372,4 +378,44 @@ add_action(
 			)
 		);
 	}
+);
+
+/**
+ * A failed password sign-in from /sign-in/ goes back there with a message,
+ * instead of WordPress's own login screen.
+ *
+ * @param string $flag Notice key (failed, empty, locked).
+ */
+function nab_back_to_signin( $flag ) {
+	if ( empty( $_POST['nab_signin_form'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- core login form, no nonce; we only redirect.
+		return;
+	}
+	$args = array( 'nab_signin' => $flag );
+	if ( ! empty( $_POST['redirect_to'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+		$args['redirect_to'] = rawurlencode( wp_validate_redirect( esc_url_raw( wp_unslash( $_POST['redirect_to'] ) ), home_url( '/dashboard/' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
+	}
+	wp_safe_redirect( add_query_arg( $args, home_url( '/sign-in/' ) ) );
+	exit;
+}
+
+// Runs after the lockout counter (security.php, default priority).
+add_action(
+	'wp_login_failed',
+	static function ( $login, $error = null ) {
+		nab_back_to_signin( is_wp_error( $error ) && 'nab_locked' === $error->get_error_code() ? 'locked' : 'failed' );
+	},
+	99,
+	2
+);
+
+// Empty fields don't fire wp_login_failed.
+add_filter(
+	'authenticate',
+	static function ( $user ) {
+		if ( is_wp_error( $user ) && array_intersect( array( 'empty_username', 'empty_password' ), $user->get_error_codes() ) ) {
+			nab_back_to_signin( 'empty' );
+		}
+		return $user;
+	},
+	999
 );

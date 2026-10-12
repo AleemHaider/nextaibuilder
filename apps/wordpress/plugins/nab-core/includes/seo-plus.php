@@ -276,7 +276,23 @@ function nab_seo_description( $desc ) {
 	if ( is_page( 'apply' ) ) {
 		return __( 'Apply to the nextaibuilder Agentic AI Engineer program. Choose a 6-month or 1-year track; we review every application and reply within two working days.', 'nab-core' );
 	}
-	return $desc;
+	return nab_fit_description( $desc );
+}
+
+/**
+ * Shorten a description to what Google shows (about 158 characters), cutting at a word.
+ *
+ * @param string $desc Description.
+ * @return string
+ */
+function nab_fit_description( $desc ) {
+	$desc = trim( preg_replace( '/\s+/', ' ', (string) $desc ) );
+	if ( mb_strlen( $desc ) <= 158 ) {
+		return $desc;
+	}
+	$cut = mb_substr( $desc, 0, 157 );
+	$cut = preg_replace( '/[\s,;:.\-–—]+\S*$/u', '', $cut );
+	return preg_replace( '/[\s,;:.–—…]+$/u', '', $cut ) . '…';
 }
 
 /* ---------------- Structured data ---------------- */

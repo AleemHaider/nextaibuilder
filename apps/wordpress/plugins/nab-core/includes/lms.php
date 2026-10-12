@@ -113,6 +113,46 @@ add_action(
 	5
 );
 
+// Say why the student landed here instead of the lesson they clicked.
+add_filter(
+	'the_content',
+	static function ( $content ) {
+		static $shown = false;
+		// Skip <head> (the meta description builds an excerpt through the_content).
+		if ( $shown || ! did_action( 'wp_body_open' ) || ! is_singular( 'lesson' ) || empty( $_GET['nab_locked'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- display only.
+			return $content;
+		}
+		$shown = true;
+		return '<p class="nab-notice" role="status">' . esc_html__( 'That lesson is still locked. Finish this one and click “Mark as Complete” to unlock the next lesson.', 'nab-core' ) . '</p>' . $content;
+	},
+30
+);
+
+// Mark locked lessons in the course sidebar so students know before clicking.
+add_action(
+	'wp_footer',
+	static function () {
+		if ( ! is_singular( 'lesson' ) || ! is_user_logged_in() ) {
+			return;
+		}
+		$user   = get_current_user_id();
+		$locked = array();
+		foreach ( nab_course_lesson_ids( nab_lesson_course( get_queried_object_id() ) ) as $id ) {
+			if ( nab_lesson_locked( $id, $user ) ) {
+				$locked[] = untrailingslashit( get_permalink( $id ) );
+			}
+		}
+		if ( ! $locked ) {
+			return;
+		}
+		printf(
+			'<script>(function(l,t){document.querySelectorAll("a.tutor-learning-nav-item[href]").forEach(function(a){if(l.indexOf(a.href.split("?")[0].replace(/\\/$/,""))<0)return;a.classList.add("nab-lesson-locked");a.setAttribute("title",t);var s=document.createElement("span");s.className="nab-lock-badge";s.textContent=t;a.appendChild(s);});})(%s,%s);</script>' . "\n",
+			wp_json_encode( $locked ),
+			wp_json_encode( __( 'Locked', 'nab-core' ) )
+		);
+	}
+);
+
 /* ---------------- Free-preview lessons ---------------- */
 
 /**

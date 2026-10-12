@@ -105,3 +105,30 @@ add_filter(
 	10,
 	2
 );
+
+/*
+ * Keep account usernames private: the public users REST endpoint and author
+ * archives (/?author=1 → /author/<login>/) both reveal sign-in names.
+ */
+add_filter(
+	'rest_endpoints',
+	static function ( $endpoints ) {
+		if ( ! current_user_can( 'list_users' ) ) {
+			unset( $endpoints['/wp/v2/users'], $endpoints['/wp/v2/users/(?P<id>[\d]+)'] );
+		}
+		return $endpoints;
+	}
+);
+
+// One-instructor site: author links and archives point to the About page.
+add_filter( 'author_link', static fn() => home_url( '/about/' ) );
+add_action(
+	'template_redirect',
+	static function () {
+		if ( is_author() || isset( $_GET['author'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- read-only redirect.
+			wp_safe_redirect( home_url( '/about/' ), 301 );
+			exit;
+		}
+	},
+	1
+);
