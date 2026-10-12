@@ -180,6 +180,11 @@ add_action(
 			'/pricing'      => '/#pricing',
 			'/curriculum'   => '/#curriculum',
 		);
+		// Old static guide URLs (/guides/slug.html) still resolve, so send them to the canonical slug.
+		if ( preg_match( '#^/(guides|resources)/([a-z0-9-]+)\.html$#', $path, $m ) ) {
+			wp_safe_redirect( home_url( '/' . $m[1] . '/' . $m[2] . '/' ), 301 );
+			exit;
+		}
 		$key  = untrailingslashit( $path );
 		if ( isset( $map[ $key ] ) && is_404() ) {
 			wp_safe_redirect( home_url( $map[ $key ] ), 301 );
