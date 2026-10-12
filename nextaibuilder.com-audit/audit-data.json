@@ -1,0 +1,103 @@
+{
+ "summary": {
+  "health_score": 90,
+  "business_type": "Online education (course provider)",
+  "top_findings": [
+   "Sitemap listed 33 non-indexable URLs (fixed)",
+   "Missing canonicals on home/archives (fixed)",
+   "Duplicate course titles and short descriptions (fixed)",
+   "Thin About page / few articles (open: needs content)",
+   "Search Console not set up (open)"
+  ],
+  "quick_wins": [
+   "Submit sitemap in Search Console",
+   "Add real bio + LinkedIn to About",
+   "Fix SPF/SMTP for site email"
+  ]
+ },
+ "categories": [
+  {
+   "name": "Technical SEO",
+   "score": 97,
+   "what_works": [],
+   "findings": []
+  },
+  {
+   "name": "Content Quality",
+   "score": 70,
+   "what_works": [],
+   "findings": []
+  },
+  {
+   "name": "On-Page SEO",
+   "score": 96,
+   "what_works": [],
+   "findings": []
+  },
+  {
+   "name": "Schema / Structured Data",
+   "score": 95,
+   "what_works": [],
+   "findings": []
+  },
+  {
+   "name": "Performance (CWV)",
+   "score": 99,
+   "what_works": [],
+   "findings": []
+  },
+  {
+   "name": "AI Search Readiness",
+   "score": 95,
+   "what_works": [],
+   "findings": []
+  },
+  {
+   "name": "Images",
+   "score": 98,
+   "what_works": [],
+   "findings": []
+  }
+ ],
+ "action_plan": {
+  "phases": [
+   {
+    "name": "Phase 1: Critical Fixes",
+    "timeframe": "Week 1",
+    "items": [
+     "Search Console + Bing verification",
+     "Email deliverability"
+    ]
+   },
+   {
+    "name": "Phase 2: High-Impact Improvements",
+    "timeframe": "Weeks 2-3",
+    "items": [
+     "About page E-E-A-T",
+     "Social profiles",
+     "Course images"
+    ]
+   },
+   {
+    "name": "Phase 3: Content & Authority",
+    "timeframe": "Month 2",
+    "items": [
+     "4-6 answer-first guides",
+     "Real student outcomes"
+    ]
+   },
+   {
+    "name": "Phase 4: Monitoring & Iteration",
+    "timeframe": "Ongoing",
+    "items": [
+     "Re-audit",
+     "Search Console coverage"
+    ]
+   }
+  ]
+ },
+ "artifacts": {
+  "findings_dir": "findings/",
+  "screenshots_dir": "screenshots/"
+ }
+}

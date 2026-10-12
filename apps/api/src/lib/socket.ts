@@ -158,7 +158,10 @@ export function emitSubmissionUpdated(
 ) {
   try {
     getIO().to(`student:${userId}`).emit('submission:updated', payload)
-    getIO().emit('admin:submission:updated', { userId, ...payload })
+    // Scope the admin event to the admin room. A bare `.emit()` broadcasts to
+    // EVERY connected socket, so every student received every other student's
+    // submission id, ML feedback and score in real time.
+    getIO().to('role:admin').emit('admin:submission:updated', { userId, ...payload })
   } catch {
     // Socket.io not ready — non-fatal
   }

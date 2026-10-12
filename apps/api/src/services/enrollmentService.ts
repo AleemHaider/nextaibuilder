@@ -22,6 +22,7 @@ import { Queue } from 'bullmq'
 import { Types, type HydratedDocument } from 'mongoose'
 import { bullMQConnection } from '../lib/redis.js'
 import { Enrollment, type IEnrollment } from '../models/Enrollment.js'
+import { CohortMembership } from '../models/CohortMembership.js'
 import { SlackInvite } from '../models/SlackInvite.js'
 import { EmailLog } from '../models/EmailLog.js'
 import { logger } from '../lib/logger.js'
@@ -45,7 +46,12 @@ const emailNotificationsQueue = new Queue('email-notifications', {
 export interface ActivateEnrollmentInput {
   studentId:     Types.ObjectId
   cohortId:      Types.ObjectId
-  paymentMethod: 'STRIPE' | 'MANUAL_RECEIPT'
+  paymentMethod: 'STRIPE' | 'PADDLE' | 'MANUAL_RECEIPT' | 'COUPON'
+  /**
+   * Payment status stamped on the enrollment. Defaults to 'PAID'.
+   * Coupon-based (free) enrollments pass 'WAIVED'.
+   */
+  paymentStatus?: 'PAID' | 'WAIVED'
   paymentPlanId?: Types.ObjectId | null
   enrolledBy?:    Types.ObjectId | null
   /** The student's email. If null/undefined, the Slack invite step is skipped. */
@@ -183,7 +189,7 @@ export async function activateEnrollment(
     { studentId: input.studentId, cohortId: input.cohortId },
     {
       $set: {
-        paymentStatus:   'PAID',
+        paymentStatus:   input.paymentStatus ?? 'PAID',
         status:          'ACTIVE',
         accessGrantedAt: new Date(),
         paymentMethod:   input.paymentMethod,
@@ -200,6 +206,27 @@ export async function activateEnrollment(
     },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   ) as HydratedDocument<IEnrollment>
+
+  // Keep the legacy CohortMembership in sync — the student dashboard
+  // (/api/student/dashboard) and the Setup Companion resolve the student's
+  // cohort through CohortMembership, not Enrollment. Without this, a student
+  // enrolled via Stripe / manual payment / coupon stays stuck on the
+  // "cohort assignment coming soon" screen forever. userId is unique on the
+  // collection (one membership per student), so an existing membership is
+  // repointed at the newly activated cohort. Non-fatal: activation must not
+  // fail because the legacy mirror couldn't be written.
+  try {
+    await CohortMembership.findOneAndUpdate(
+      { userId: input.studentId },
+      {
+        $set:         { cohortId: input.cohortId },
+        $setOnInsert: { userId: input.studentId },
+      },
+      { upsert: true, setDefaultsOnInsert: true },
+    )
+  } catch (err: unknown) {
+    logger.error({ err }, '[EnrollmentService] Failed to upsert CohortMembership mirror')
+  }
 
   if (input.studentEmail) {
     await enqueueSlackInviteWithIdempotency(

@@ -100,24 +100,28 @@ beforeEach(() => {
 
 describe('Stripe webhook event-type allowlist', () => {
 
-  it('exposes exactly the 4 event types the worker switch handles', () => {
+  it('exposes exactly the event types the worker switch handles', () => {
     expect(STRIPE_WEBHOOK_EVENT_ALLOWLIST).toEqual(new Set([
       'payment_intent.succeeded',
       'invoice.payment_succeeded',
       'invoice.payment_failed',
       'customer.subscription.deleted',
+      'charge.refunded',
+      'charge.dispute.created',
     ]))
   })
 
-  it('rejects ad-hoc events not the worker handles (e.g. charge.refunded)', () => {
-    expect(STRIPE_WEBHOOK_EVENT_ALLOWLIST.has('charge.refunded')).toBe(false)
+  it('rejects ad-hoc events the worker does not handle', () => {
     expect(STRIPE_WEBHOOK_EVENT_ALLOWLIST.has('customer.created')).toBe(false)
     expect(STRIPE_WEBHOOK_EVENT_ALLOWLIST.has('invoice.created')).toBe(false)
+    // now handled (dashboard refunds + chargebacks)
+    expect(STRIPE_WEBHOOK_EVENT_ALLOWLIST.has('charge.refunded')).toBe(true)
+    expect(STRIPE_WEBHOOK_EVENT_ALLOWLIST.has('charge.dispute.created')).toBe(true)
   })
 
   // Sanity: allowlist size matches the worker switch.
-  it('list size matches the four handlers in stripeWebhookWorker switch', () => {
-    expect(STRIPE_WEBHOOK_EVENT_ALLOWLIST.size).toBe(4)
+  it('list size matches the handlers in stripeWebhookWorker switch', () => {
+    expect(STRIPE_WEBHOOK_EVENT_ALLOWLIST.size).toBe(6)
   })
 })
 

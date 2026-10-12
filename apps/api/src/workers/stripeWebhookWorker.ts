@@ -32,6 +32,10 @@ import type { StripeWebhookJobData } from '../routes/webhook-stripe.js'
 import { logger } from '../lib/logger.js'
 // Service-layer extraction: Enrollment + Slack + welcome-email side effects.
 import { activateEnrollment } from '../services/enrollmentService.js'
+// Needed to resolve subscription metadata on the first installment invoice
+// (checkout stores studentId/cohortId/paymentPlanId on the subscription, not
+// on any enrollment — the enrollment is created here on first payment).
+import { stripe } from '../lib/stripe.js'
 
 // ── Idempotency-key helpers ───────────────────────────────────────────────
 // Key format: `{stripeEventId}:{operation}` — deterministic + human-readable,
@@ -54,10 +58,19 @@ interface StripePaymentIntentData {
 
 interface StripeInvoiceData {
   id:              string
-  subscription?:   string
+  subscription?:   string | { id: string }
   amount_paid:     number
   currency:        string
   payment_intent?: string
+  // 2025+ API (pinned apiVersion 2026-03-25.dahlia) moved subscription context
+  // off the top level onto `parent.subscription_details` and per-line details.
+  subscription_details?: { metadata?: Record<string, string> }
+  parent?: {
+    subscription_details?: {
+      subscription?: string | { id: string }
+      metadata?: Record<string, string>
+    }
+  }
   // Stripe sends 'lines.data[0].period' for invoice line item details
   lines?: {
     data: Array<{
@@ -89,8 +102,89 @@ async function deriveInstallmentNumber(enrollmentId: Types.ObjectId): Promise<nu
 // Idempotency-keyed helpers moved to ../services/enrollmentService.
 import {
   enqueueEmailWithIdempotency,
-  enqueueSlackInviteWithIdempotency,
 } from '../services/enrollmentService.js'
+
+// ── Helper: resolve the subscription id from an invoice ───────────────────
+// Stripe changed the invoice shape across API versions: the subscription id
+// used to be `invoice.subscription` (top-level string) and is now nested under
+// `invoice.parent.subscription_details.subscription` and per-line details.
+// Check every known location so the handler works regardless of shape.
+function extractSubscriptionId(invoice: StripeInvoiceData): string | null {
+  const unwrap = (v: unknown): string | null =>
+    typeof v === 'string' ? v
+    : (v && typeof v === 'object' && typeof (v as { id?: unknown }).id === 'string')
+      ? (v as { id: string }).id
+      : null
+
+  return (
+    unwrap(invoice.subscription) ??
+    unwrap(invoice.parent?.subscription_details?.subscription) ??
+    unwrap(invoice.lines?.data?.[0]?.subscription) ??
+    null
+  )
+}
+
+// ── Helper: read subscription metadata embedded on the invoice, if present ──
+function extractInvoiceSubscriptionMetadata(
+  invoice: StripeInvoiceData,
+): Record<string, string> | undefined {
+  return (
+    invoice.parent?.subscription_details?.metadata ??
+    invoice.subscription_details?.metadata ??
+    undefined
+  )
+}
+
+// ── Helper: resolve student/cohort/plan context for a subscription ─────────
+// Prefers metadata embedded on the invoice; falls back to retrieving the
+// subscription from Stripe. Returns null if the context can't be resolved or
+// is malformed (caller then skips without burning retries on a bad event).
+async function resolveSubscriptionContext(
+  subscriptionId: string,
+  invoice: StripeInvoiceData,
+): Promise<{
+  studentObjectId: Types.ObjectId
+  cohortObjectId:  Types.ObjectId
+  paymentPlanId:   Types.ObjectId | null
+} | null> {
+  let meta = extractInvoiceSubscriptionMetadata(invoice)
+
+  if (!meta?.studentId || !meta?.cohortId) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(subscriptionId)
+      meta = sub.metadata as Record<string, string> | undefined
+    } catch (err) {
+      logger.error(
+        { err, subscriptionId },
+        '[Stripe Worker] Failed to retrieve subscription to resolve metadata',
+      )
+      return null
+    }
+  }
+
+  const studentId     = meta?.studentId
+  const cohortId      = meta?.cohortId
+  const paymentPlanId = meta?.paymentPlanId
+
+  if (
+    !studentId || !cohortId ||
+    !Types.ObjectId.isValid(studentId) || !Types.ObjectId.isValid(cohortId)
+  ) {
+    logger.warn(
+      { subscriptionId, studentId, cohortId },
+      '[Stripe Worker] subscription metadata missing/invalid studentId or cohortId — skipping',
+    )
+    return null
+  }
+
+  return {
+    studentObjectId: new Types.ObjectId(studentId),
+    cohortObjectId:  new Types.ObjectId(cohortId),
+    paymentPlanId:   paymentPlanId && Types.ObjectId.isValid(paymentPlanId)
+      ? new Types.ObjectId(paymentPlanId)
+      : null,
+  }
+}
 
 // ── Handler: payment_intent.succeeded (ONE_TIME) ──────────────────────────
 // FIR-43
@@ -198,30 +292,69 @@ async function handleInvoicePaymentSucceeded(
 ): Promise<void> {
   const invoice = data as unknown as StripeInvoiceData
 
-  if (!invoice.subscription) {
-    // Not a subscription invoice — skip (could be a one-time invoice)
+  const subscriptionId = extractSubscriptionId(invoice)
+  if (!subscriptionId) {
+    // Not a subscription invoice (e.g. a one-off invoice) — nothing to do.
+    logger.info(
+      `[Stripe Worker] invoice.payment_succeeded: no subscription on invoice ${invoice.id} — skipping`,
+    )
     return
   }
 
-  // Resolve enrollment by stripeSubscriptionId.
-  let enrollment = await Enrollment.findOne({ stripeSubscriptionId: invoice.subscription })
+  // Resolve the enrollment for this subscription.
+  let enrollment = await Enrollment.findOne({ stripeSubscriptionId: subscriptionId })
 
+  // First installment: the checkout flow creates the Stripe subscription but
+  // NO enrollment (it stores studentId/cohortId/paymentPlanId on the
+  // subscription's metadata). Create the enrollment now, from that metadata,
+  // and stamp the subscription id so later installments + subscription.deleted
+  // resolve it. (Previously this handler bailed out here, so installment
+  // buyers were charged but never enrolled.)
+  const isFirstInstallment = !enrollment
   if (!enrollment) {
-    logger.warn(
-      `[Stripe Worker] invoice.payment_succeeded: no enrollment found for subscription ${invoice.subscription}` +
-      ` — skipping (enrollment will be activated via payment_intent.succeeded)`,
-    )
-    return
-  }
+    const ctx = await resolveSubscriptionContext(subscriptionId, invoice)
+    if (!ctx) {
+      // Metadata unresolvable — throw so BullMQ retries (transient Stripe
+      // errors) rather than silently dropping a paid enrollment.
+      throw new Error(
+        `[Stripe Worker] invoice.payment_succeeded: could not resolve subscription context for ${subscriptionId}`,
+      )
+    }
 
-  // Stamp the subscriptionId on enrollment if not already set (first payment scenario)
-  if (!enrollment.stripeSubscriptionId) {
-    enrollment = await Enrollment.findByIdAndUpdate(
-      enrollment._id,
-      { $set: { stripeSubscriptionId: invoice.subscription } },
-      { new: true },
+    const user = await User.findById(ctx.studentObjectId)
+      .select('stripeCustomerId email')
+      .lean()
+
+    const { enrollment: created } = await activateEnrollment({
+      studentId:        ctx.studentObjectId,
+      cohortId:         ctx.cohortObjectId,
+      paymentMethod:    'STRIPE',
+      paymentPlanId:    ctx.paymentPlanId,
+      studentEmail:     user?.email ?? null,
+      idempotencyScope: eventId,
+      email: {
+        jobName:          'enrollment-confirmed',
+        notificationType: 'ENROLLMENT_CONFIRMED',
+      },
+    })
+    enrollment = created
+
+    await Enrollment.findByIdAndUpdate(enrollment._id, {
+      $set: {
+        stripeSubscriptionId: subscriptionId,
+        ...(user?.stripeCustomerId ? { stripeCustomerId: user.stripeCustomerId } : {}),
+      },
+    })
+
+    // Sprint 2 Story 10 (GAP-037) — schedule installment reminders once, on the
+    // first successful installment payment. JobIds are deterministic so replays
+    // won't double-enqueue.
+    await scheduleInstallmentReminders(
+      enrollment._id as Types.ObjectId,
+      new Date(),
+    ).catch((err: unknown) =>
+      logger.error({ err }, '[Stripe Worker] Failed to schedule installment reminders:'),
     )
-    if (!enrollment) return
   }
 
   // ── StripePayment ledger row (replay-safe upsert) ──────────────────────
@@ -233,7 +366,7 @@ async function handleInvoicePaymentSucceeded(
         enrollmentId:          enrollment._id,
         studentId:             enrollment.studentId,
         stripeEventId:         eventId,
-        stripePaymentIntentId: invoice.payment_intent ?? undefined,
+        stripePaymentIntentId: typeof invoice.payment_intent === 'string' ? invoice.payment_intent : undefined,
         stripeInvoiceId:       invoice.id,
         amount:                invoice.amount_paid,
         currency:              invoice.currency,
@@ -241,7 +374,7 @@ async function handleInvoicePaymentSucceeded(
         // installmentNumber is derived post-insert below; set a placeholder
         // for new inserts and recompute. Replays won't re-enter this branch.
         installmentNumber:     await deriveInstallmentNumber(enrollment._id),
-        metadata: { planType: 'INSTALLMENT', subscriptionId: invoice.subscription },
+        metadata: { planType: 'INSTALLMENT', subscriptionId },
         idempotencyKey:        paymentIdemKey,
       },
     },
@@ -257,56 +390,22 @@ async function handleInvoicePaymentSucceeded(
   })
   const allPaid = paidCount >= 3
 
-  // Build update payload
-  const enrollmentUpdate: Record<string, unknown> = {
-    paymentStatus: allPaid ? 'PAID' : 'PARTIAL',
-  }
-
-  // Grant access on first installment payment
-  if (installmentNumber === 1) {
-    enrollmentUpdate['status']          = 'ACTIVE'
-    enrollmentUpdate['accessGrantedAt'] = new Date()
-  }
-
-  await Enrollment.findByIdAndUpdate(enrollment._id, { $set: enrollmentUpdate })
-
-  // Send enrollment confirmation email + Slack invite on first installment
-  if (installmentNumber === 1) {
-    await enqueueEmailWithIdempotency(
-      enrollment.studentId,
-      'WELCOME',
-      idemKey(eventId, 'send-welcome-email'),
-      'enrollment-confirmed',
-      {
-        type:      'ENROLLMENT_CONFIRMED',
-        studentId: enrollment.studentId.toString(),
-        cohortId:  enrollment.cohortId.toString(),
-      },
-    )
-
-    const user = await User.findById(enrollment.studentId).select('email').lean()
-    if (user?.email) {
-      await enqueueSlackInviteWithIdempotency(
-        enrollment.studentId,
-        enrollment._id as Types.ObjectId,
-        user.email,
-        idemKey(eventId, 'slack-invite'),
-      )
-    }
-
-    // Sprint 2 Story 10 (GAP-037) — schedule installment reminders on first
-    // successful installment payment. JobIds are deterministic so replays
-    // won't double-enqueue.
-    await scheduleInstallmentReminders(
-      enrollment._id as Types.ObjectId,
-      new Date(),
-    ).catch((err: unknown) =>
-      logger.error({ err: err }, '[Stripe Worker] Failed to schedule installment reminders:'),
-    )
-  }
+  // Keep access active and reconcile payment status. `activateEnrollment`
+  // seeds status=ACTIVE + accessGrantedAt on first-installment creation; here
+  // we make sure paymentStatus reflects PARTIAL until all 3 are collected.
+  // A successful payment also clears any outstanding failed-payment grace
+  // deadline so the sweep won't suspend a student who caught up.
+  await Enrollment.findByIdAndUpdate(enrollment._id, {
+    $set: {
+      paymentStatus:      allPaid ? 'PAID' : 'PARTIAL',
+      status:             'ACTIVE',
+      paymentGraceEndsAt: null,
+    },
+  })
 
   logger.info(
-    `[Stripe Worker] invoice.payment_succeeded: installment ${installmentNumber}/3 — enrollment=${enrollment._id.toString()} allPaid=${allPaid}`,
+    `[Stripe Worker] invoice.payment_succeeded: installment ${installmentNumber}/3 — ` +
+    `enrollment=${enrollment._id.toString()} firstInstallment=${isFirstInstallment} allPaid=${allPaid}`,
   )
 }
 
@@ -318,12 +417,15 @@ async function handleInvoicePaymentFailed(
 ): Promise<void> {
   const invoice = data as unknown as StripeInvoiceData
 
-  if (!invoice.subscription) return
+  const subscriptionId = extractSubscriptionId(invoice)
+  if (!subscriptionId) return
 
-  const enrollment = await Enrollment.findOne({ stripeSubscriptionId: invoice.subscription })
+  const enrollment = await Enrollment.findOne({ stripeSubscriptionId: subscriptionId })
   if (!enrollment) {
+    // No enrollment yet means the very first installment failed (checkout
+    // creates no enrollment up front) — there's nothing to suspend.
     logger.warn(
-      `[Stripe Worker] invoice.payment_failed: no enrollment for subscription ${invoice.subscription}`,
+      `[Stripe Worker] invoice.payment_failed: no enrollment for subscription ${subscriptionId} — skipping`,
     )
     return
   }
@@ -345,20 +447,25 @@ async function handleInvoicePaymentFailed(
         currency:        invoice.currency,
         status:          'FAILED',
         installmentNumber,
-        metadata: { planType: 'INSTALLMENT', subscriptionId: invoice.subscription },
+        metadata: { planType: 'INSTALLMENT', subscriptionId },
         idempotencyKey:  paymentIdemKey,
       },
     },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   )
 
-  // Set grace period — do not immediately suspend the student
+  // Set grace period — do not immediately suspend the student. Stamp a
+  // deadline so the payment-grace sweep can suspend access if the student
+  // doesn't catch up (previously nothing ever suspended a non-payer).
+  const gracePeriodHours = Number(process.env.GRACE_PERIOD_HOURS ?? 72)
   await Enrollment.findByIdAndUpdate(enrollment._id, {
-    $set: { paymentStatus: 'PARTIAL' },
+    $set: {
+      paymentStatus:      'PARTIAL',
+      paymentGraceEndsAt: new Date(Date.now() + gracePeriodHours * 60 * 60 * 1000),
+    },
   })
 
   // ── Payment-failed email (idempotent enqueue) ──────────────────────────
-  const gracePeriodHours = Number(process.env.GRACE_PERIOD_HOURS ?? 72)
   await enqueueEmailWithIdempotency(
     enrollment.studentId,
     'URGENCY_REMINDER',
@@ -413,6 +520,78 @@ async function handleSubscriptionDeleted(
   }
 }
 
+// ── Handler: charge.refunded (dashboard refunds) ──────────────────────────
+// Refunds issued from the Stripe dashboard don't flow through the app's own
+// refund service, so without this the StripePayment ledger stays SUCCEEDED and
+// the student keeps access. Idempotent: re-running sets the same state.
+async function handleChargeRefunded(
+  _eventId: string,
+  data: Record<string, unknown>,
+): Promise<void> {
+  const charge = data as {
+    payment_intent?: string
+    amount?: number
+    amount_refunded?: number
+    refunded?: boolean
+  }
+  const piId = charge.payment_intent
+  if (!piId) {
+    logger.info('[Stripe Worker] charge.refunded: no payment_intent on charge — skipping')
+    return
+  }
+
+  const payment = await StripePayment.findOne({ stripePaymentIntentId: piId })
+  if (!payment) {
+    logger.warn(`[Stripe Worker] charge.refunded: no StripePayment for PI ${piId} — skipping`)
+    return
+  }
+
+  if (payment.status !== 'REFUNDED') {
+    payment.status = 'REFUNDED'
+    await payment.save()
+  }
+
+  const fullyRefunded =
+    charge.refunded === true ||
+    (charge.amount != null && charge.amount_refunded != null && charge.amount_refunded >= charge.amount)
+
+  if (fullyRefunded && payment.enrollmentId) {
+    await Enrollment.findByIdAndUpdate(payment.enrollmentId, { $set: { status: 'REVOKED' } })
+    logger.warn(
+      `[Stripe Worker] charge.refunded: enrollment ${payment.enrollmentId.toString()} REVOKED (PI ${piId})`,
+    )
+  }
+}
+
+// ── Handler: charge.dispute.created (chargebacks) ─────────────────────────
+// A dispute isn't final (it can be won), so suspend access rather than revoke.
+async function handleChargeDisputeCreated(
+  _eventId: string,
+  data: Record<string, unknown>,
+): Promise<void> {
+  const dispute = data as { payment_intent?: string }
+  const piId = dispute.payment_intent
+  if (!piId) {
+    logger.info('[Stripe Worker] charge.dispute.created: no payment_intent — skipping')
+    return
+  }
+
+  const payment = await StripePayment.findOne({ stripePaymentIntentId: piId })
+  if (!payment) {
+    logger.warn(`[Stripe Worker] charge.dispute.created: no StripePayment for PI ${piId} — skipping`)
+    return
+  }
+
+  if (payment.enrollmentId) {
+    await Enrollment.findByIdAndUpdate(payment.enrollmentId, {
+      $set: { status: 'SUSPENDED', paymentStatus: 'FAILED' },
+    })
+    logger.warn(
+      `[Stripe Worker] charge.dispute.created: enrollment ${payment.enrollmentId.toString()} SUSPENDED pending dispute (PI ${piId})`,
+    )
+  }
+}
+
 // ── Sprint 2 Story 10 (GAP-036) — upstream idempotency guard ─────────────
 // Check ProcessedStripeEvent FIRST. If the event already has a SUCCESS row,
 // return immediately — BullMQ considers this a success and no side effects
@@ -453,6 +632,14 @@ async function processEventWithGuard(
 
       case 'customer.subscription.deleted':
         await handleSubscriptionDeleted(data)
+        break
+
+      case 'charge.refunded':
+        await handleChargeRefunded(eventId, data)
+        break
+
+      case 'charge.dispute.created':
+        await handleChargeDisputeCreated(eventId, data)
         break
 
       default:
@@ -566,6 +753,8 @@ export const __testables = {
   handleInvoicePaymentSucceeded,
   handleInvoicePaymentFailed,
   handleSubscriptionDeleted,
+  handleChargeRefunded,
+  handleChargeDisputeCreated,
   idemKey,
   // Sprint 2 Story 10 (GAP-036) — upstream idempotency guard
   processEventWithGuard,

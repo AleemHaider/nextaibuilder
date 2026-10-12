@@ -20,10 +20,10 @@
 #   GHCR_TOKEN             GitHub personal access token with write:packages scope
 #                          Create at: github.com/settings/tokens → "Classic" → check write:packages
 #
-#   VITE_API_URL           URL the *browser* uses to reach the API
+#   VITE_API_URL           URL the *browser* uses to reach the API (reused as NEXT_PUBLIC_API_URL)
 #                          Set to: https://aleemhaider.com
-#                          (Apache on :443 proxies to Docker nginx on :3000,
-#                           which in turn proxies /api/* to the API container on :4000)
+#                          (Apache on :443 proxies to Next.js on :3000,
+#                           which proxies /api/* to the Fastify container on :4000)
 #   VITE_GOOGLE_CLIENT_ID  Google OAuth 2.0 client ID (from Google Cloud Console)
 #   VITE_APPLE_CLIENT_ID   Apple Services ID (from Apple Developer portal)
 #
@@ -49,62 +49,11 @@ env:
   REGISTRY: ghcr.io
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Job 1: CI — Frontend
+# Job 1: CI — Frontend (apps/web — Next.js 15)
 # ─────────────────────────────────────────────────────────────────────────────
 jobs:
-  # NOTE: This job builds nextaibuilder-app/, which is the legacy frontend
-  # currently deployed to production. The active product surface lives in
-  # apps/web/ (41+ commits in the recent sprint that DO NOT yet reach prod
-  # because the Docker frontend image is built from nextaibuilder-app/).
-  # When the team is ready to cut over, swap the working-directory + the
-  # COPY paths in docker/Dockerfile.frontend + the dependabot directory.
   ci-frontend:
     name: Frontend CI (lint + type-check + build)
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: nextaibuilder-app
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: nextaibuilder-app/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Type check
-        run: npx tsc --noEmit
-
-      - name: Build (smoke-test with placeholder env vars)
-        run: npm run build
-        env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL || 'http://localhost:3000' }}
-          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID || '' }}
-          VITE_APPLE_CLIENT_ID: ${{ secrets.VITE_APPLE_CLIENT_ID || '' }}
-          VITE_APP_URL: ${{ secrets.VITE_APP_URL || '' }}
-          VITE_APPLE_REDIRECT_URI: ${{ secrets.VITE_APPLE_REDIRECT_URI || '' }}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Job 1b: CI — apps/web (canonical product frontend, NOT YET DEPLOYED)
-# Runs lint/typecheck/test/build against apps/web/ so the active product
-# surface stays green even though the production Docker image is currently
-# built from nextaibuilder-app/. This job does NOT block docker-build —
-# fail mode is "warn loudly" until the team decides to switch. Once the
-# Dockerfile.frontend is updated to copy apps/web/, add ci-web to
-# docker-build.needs so a broken apps/web blocks deploys.
-# ─────────────────────────────────────────────────────────────────────────────
-  ci-web:
-    name: apps/web CI (type-check + test + build)
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -124,18 +73,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test -- --run
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
 
       - name: Build (smoke-test with placeholder env vars)
         run: npm run build
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL || 'http://localhost:3000' }}
-          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID || '' }}
-          VITE_APPLE_CLIENT_ID: ${{ secrets.VITE_APPLE_CLIENT_ID || '' }}
-          VITE_APP_URL: ${{ secrets.VITE_APP_URL || '' }}
-          VITE_APPLE_REDIRECT_URI: ${{ secrets.VITE_APPLE_REDIRECT_URI || '' }}
-          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN || '' }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.VITE_API_URL || '' }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID || '' }}
+          NEXT_PUBLIC_APPLE_CLIENT_ID: ${{ secrets.VITE_APPLE_CLIENT_ID || '' }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.VITE_APP_URL || '' }}
+          NEXT_PUBLIC_APPLE_REDIRECT_URI: ${{ secrets.VITE_APPLE_REDIRECT_URI || '' }}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Job 2: CI — API
@@ -232,7 +183,7 @@ jobs:
         continue-on-error: false   # fail the build on high/critical
 
       - name: Security audit (frontend)
-        working-directory: nextaibuilder-app
+        working-directory: apps/web
         run: npm audit --audit-level=high --omit=dev
         continue-on-error: false   # fail the build on high/critical
 
@@ -303,12 +254,12 @@ jobs:
             ${{ steps.meta.outputs.image_base }}/nextaibuilder-frontend:${{ steps.meta.outputs.image_tag }}
             ${{ steps.meta.outputs.image_base }}/nextaibuilder-frontend:latest
           build-args: |
-            VITE_API_URL=${{ secrets.VITE_API_URL }}
-            VITE_APP_URL=${{ secrets.VITE_APP_URL }}
-            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
-            VITE_APPLE_CLIENT_ID=${{ secrets.VITE_APPLE_CLIENT_ID }}
-            VITE_APPLE_REDIRECT_URI=${{ secrets.VITE_APPLE_REDIRECT_URI }}
-            VITE_SUPPORT_EMAIL=support@productbuilderacademy.com
+            NEXT_PUBLIC_API_URL=${{ secrets.VITE_API_URL }}
+            NEXT_PUBLIC_APP_URL=${{ secrets.VITE_APP_URL }}
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+            NEXT_PUBLIC_APPLE_CLIENT_ID=${{ secrets.VITE_APPLE_CLIENT_ID }}
+            NEXT_PUBLIC_APPLE_REDIRECT_URI=${{ secrets.VITE_APPLE_REDIRECT_URI }}
+            NEXT_PUBLIC_SUPPORT_EMAIL=support@productbuilderacademy.com
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

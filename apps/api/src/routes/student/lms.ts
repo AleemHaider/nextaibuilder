@@ -19,6 +19,7 @@ import { Lesson } from '../../models/Lesson.js'
 import { StudentLesson } from '../../models/StudentLesson.js'
 import { LiveSession } from '../../models/LiveSession.js'
 import { Certificate } from '../../models/Certificate.js'
+import { nextSequence } from '../../models/Counter.js'
 import { PaymentPlan } from '../../models/PaymentPlan.js'
 import { User } from '../../models/User.js'
 import { SetupStep } from '../../models/SetupStep.js'
@@ -70,6 +71,27 @@ async function findActiveEnrollment(
   })
 }
 
+// ── Shared helper: ordered published lesson ids for a cohort ──────────────
+// Sorted by module order, then lesson order within the module — the canonical
+// sequential order students progress through. Used to gate completion and to
+// unlock the next lesson.
+async function getOrderedPublishedLessonIds(cohortId: Types.ObjectId): Promise<string[]> {
+  const [lessons, modules] = await Promise.all([
+    Lesson.find({ cohortId, isPublished: true }).select('_id moduleId order').lean(),
+    Module.find({ cohortId, isPublished: true }).select('_id order').lean(),
+  ])
+  const moduleOrder = new Map<string, number>()
+  for (const m of modules) moduleOrder.set((m._id as Types.ObjectId).toString(), m.order)
+  return lessons
+    .sort((a, b) => {
+      const ma = moduleOrder.get((a.moduleId as Types.ObjectId).toString()) ?? 0
+      const mb = moduleOrder.get((b.moduleId as Types.ObjectId).toString()) ?? 0
+      if (ma !== mb) return ma - mb
+      return a.order - b.order
+    })
+    .map((l) => (l._id as Types.ObjectId).toString())
+}
+
 // ── Shared helper: resolve cohort by slug ────────────────────────────────
 async function findCohortBySlug(slug: string): Promise<ICohort | null> {
   // Cast through unknown: recent Mongoose versions wrap .lean() results in
@@ -81,6 +103,25 @@ async function findCohortBySlug(slug: string): Promise<ICohort | null> {
 
 // ── Internal: generate certificate when 100% complete ────────────────────
 // FIR-58 — Certificate generation (triggered internally by lesson-complete)
+/**
+ * Resolve the id of the first published lesson in module order → lesson
+ * order. `modules` must already be sorted by order; `lessons` grouped/sorted
+ * per module is not assumed — we sort locally.
+ */
+function firstPublishedLessonId(
+  modules: Array<{ _id: unknown }>,
+  lessons: Array<{ _id: unknown; moduleId: unknown; order: number }>,
+): string | null {
+  for (const mod of modules) {
+    const modId = String(mod._id)
+    const inModule = lessons
+      .filter((l) => String(l.moduleId) === modId)
+      .sort((a, b) => a.order - b.order)
+    if (inModule.length > 0) return String(inModule[0]._id)
+  }
+  return null
+}
+
 async function generateCertificate(
   studentId: string,
   cohortId: Types.ObjectId,
@@ -90,19 +131,29 @@ async function generateCertificate(
   const existing = await Certificate.findOne({ enrollmentId }).lean()
   if (existing) return
 
+  // Atomic, deletion-safe credential sequence (was countDocuments()+1, which
+  // collided on the unique index under concurrency and after any deletion).
   const year = new Date().getFullYear()
-  const sequence = (await Certificate.countDocuments()) + 1
+  const sequence = await nextSequence(`certificate:${year}`)
   const credentialId = `NAB-${year}-${String(sequence).padStart(4, '0')}`
 
-  const cert = await Certificate.create({
-    userId:           new Types.ObjectId(studentId),
-    cohortId,
-    enrollmentId,
-    credentialId,
-    certificateToken: crypto.randomUUID(),
-    // publicToken has a schema-level default (crypto.randomUUID())
-    issuedAt:         new Date(),
-  })
+  let cert
+  try {
+    cert = await Certificate.create({
+      userId:           new Types.ObjectId(studentId),
+      cohortId,
+      enrollmentId,
+      credentialId,
+      certificateToken: crypto.randomUUID(),
+      // publicToken has a schema-level default (crypto.randomUUID())
+      issuedAt:         new Date(),
+    })
+  } catch (err: unknown) {
+    // A concurrent issue for the same enrollment won the race — treat as
+    // already-issued rather than throwing out of this fire-and-forget path.
+    if ((err as { code?: number } | null)?.code === 11000) return
+    throw err
+  }
 
   // Enqueue certificate-issued email (fire-and-forget — caller does not await)
   void emailNotificationsQueue.add('certificate-issued', {
@@ -384,14 +435,23 @@ export async function studentLmsRoutes(fastify: FastifyInstance) {
         statusMap.set(sl.lessonId.toString(), sl.status)
       }
 
-      // 6. Group lessons by module, attaching per-student status
+      // 6. Group lessons by module, attaching per-student status.
+      // The very first lesson of the course is always accessible (the viewer
+      // and complete endpoints both special-case it), so when the student has
+      // no StudentLesson record yet report it as IN_PROGRESS rather than
+      // LOCKED — otherwise every fresh enrollment renders a padlock on the
+      // one lesson they're meant to start with.
+      const firstLessonId = firstPublishedLessonId(modules, lessons)
       const lessonsByModule = new Map<string, Array<ILesson & { status: string }>>()
       for (const lesson of lessons) {
         const moduleKey = (lesson.moduleId as Types.ObjectId).toString()
         if (!lessonsByModule.has(moduleKey)) lessonsByModule.set(moduleKey, [])
+        const idStr = (lesson._id as Types.ObjectId).toString()
+        let status = statusMap.get(idStr) ?? 'LOCKED'
+        if (status === 'LOCKED' && idStr === firstLessonId) status = 'IN_PROGRESS'
         lessonsByModule.get(moduleKey)!.push({
           ...lesson,
-          status: statusMap.get((lesson._id as Types.ObjectId).toString()) ?? 'LOCKED',
+          status,
         } as unknown as ILesson & { status: string })
       }
 
@@ -580,6 +640,29 @@ export async function studentLmsRoutes(fastify: FastifyInstance) {
         return reply.code(403).send({ error: 'NOT_ENROLLED', message: 'Active enrollment required.' })
       }
 
+      // 3b. Enforce sequential progression. A lesson may only be completed if
+      // it's the first lesson OR the immediately preceding lesson is already
+      // COMPLETED for this student. Without this gate a student could POST
+      // /complete for every lesson id out of order and mint a certificate; the
+      // viewer enforces locking but this endpoint previously did not.
+      const orderedIds = await getOrderedPublishedLessonIds(lesson.cohortId as Types.ObjectId)
+      const idx = orderedIds.indexOf(lessonId)
+      if (idx === -1) {
+        return reply.code(404).send({ error: 'NOT_FOUND', message: 'Lesson not found in cohort.' })
+      }
+      if (idx > 0) {
+        const prev = await StudentLesson.findOne({
+          enrollmentId: enrollment._id,
+          lessonId:     new Types.ObjectId(orderedIds[idx - 1]),
+        }).select('status').lean()
+        if (prev?.status !== 'COMPLETED') {
+          return reply.code(403).send({
+            error:   'LESSON_LOCKED',
+            message: 'Complete the previous lesson first.',
+          })
+        }
+      }
+
       // 4. Upsert StudentLesson to COMPLETED (idempotent)
       await StudentLesson.findOneAndUpdate(
         {
@@ -600,6 +683,34 @@ export async function studentLmsRoutes(fastify: FastifyInstance) {
         },
         { upsert: true, new: true },
       )
+
+      // 4b. Unlock the next lesson in sequence so honest progression works.
+      // (Nothing else ever unlocked lesson N+1, so without this an enrolled
+      // student who legitimately completed lesson N stayed locked out of N+1.)
+      const nextId = orderedIds[idx + 1]
+      if (nextId) {
+        const nextObjId = new Types.ObjectId(nextId)
+        // Create an IN_PROGRESS record if the student has none yet…
+        await StudentLesson.findOneAndUpdate(
+          { enrollmentId: enrollment._id, lessonId: nextObjId },
+          {
+            $setOnInsert: {
+              studentId:    new Types.ObjectId(studentId),
+              cohortId:     lesson.cohortId,
+              enrollmentId: enrollment._id,
+              lessonId:     nextObjId,
+              status:       'IN_PROGRESS',
+            },
+          },
+          { upsert: true },
+        )
+        // …or bump an existing LOCKED record to IN_PROGRESS (never downgrade a
+        // COMPLETED/IN_PROGRESS lesson).
+        await StudentLesson.updateOne(
+          { enrollmentId: enrollment._id, lessonId: nextObjId, status: 'LOCKED' },
+          { $set: { status: 'IN_PROGRESS' } },
+        )
+      }
 
       // 5. Recalculate completionPercentage
       const totalPublishedLessons = await Lesson.countDocuments({
@@ -758,6 +869,14 @@ export async function studentLmsRoutes(fastify: FastifyInstance) {
 
       const now = Date.now()
 
+      // Server-side paywall: only surface the Zoom URL to students in good
+      // payment standing. Previously the URL was returned to any non-revoked
+      // enrollment and the PAID-gate lived only in the frontend, so a student
+      // with a failed/pending payment could pull the link straight from the API.
+      const hasLiveAccess = ['PAID', 'PARTIAL', 'WAIVED'].includes(
+        enrollment.paymentStatus as string,
+      )
+
       // 4. Tag each session by status and include only relevant fields
       const taggedSessions = sessions.map((session) => {
         const startMs  = session.scheduledAt.getTime()
@@ -783,11 +902,11 @@ export async function studentLmsRoutes(fastify: FastifyInstance) {
         }
 
         if (status === 'LIVE') {
-          return { ...base, zoomUrl: session.zoomUrl }
+          return { ...base, zoomUrl: hasLiveAccess ? session.zoomUrl : null }
         }
 
         if (status === 'UPCOMING') {
-          return { ...base, scheduledAt: session.scheduledAt, zoomUrl: session.zoomUrl }
+          return { ...base, scheduledAt: session.scheduledAt, zoomUrl: hasLiveAccess ? session.zoomUrl : null }
         }
 
         // PAST — include recording if available

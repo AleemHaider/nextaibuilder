@@ -83,6 +83,66 @@ function layout(content: string): string {
 </html>`
 }
 
+// ── nextaibuilder layout wrapper ─────────────────────────────────────────────
+// Separate brand from the PBA layout() above — nextaibuilder (sdk.nextaibuilder.com)
+// is a distinct product/brand from Product Builder Academy, sharing this codebase
+// but not its identity. Text wordmark instead of an embedded logo image, matching
+// how the brand already renders in the site footer.
+
+function nextaibuilderLayout(content: string, footerNote: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>nextaibuilder</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f3f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f3f5;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width:600px;">
+
+          <!-- Header / Wordmark -->
+          <tr>
+            <td style="padding-bottom:24px;text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:#1a2744;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">nextaibuilder</div>
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td style="background-color:#ffffff;border-radius:12px;padding:40px 40px 32px;border:1px solid rgba(0,0,0,0.08);">
+              ${content}
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding-top:24px;text-align:center;font-size:13px;color:#717182;line-height:1.6;">
+              &copy; ${new Date().getFullYear()} nextaibuilder. All rights reserved.<br />
+              ${footerNote}
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
+function nextaibuilderCtaButton(label: string, href: string): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+    <tr>
+      <td style="background-color:#ff6347;border-radius:8px;">
+        <a href="${href}" style="display:inline-block;padding:12px 28px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">${label}</a>
+      </td>
+    </tr>
+  </table>`
+}
+
 // ── Shared helpers ─────────────────────────────────────────────────────────
 
 function heading(text: string): string {
@@ -307,6 +367,60 @@ export function humanReviewAlertTemplate(count: number, threshold: number): stri
     ${divider()}
     ${paragraph('<span style="color:#717182;font-size:14px;">This alert is sent at most once per hour. The threshold can be adjusted via the <code>HUMAN_REVIEW_ALERT_THRESHOLD</code> environment variable.</span>')}
   `)
+}
+
+/**
+ * sdk.nextaibuilder.com — sent to staff when a new physical-course admission
+ * application comes in via the public admission form.
+ */
+export function admissionNotificationTemplate(fields: {
+  fullName: string
+  email: string
+  phone: string
+  track: '6-month' | '1-year'
+  message: string | null
+}): string {
+  // Hardcoded, not FRONTEND_URL — that var points at the main PBA app, which
+  // doesn't have an /admin route at all. The admin portal for sdk admissions
+  // is only ever reachable on the sdk subdomain.
+  const adminUrl = 'https://sdk.nextaibuilder.com/admin/admissions'
+  const trackLabel = fields.track === '6-month' ? '6-Month Track' : '1-Year Track'
+  return nextaibuilderLayout(`
+    <div style="background-color:#e8f4fd;border-radius:8px;padding:14px 18px;margin-bottom:24px;text-align:center;">
+      <span style="font-size:13px;font-weight:700;color:#4a9ad4;text-transform:uppercase;letter-spacing:0.08em;">New Admission Application</span>
+    </div>
+    ${heading('New Agentic AI Engineer applicant')}
+    ${paragraph(`<strong style="color:#1a2744;">${fields.fullName}</strong> applied to the <strong style="color:#1a2744;">${trackLabel}</strong> from the sdk.nextaibuilder.com landing page.`)}
+    ${paragraph(`<strong style="color:#1a2744;">Email:</strong> ${fields.email}<br/><strong style="color:#1a2744;">Phone:</strong> ${fields.phone}`)}
+    ${fields.message ? paragraph(`<strong style="color:#1a2744;">Message:</strong><br/>${fields.message}`) : ''}
+    ${nextaibuilderCtaButton('Review in Admin', adminUrl)}
+  `, 'You are receiving this because you are an admin for the Agentic AI Engineer program.')
+}
+
+/**
+ * Sent to the applicant immediately after they submit the sdk.nextaibuilder.com
+ * admission form — confirms receipt and sets expectations for what happens next.
+ * Fire-and-forget from the admissions route; a delivery failure here must never
+ * fail the applicant's submission.
+ */
+export function admissionWelcomeTemplate(fields: {
+  fullName: string
+  track: '6-month' | '1-year'
+}): string {
+  const trackLabel = fields.track === '6-month' ? '6-Month Track' : '1-Year Track'
+  const firstName = fields.fullName.trim().split(/\s+/)[0] || fields.fullName
+  return nextaibuilderLayout(`
+    <div style="background-color:#e8f4fd;border-radius:8px;padding:14px 18px;margin-bottom:24px;text-align:center;">
+      <span style="font-size:13px;font-weight:700;color:#4a9ad4;text-transform:uppercase;letter-spacing:0.08em;">Application Received</span>
+    </div>
+    ${heading(`Welcome, ${firstName}!`)}
+    ${paragraph(`Thanks for applying to the <strong style="color:#1a2744;">Agentic AI Engineer</strong> program — we've received your application for the <strong style="color:#1a2744;">${trackLabel}</strong>.`)}
+    ${paragraph(`Applications are reviewed on a rolling basis. Our admissions team will reach out to you by email or phone with next steps, including your cohort dates and setup details.`)}
+    ${divider()}
+    ${paragraph(`This is an in-person program based at our studio in Sadiqabad, Punjab:<br/><strong style="color:#1a2744;">Plaza No. 11, Al-Haram City, Near New Bus Stand, Sadiqabad, Punjab, Pakistan</strong>`)}
+    ${paragraph(`Questions in the meantime? Message us on WhatsApp any time.`)}
+    ${nextaibuilderCtaButton('Chat on WhatsApp', 'https://wa.me/923456655181')}
+  `, "You're receiving this because you applied for the Agentic AI Engineer program at sdk.nextaibuilder.com.")
 }
 
 /**

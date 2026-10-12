@@ -58,6 +58,17 @@ vi.mock('../models/ManualPaymentRequest.js', () => ({
       if (doc && (doc['status'] as string) === filter.status) return Promise.resolve(doc)
       return Promise.resolve(null)
     }),
+    // Atomic claim: flip PENDING→APPROVED and return the doc, or null if the
+    // status no longer matches (concurrent / repeat approval).
+    findOneAndUpdate: vi.fn((
+      filter: { _id: Types.ObjectId; status: string },
+      update: { $set: Record<string, unknown> },
+    ) => {
+      const doc = state.manualRequests.get(String(filter._id))
+      if (!doc || (doc['status'] as string) !== filter.status) return Promise.resolve(null)
+      Object.assign(doc, update.$set)
+      return Promise.resolve(doc)
+    }),
   },
 }))
 
@@ -73,6 +84,10 @@ vi.mock('../models/User.js', () => ({
 
 vi.mock('../models/Enrollment.js', () => ({
   Enrollment: {
+    findOne: vi.fn((filter: { studentId: Types.ObjectId; cohortId: Types.ObjectId }) => {
+      const key = `${String(filter.studentId)}:${String(filter.cohortId)}`
+      return Promise.resolve(state.enrollments.find((r) => (r as { _key: string })._key === key) ?? null)
+    }),
     findOneAndUpdate: vi.fn((
       filter: { studentId: Types.ObjectId; cohortId: Types.ObjectId },
       update: { $set: Record<string, unknown>; $setOnInsert: Record<string, unknown> },
@@ -113,6 +128,14 @@ vi.mock('../models/SlackInvite.js', () => ({
       }
       return Promise.resolve(row)
     }),
+  },
+}))
+
+vi.mock('../models/CohortMembership.js', () => ({
+  CohortMembership: {
+    // Legacy-dashboard mirror upsert inside activateEnrollment — resolves
+    // without touching a real connection.
+    findOneAndUpdate: vi.fn(() => Promise.resolve(null)),
   },
 }))
 
@@ -248,6 +271,43 @@ beforeEach(() => {
 // ── The integration test ──────────────────────────────────────────────────
 
 describe('POST /admin/manual-payments/:id/approve — service integration', () => {
+
+  it('H-10: links to an existing ACTIVE/PAID enrollment without re-activating (no double-charge overwrite)', async () => {
+    const handlers = await buildHandlers()
+    const handle = handlers['POST:/:id/approve'][0] as
+      (req: FastifyRequest, reply: FastifyReply) => Promise<unknown>
+
+    // Student already paid (e.g. via Stripe) → active, paid enrollment exists.
+    const existingId = new Types.ObjectId()
+    state.enrollments.push({
+      _key:          `${STUDENT_ID}:${COHORT_ID}`,
+      _id:           existingId,
+      status:        'ACTIVE',
+      paymentStatus: 'PAID',
+      paymentMethod: 'STRIPE',
+    } as unknown as Record<string, unknown>)
+
+    const doc = seedManualRequest()
+    const reply = makeReply()
+    await handle(
+      makeRequest({ params: { id: doc._id.toString() }, body: {} }),
+      reply as unknown as FastifyReply,
+    )
+
+    expect(reply._status).toBe(200)
+    expect((reply._body as { alreadyEnrolled?: boolean }).alreadyEnrolled).toBe(true)
+    expect((reply._body as { enrollmentId: string }).enrollmentId).toBe(existingId.toString())
+
+    // Request was claimed + linked to the existing enrollment.
+    expect(doc.status).toBe('APPROVED')
+    expect(doc.enrollmentId?.toString()).toBe(existingId.toString())
+
+    // Crucially: NO re-activation → no overwrite, no duplicate side effects.
+    expect(state.enrollments).toHaveLength(1)
+    expect(state.slackInvites.size).toBe(0)
+    expect(state.emailLogs.size).toBe(0)
+    expect(state.queueJobs['email-notifications']).toHaveLength(0)
+  })
 
   it('happy path: 200 + Enrollment + Slack invite + approval email', async () => {
     const handlers = await buildHandlers()

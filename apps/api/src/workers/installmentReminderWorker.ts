@@ -28,7 +28,17 @@ import { Enrollment } from '../models/Enrollment.js'
 import { Cohort } from '../models/Cohort.js'
 import { User } from '../models/User.js'
 import { EmailLog } from '../models/EmailLog.js'
+import { PaymentPlan } from '../models/PaymentPlan.js'
+import { sendEmail } from '../lib/mailer.js'
 import { logger } from '../lib/logger.js'
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
 
 const QUEUE_NAME = 'installment-reminder-queue'
 const JOB_NAME   = 'send-installment-reminder'
@@ -143,7 +153,8 @@ export function formatInstallmentReminder(args: {
     ``,
     `This is a reminder that installment ${installmentNumber} of 3 for ${cohortTitle} is coming up.`,
     ``,
-    `Amount: ${amountFormatted}`,
+    // Only show the amount when we could resolve it from the payment plan.
+    ...(installmentAmount > 0 ? [`Amount: ${amountFormatted}`] : []),
     `Due: ${dueAtFormatted}`,
     ``,
     `We'll charge the card on file automatically. If you need to update your payment method, manage your subscription here:`,
@@ -191,10 +202,13 @@ export async function runInstallmentReminderJob(
     return
   }
 
-  // Resolve cohort title + user email for the template.
-  const [cohort, user] = await Promise.all([
+  // Resolve cohort title + user email (+ plan amount) for the template.
+  const [cohort, user, plan] = await Promise.all([
     Cohort.findById(enrollment.cohortId).select('name').lean(),
     User.findById(enrollment.studentId).select('email').lean(),
+    enrollment.paymentPlanId
+      ? PaymentPlan.findById(enrollment.paymentPlanId).select('totalAmount currency').lean()
+      : Promise.resolve(null),
   ])
 
   if (!cohort || !user) {
@@ -204,7 +218,33 @@ export async function runInstallmentReminderJob(
     return
   }
 
-  // Stamp the EmailLog row FIRST so a crash after send still blocks replays.
+  // Build and SEND the reminder. (Previously this worker only stamped an
+  // EmailLog row as SENT and never actually sent anything — students received
+  // no payment reminders while the log claimed delivery.)
+  const planDoc = plan as { totalAmount?: number; currency?: string } | null
+  const installmentAmount = planDoc?.totalAmount ? Math.ceil(planDoc.totalAmount / 3) : 0
+  const subject = `Installment ${installmentNumber} of 3 — ${cohort.name}`
+  const body = formatInstallmentReminder({
+    cohortTitle:       cohort.name,
+    installmentNumber,
+    installmentAmount,
+    currency:          planDoc?.currency ?? 'usd',
+    dueAt:             new Date(dueAtStr),
+    manageUrl:         `${process.env.FRONTEND_URL ?? 'https://app.productbuilderacademy.com'}/dashboard`,
+  })
+  const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1a2744;white-space:pre-wrap">${escapeHtml(body)}</div>`
+
+  try {
+    await sendEmail(user.email, subject, html)
+  } catch (err) {
+    // Do not stamp the EmailLog — throw so BullMQ retries. Because the row is
+    // only written after a successful send, Guard 1 finds nothing on the retry
+    // and re-attempts rather than being blocked.
+    logger.error({ err, enrollmentId: enrollmentIdStr, installmentNumber }, '[InstallmentReminderWorker] send failed')
+    throw err
+  }
+
+  // Stamp SENT only after a successful send.
   try {
     await EmailLog.create({
       userId:         enrollment.studentId,
@@ -212,13 +252,13 @@ export async function runInstallmentReminderJob(
       status:         'SENT',
       sentAt:         new Date(),
       recipientEmail: user.email,
-      subject:        `Installment ${installmentNumber} of 3 — ${cohort.name}`,
+      subject,
       idempotencyKey,
     })
   } catch (err: unknown) {
     const code = (err as { code?: number } | null)?.code
     if (code === 11000) {
-      // Race with another worker — the other side wins, we skip.
+      // Race with another worker — the other side already stamped it.
       logger.info(
         `[InstallmentReminderWorker] Race on key=${idempotencyKey} — another worker won`,
       )
@@ -228,7 +268,7 @@ export async function runInstallmentReminderJob(
   }
 
   logger.info(
-    `[InstallmentReminderWorker] Recorded reminder ${installmentNumber}/3 for enrollment=${enrollmentIdStr}` +
+    `[InstallmentReminderWorker] Sent reminder ${installmentNumber}/3 for enrollment=${enrollmentIdStr}` +
     ` due=${dueAtStr}`,
   )
 }

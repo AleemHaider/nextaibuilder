@@ -53,7 +53,6 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
     // Use endDate as the setup deadline (deadline = cohort end date for setup)
     const deadline = (cohort as unknown as { endDate: Date }).endDate
     const now = new Date()
-    const deadlineMissed = deadline && now > deadline && membership.completionStatus !== 'COMPLETE'
 
     // 2. Fetch all setup steps (ordered) — PBA-269: only active steps
     // Use $ne: false so steps without the isActive field are included (treats missing as active)
@@ -103,6 +102,21 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
     }
 
     const progressPercent = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0
+
+    // Derive completion from actual step data — `completionStatus` was never
+    // written anywhere, so relying on it flagged finished students as
+    // DEADLINE_MISSED. Compute it here and write it through so downstream
+    // consumers (reminder-email worker, reports) stop treating a completed
+    // student as active.
+    const isComplete = totalSteps > 0 && completedSteps >= totalSteps
+    const deadlineMissed = Boolean(deadline) && now > deadline && !isComplete
+
+    if (isComplete && membership.completionStatus !== 'COMPLETE') {
+      void CohortMembership.updateOne(
+        { _id: membership._id },
+        { $set: { completionStatus: 'COMPLETE' } },
+      ).catch(() => { /* non-fatal write-through */ })
+    }
 
     // 5. Compute dashboard state
     let dashboardState: DashboardState

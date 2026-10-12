@@ -1,0 +1,6 @@
+/usr/bin/py:29: SyntaxWarning: invalid escape sequence '\.'
+  if re.match('np(\..*)?$', raw_module_name):
+/usr/bin/py:31: SyntaxWarning: invalid escape sequence '\.'
+  elif re.match('pd(\..*)?$', raw_module_name):
+usage: py [-x] [-l] [-c PRE_CMD] [-C POST_CMD] [-V] [-h] [expression]
+py: error: ambiguous option: --json could match --json_input, --json_output

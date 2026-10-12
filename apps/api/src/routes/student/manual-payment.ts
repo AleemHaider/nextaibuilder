@@ -173,6 +173,21 @@ export async function studentManualPaymentRoutes(fastify: FastifyInstance) {
         })
       }
 
+      // ── Guard: don't allow stacking multiple pending receipts ──────────
+      // Without this a student could submit several receipts for the same
+      // cohort, each independently approvable (double enrollment / revenue).
+      const existingPending = await ManualPaymentRequest.findOne({
+        studentId: new Types.ObjectId(studentId),
+        cohortId,
+        status:    'PENDING',
+      }).lean()
+      if (existingPending) {
+        return reply.code(409).send({
+          error:   'REQUEST_PENDING',
+          message: 'You already have a payment receipt under review for this cohort.',
+        })
+      }
+
       // ── Resolve payment plan amount (optional) ─────────────────────────
       let amount: number | undefined
       let planObjectId: Types.ObjectId | undefined
@@ -278,7 +293,11 @@ export async function studentManualPaymentRoutes(fastify: FastifyInstance) {
       return reply.send({
         requestId:       doc._id.toString(),
         status:          doc.status,
-        rejectionReason: doc.rejectionReason,
+        // Only surface the reason on an actual rejection. The same field is
+        // reused to store the admin's internal note on APPROVED requests, so
+        // returning it unconditionally leaked that note to the student as an
+        // apparent "rejection reason".
+        rejectionReason: doc.status === 'REJECTED' ? doc.rejectionReason : null,
         createdAt:       doc.createdAt,
         reviewedAt:      doc.reviewedAt,
       })

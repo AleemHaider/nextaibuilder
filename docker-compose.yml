@@ -2,7 +2,7 @@
 # NAB — Docker Compose (Production)
 #
 # Services:
-#   frontend  — nginx serving Vite static build on port 3000 (public)
+#   frontend  — Next.js 15 standalone server on port 3000 (public)
 #   api       — Fastify Node.js API on port 4000 (also exposed for health checks)
 #
 # Required on the EC2 host before first deploy:

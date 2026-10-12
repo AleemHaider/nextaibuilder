@@ -49,6 +49,8 @@ import { uploadsRoutes } from './routes/uploads.js'
 import { storefrontRoutes } from './routes/storefront.js'   // FIR-31
 import { checkoutRoutes, studentEnrollmentsRoutes } from './routes/student/checkout.js'  // FIR-39/40/41
 import { stripeWebhookRoutes } from './routes/webhook-stripe.js'                          // FIR-42
+import { paddleWebhookRoutes } from './routes/webhook-paddle.js'
+import { paddleCheckoutRoutes } from './routes/student/checkout-paddle.js'
 import { studentManualPaymentRoutes } from './routes/student/manual-payment.js'           // FIR-46
 import { adminManualPaymentsRoutes } from './routes/admin/manual-payments.js'             // FIR-47/48/49
 import { studentLmsRoutes } from './routes/student/lms.js'                                // FIR-51–58
@@ -59,6 +61,10 @@ import { adminAnalyticsRoutes } from './routes/admin/analytics.js'              
 import { firAdminStudentsRoutes } from './routes/admin/fir-students.js'                  // FIR-209–212
 import { firAdminEnrollmentsRoutes } from './routes/admin/fir-enrollments.js'             // FIR-213/214/215
 import { firAdminPaymentsRoutes } from './routes/admin/fir-payments.js'                   // FIR-216/217/218
+import { admissionsRoutes } from './routes/admissions.js'                                 // sdk.nextaibuilder.com
+import { adminAdmissionsRoutes } from './routes/admin/admissions.js'                      // sdk.nextaibuilder.com
+import { adminContentPagesRoutes } from './routes/admin/content-pages.js'                 // admin-managed SEO/LLM guides & resources
+import { adminEmailLogsRoutes } from './routes/admin/email-logs.js'                       // broadcast send history (BroadcastEmailPage)
 import { initSocketIO } from './lib/socket.js'
 import { securityPlugin } from './plugins/security.js'                                   // FIR-172
 import { startScreenshotValidationWorker } from './workers/screenshotValidationWorker.js'
@@ -68,6 +74,7 @@ import { startInstallmentReminderWorker } from './workers/installmentReminderWor
 import { startSlackInviteWorker } from './workers/slackInviteWorker.js'                  // FIR-66
 import { startNotificationWorker } from './workers/notificationWorker.js'                // FIR-68–71
 import { startReEngagementCron } from './jobs/reEngagementCron.js'                       // FIR-170
+import { startPaymentGraceSweepCron } from './jobs/paymentGraceSweep.js'                 // H-5
 
 const server = Fastify({
   // Use the shared pino instance — same redaction rules and Sentry forwarding
@@ -201,10 +208,12 @@ async function start() {
 
   // ── Stripe checkout routes (student-authenticated) ────────────────────
   await server.register(checkoutRoutes, { prefix: '/api/v1/student/checkout' })          // FIR-39/40
+  await server.register(paddleCheckoutRoutes, { prefix: '/api/v1/student/checkout' })    // Paddle one-time
   await server.register(studentEnrollmentsRoutes, { prefix: '/api/v1/student' })         // FIR-41
 
   // ── Stripe webhook receiver (no auth — Stripe HMAC signed) ───────────
   await server.register(stripeWebhookRoutes, { prefix: '/api/v1/webhook' })               // FIR-42
+  await server.register(paddleWebhookRoutes, { prefix: '/api/v1/webhook' })               // Paddle
 
   // ── Manual payment routes ─────────────────────────────────────────────
   await server.register(studentManualPaymentRoutes, { prefix: '/api/v1/student/manual-payment' }) // FIR-46
@@ -222,6 +231,14 @@ async function start() {
   await server.register(firAdminStudentsRoutes,      { prefix: '/api/v1/admin/students' })             // FIR-209–212
   await server.register(firAdminEnrollmentsRoutes,  { prefix: '/api/v1/admin/enrollments-v2' })       // FIR-213/214/215
   await server.register(firAdminPaymentsRoutes,     { prefix: '/api/v1/admin/payments' })             // FIR-216/217/218
+
+  // ── sdk.nextaibuilder.com — physical course admission form ───────────────
+  await server.register(admissionsRoutes,      { prefix: '/api/v1/admissions' })       // public
+  await server.register(adminAdmissionsRoutes, { prefix: '/api/v1/admin/admissions' }) // admin list
+
+  // ── Admin-managed SEO/LLM content pages (guides & resources) ─────────────
+  await server.register(adminContentPagesRoutes, { prefix: '/api/v1/admin/content-pages' })
+  await server.register(adminEmailLogsRoutes, { prefix: '/api/v1/admin/email-logs' })
 
   // ── Local uploads (dev, when S3 not configured) ───
   await server.register(uploadsRoutes, { prefix: '/api/uploads' })
@@ -257,15 +274,47 @@ async function start() {
   //   ROLE=worker         — workers only (no HTTP)  ← started via separate entrypoint
   const role = process.env.ROLE ?? 'all'
   const isTest = process.env.NODE_ENV === 'test'
+  const closeables: Array<{ close: () => Promise<unknown> }> = []
   if (!isTest && (role === 'all' || role === 'worker')) {
-    void startScreenshotValidationWorker()    // PBA-150 / PBA-372 (async for startup health checks)
-    startScheduledEmailWorker()               // PBA-134
-    startStripeWebhookWorker()                // FIR-43/44
-    startInstallmentReminderWorker()          // Sprint 2 Story 10 (GAP-037)
-    startSlackInviteWorker()                  // FIR-66
-    startNotificationWorker()                 // FIR-68–71
-    startReEngagementCron()                   // FIR-170
+    closeables.push(await startScreenshotValidationWorker())   // PBA-150 / PBA-372 (async for startup health checks)
+    closeables.push(startScheduledEmailWorker())               // PBA-134
+    closeables.push(startStripeWebhookWorker())                // FIR-43/44
+    closeables.push(startInstallmentReminderWorker())          // Sprint 2 Story 10 (GAP-037)
+    closeables.push(startSlackInviteWorker())                  // FIR-66
+    closeables.push(startNotificationWorker())                 // FIR-68–71
+    closeables.push(startReEngagementCron())                   // FIR-170
+    closeables.push(startPaymentGraceSweepCron())              // H-5
   }
+
+  // ── Graceful shutdown ─────────────────────────────
+  // On deploy (SIGTERM), stop the HTTP listener first (drain in-flight
+  // requests) then close each BullMQ worker (which waits for active jobs to
+  // finish) so nothing is killed mid-side-effect.
+  let shuttingDown = false
+  const shutdown = async (signal: string) => {
+    if (shuttingDown) return
+    shuttingDown = true
+    logger.info({ signal }, '[process] graceful shutdown starting')
+    const forceExit = setTimeout(() => {
+      logger.warn('[process] shutdown timed out after 25s — forcing exit')
+      process.exit(1)
+    }, 25_000)
+    forceExit.unref()
+    try {
+      await server.close()
+      const results = await Promise.allSettled(closeables.map((c) => c.close()))
+      for (const r of results) {
+        if (r.status === 'rejected') logger.error({ err: r.reason }, '[process] error closing a worker')
+      }
+    } catch (err) {
+      logger.error({ err }, '[process] error during shutdown')
+    }
+    clearTimeout(forceExit)
+    logger.info('[process] shutdown complete — exiting')
+    process.exit(0)
+  }
+  process.on('SIGTERM', () => void shutdown('SIGTERM'))
+  process.on('SIGINT', () => void shutdown('SIGINT'))
 
   // ── Start ─────────────────────────────────────────
   const port = Number(process.env.PORT ?? 4000)

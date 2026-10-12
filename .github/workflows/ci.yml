@@ -100,7 +100,7 @@ jobs:
         run: npm audit --audit-level=high --omit=dev
         continue-on-error: false   # fail the build on high/critical
 
-      - name: Security audit (frontend — nextaibuilder-app)
-        working-directory: nextaibuilder-app
+      - name: Security audit (frontend — apps/web)
+        working-directory: apps/web
         run: npm audit --audit-level=high --omit=dev
         continue-on-error: false   # fail the build on high/critical

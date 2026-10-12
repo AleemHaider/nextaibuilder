@@ -285,12 +285,7 @@ export async function authAdminRoutes(fastify: FastifyInstance) {
 
     const userId = payload.sub
 
-    // ── DEV BYPASS — remove before public launch ───────────────────────────
-    const BYPASS_CODE = '123344'
-    const isBypass = code === BYPASS_CODE
-    // ───────────────────────────────────────────────────────────────────────
-
-    const result = isBypass ? 'valid' : await verifyOtp(userId, code)
+    const result = await verifyOtp(userId, code)
 
     if (result === 'expired') {
       return reply.code(401).send({

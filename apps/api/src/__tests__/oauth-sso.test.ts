@@ -143,11 +143,12 @@ const USER_EMAIL  = 'student@example.com'
 const USER_ID_STR = 'aaaaaaaaaaaaaaaaaaaaaaaa'
 
 const GOOGLE_PAYLOAD = {
-  sub:         GOOGLE_SUB,
-  email:       USER_EMAIL,
-  given_name:  'Alice',
-  family_name: 'Smith',
-  picture:     'https://example.com/avatar.jpg',
+  sub:            GOOGLE_SUB,
+  email:          USER_EMAIL,
+  email_verified: true,
+  given_name:     'Alice',
+  family_name:    'Smith',
+  picture:        'https://example.com/avatar.jpg',
 }
 
 function makeUserDoc(overrides: Record<string, unknown> = {}) {
@@ -250,6 +251,37 @@ describe('POST /api/auth/oauth/google', () => {
     expect(reply._status).toBe(403)
     expect((reply._body as { error: string }).error).toBe('NOT_ENROLLED')
     expect(vi.mocked(User.create)).not.toHaveBeenCalled()
+  })
+
+  // ── G1a: Admin account via student SSO → 403 (2FA-bypass guard) ──────────
+
+  it('G1a should return 403 OAUTH_NOT_ALLOWED when the matched user is an admin', async () => {
+    setValidGoogleToken()
+    vi.mocked(User.findOne).mockResolvedValueOnce(
+      makeUserDoc({ role: 'SUPER_ADMIN' }) as never,
+    )
+
+    const reply = makeReply()
+    await handle(makeRequest({ idToken: 'valid-google-token' }), reply)
+
+    expect(reply._status).toBe(403)
+    expect((reply._body as { error: string }).error).toBe('OAUTH_NOT_ALLOWED')
+  })
+
+  // ── G1b: Unverified Google email → 401 ──────────────────────────────────
+
+  it('G1b should return 401 EMAIL_NOT_VERIFIED when email_verified is not true', async () => {
+    mockVerifyIdToken.mockResolvedValueOnce({
+      getPayload: () => ({ ...GOOGLE_PAYLOAD, email_verified: false }),
+    })
+
+    const reply = makeReply()
+    await handle(makeRequest({ idToken: 'valid-google-token' }), reply)
+
+    expect(reply._status).toBe(401)
+    expect((reply._body as { error: string }).error).toBe('EMAIL_NOT_VERIFIED')
+    // must not have even looked up the user
+    expect(vi.mocked(User.findOne)).not.toHaveBeenCalled()
   })
 
   // ── G2: Existing user matched by oauthId → sign-in ───────────────────────

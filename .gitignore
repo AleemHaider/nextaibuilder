@@ -11,3 +11,63 @@ coverage/
 # Local dev uploads — when S3 not configured the backend writes here
 # (apps/api/src/routes/uploads.ts). Dev-only binary data, never commit.
 apps/api/uploads/
+
+# --- publish-safety (added 2026-10-11) ---
+# dependencies / build
+node_modules/
+.next/
+.nuxt/
+.turbo/
+.vercel/
+dist/
+build/
+out/
+coverage/
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+.pytest_cache/
+.ipynb_checkpoints/
+__MACOSX/
+.DS_Store
+.claude/settings.local.json
+# secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.*.template
+!.env.template
+*.pem
+*.key
+*token.json
+tokens/
+*credentials*
+*CREDENTIALS*
+*.backup-*
+# large / binary artifacts (GitHub 100MB limit)
+*.zip
+*.tar.gz
+*.7z
+*.mp4
+*.mov
+*.wav
+*.mp3
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.gguf
+*.ckpt
+*.onnx
+*.parquet
+*.db
+*.sqlite
+*.sqlite3
+*.log
+models/
+pretrained_models/
+checkpoints/
+

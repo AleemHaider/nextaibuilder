@@ -5,6 +5,7 @@ import type { FastifyInstance } from 'fastify'
 import { createReadStream, existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
+import { verifyLocalUploadSignature } from '../lib/localUploadSigning.js'
 
 const UPLOADS_DIR = resolve(process.cwd(), 'uploads')
 
@@ -17,12 +18,19 @@ export async function uploadsRoutes(fastify: FastifyInstance) {
   }
 
   // PUT /api/uploads/* — save file locally
-  fastify.put<{ Params: { '*': string } }>(
+  fastify.put<{ Params: { '*': string }; Querystring: { exp?: string; sig?: string } }>(
     '/*',
-    { config: { rateLimit: false }, bodyLimit: 10 * 1024 * 1024 },
+    { bodyLimit: 10 * 1024 * 1024 },
     async (request, reply) => {
       const key = request.params['*']
       if (!key) return reply.code(400).send({ error: 'Missing file key' })
+
+      // Require a valid short-lived signature (issued by the presign endpoints).
+      // Without this the endpoint is an open, unauthenticated write.
+      const { exp, sig } = request.query
+      if (!verifyLocalUploadSignature(key, exp, sig)) {
+        return reply.code(403).send({ error: 'INVALID_UPLOAD_SIGNATURE' })
+      }
 
       const filePath = join(UPLOADS_DIR, key)
       // Guard against path traversal

@@ -1,0 +1,7 @@
+{
+  "name": "nab-qa",
+  "private": true,
+  "type": "module",
+  "scripts": { "qa": "node qa.mjs", "qa:live": "NAB_URL=https://nextaibuilder.com node qa.mjs" },
+  "dependencies": { "playwright-core": "1.48.2" }
+}

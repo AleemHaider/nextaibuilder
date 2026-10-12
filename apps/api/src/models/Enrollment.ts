@@ -2,7 +2,7 @@
 import { Schema, model, Document, Model, Types } from 'mongoose'
 
 export type EnrollmentStatus = 'ACTIVE' | 'SUSPENDED' | 'REVOKED' | 'COMPLETED'
-export type PaymentMethod = 'STRIPE' | 'MANUAL_RECEIPT' | 'MANUAL_ADMIN'
+export type PaymentMethod = 'STRIPE' | 'PADDLE' | 'MANUAL_RECEIPT' | 'MANUAL_ADMIN' | 'COUPON'
 export type EnrollmentPaymentStatus = 'PAID' | 'PARTIAL' | 'FAILED' | 'WAIVED' | 'PENDING'
 
 export interface IEnrollment extends Document {
@@ -14,10 +14,20 @@ export interface IEnrollment extends Document {
   status: EnrollmentStatus
   stripeSubscriptionId?: string
   stripeCustomerId?: string
+  // Paddle linkage (set by the Paddle webhook on transaction.completed)
+  paddleCustomerId?: string | null
+  paddleTransactionId?: string | null
   lessonsCompleted: number
   completionPercentage: number
   lastActivityAt?: Date
   accessGrantedAt?: Date
+  /**
+   * Set when an installment payment fails (invoice.payment_failed) to
+   * now + GRACE_PERIOD_HOURS. A scheduled sweep suspends the enrollment once
+   * this passes without the student catching up; a later successful payment
+   * clears it. Null/absent means "no outstanding failed payment".
+   */
+  paymentGraceEndsAt?: Date | null
   enrolledBy?: Types.ObjectId
   /**
    * FIR Wave 2 Story K — Idempotency key for replay-safe side effects from the
@@ -37,7 +47,7 @@ const enrollmentSchema = new Schema<IEnrollment>(
     paymentPlanId: { type: Schema.Types.ObjectId, ref: 'PaymentPlan' },
     paymentMethod: {
       type: String,
-      enum: ['STRIPE', 'MANUAL_RECEIPT', 'MANUAL_ADMIN'],
+      enum: ['STRIPE', 'PADDLE', 'MANUAL_RECEIPT', 'MANUAL_ADMIN', 'COUPON'],
       required: true,
     },
     paymentStatus: {
@@ -52,10 +62,13 @@ const enrollmentSchema = new Schema<IEnrollment>(
     },
     stripeSubscriptionId: { type: String },
     stripeCustomerId: { type: String },
+    paddleCustomerId: { type: String, default: null },
+    paddleTransactionId: { type: String, default: null },
     lessonsCompleted: { type: Number, default: 0 },
     completionPercentage: { type: Number, default: 0 },
     lastActivityAt: { type: Date },
     accessGrantedAt: { type: Date },
+    paymentGraceEndsAt: { type: Date, default: null },
     enrolledBy: { type: Schema.Types.ObjectId, ref: 'User' },
     // FIR Wave 2 Story K — idempotency key for stripeWebhookWorker replays
     idempotencyKey: { type: String, default: null },

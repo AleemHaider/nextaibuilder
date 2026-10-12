@@ -6,11 +6,11 @@ import type { FastifyInstance } from 'fastify'
 
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://js.stripe.com",
+  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://cdn.paddle.com https://sandbox-cdn.paddle.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
-  "connect-src 'self' https://api.stripe.com",
-  "frame-src https://js.stripe.com https://player.loom.com",
+  "connect-src 'self' https://api.stripe.com https://*.paddle.com",
+  "frame-src https://js.stripe.com https://player.loom.com https://*.paddle.com",
 ].join('; ')
 
 // Wave 1 Story E — Permissions-Policy: disable powerful features, allow Stripe
@@ -19,7 +19,7 @@ const PERMISSIONS_POLICY = [
   'camera=()',
   'microphone=()',
   'geolocation=()',
-  'payment=(self "https://js.stripe.com")',
+  'payment=(self "https://js.stripe.com" "https://buy.paddle.com" "https://sandbox-buy.paddle.com")',
 ].join(', ')
 
 // Wave 1 Story E — HSTS: 1 year, include subdomains, preload. Production only

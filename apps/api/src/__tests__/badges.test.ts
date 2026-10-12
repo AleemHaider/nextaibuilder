@@ -51,6 +51,12 @@ vi.mock('../models/SetupStep.js', () => ({
   },
 }))
 
+vi.mock('../models/CohortMembership.js', () => ({
+  CohortMembership: {
+    updateOne: vi.fn().mockResolvedValue({}),
+  },
+}))
+
 // Import the service AFTER mocks are registered
 import { checkAndAwardBadges, checkAndAwardCertificate } from '../services/badges.js'
 
@@ -60,6 +66,7 @@ import { UserBadge } from '../models/UserBadge.js'
 import { Certificate } from '../models/Certificate.js'
 import { StudentStep } from '../models/StudentStep.js'
 import { SetupStep } from '../models/SetupStep.js'
+import { CohortMembership } from '../models/CohortMembership.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -273,6 +280,11 @@ describe('checkAndAwardCertificate()', () => {
         userId: expect.any(Types.ObjectId),
         issuedAt: expect.any(Date),
       }),
+    )
+    // H-9: marks the cohort membership COMPLETE so reminder emails stop.
+    expect(CohortMembership.updateOne).toHaveBeenCalledWith(
+      { userId: expect.any(Types.ObjectId) },
+      { $set: { completionStatus: 'COMPLETE' } },
     )
   })
 
