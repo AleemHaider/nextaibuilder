@@ -1,0 +1,691 @@
+<!DOCTYPE html><html lang="en-US"><head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="max-image-preview:large">
+<title>nextaibuilder – AI product cohorts that ship</title>
+<link rel="alternate" type="application/rss+xml" title="nextaibuilder » Feed" href="https://nextaibuilder.com/feed/">
+<link rel="alternate" type="application/rss+xml" title="nextaibuilder » Comments Feed" href="https://nextaibuilder.com/comments/feed/">
+<link rel="manifest" href="https://nextaibuilder.com/manifest.webmanifest">
+<link rel="preload" href="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/fonts/inter.woff2" as="font" type="font/woff2" crossorigin="">
+<link rel="icon" type="image/svg+xml" href="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/apple-touch-icon.png">
+<meta name="theme-color" content="#ffffff">
+<meta name="description" content="Live and recorded cohorts that teach you to ship production AI products with the Anthropic Claude API, from prompts to pipelines.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="nextaibuilder">
+<meta property="og:title" content="nextaibuilder – AI product cohorts that ship">
+<meta property="og:description" content="Live and recorded cohorts that teach you to ship production AI products with the Anthropic Claude API, from prompts to pipelines.">
+<meta property="og:url" content="https://nextaibuilder.com/">
+<meta property="og:image" content="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"EducationalOrganization","@id":"https://nextaibuilder.com/#organization","name":"nextaibuilder","url":"https://nextaibuilder.com/","logo":"https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/apple-touch-icon.png","description":"Live and recorded cohorts that teach you to ship production AI products with the Anthropic Claude API, from prompts to pipelines."}]}</script>
+<style id="wp-img-auto-sizes-contain-inline-css">
+img:is([sizes=auto i],[sizes^="auto," i]){contain-intrinsic-size:3000px 1500px}
+/*# sourceURL=wp-img-auto-sizes-contain-inline-css */
+</style>
+
+<style id="wp-block-navigation-link-inline-css">
+.wp-block-navigation .wp-block-navigation-item__label{overflow-wrap:break-word}.wp-block-navigation .wp-block-navigation-item__description{display:none}.link-ui-tools{outline:1px solid #f0f0f0;padding:8px}.link-ui-block-inserter{padding-top:8px}.link-ui-block-inserter__back{margin-left:8px;text-transform:uppercase}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/navigation-link/style.min.css */
+</style>
+<style id="wp-block-navigation-inline-css">
+.wp-block-navigation{position:relative}.wp-block-navigation ul{margin-bottom:0;margin-left:0;margin-top:0;padding-left:0}.wp-block-navigation ul,.wp-block-navigation ul li{list-style:none}.wp-block-navigation .wp-block-navigation-item{align-items:center;background-color:inherit;display:flex;position:relative}.wp-block-navigation .wp-block-navigation-item .wp-block-navigation__submenu-container:empty{display:none}.wp-block-navigation .wp-block-navigation-item__content{display:block;z-index:1}.wp-block-navigation .wp-block-navigation-item__content.wp-block-navigation-item__content{color:inherit}.wp-block-navigation.has-text-decoration-underline .wp-block-navigation-item__content,.wp-block-navigation.has-text-decoration-underline .wp-block-navigation-item__content:active,.wp-block-navigation.has-text-decoration-underline .wp-block-navigation-item__content:focus{text-decoration:underline}.wp-block-navigation.has-text-decoration-line-through .wp-block-navigation-item__content,.wp-block-navigation.has-text-decoration-line-through .wp-block-navigation-item__content:active,.wp-block-navigation.has-text-decoration-line-through .wp-block-navigation-item__content:focus{text-decoration:line-through}.wp-block-navigation :where(a),.wp-block-navigation :where(a:active),.wp-block-navigation :where(a:focus){text-decoration:none}.wp-block-navigation .wp-block-navigation__submenu-icon{align-self:center;background-color:inherit;border:none;color:currentColor;display:inline-block;font-size:inherit;height:.6em;line-height:0;margin-left:.25em;padding:0;width:.6em}.wp-block-navigation .wp-block-navigation__submenu-icon svg{stroke:currentColor;display:inline-block;height:inherit;margin-top:.075em;width:inherit}.wp-block-navigation{--navigation-layout-justification-setting:flex-start;--navigation-layout-direction:row;--navigation-layout-wrap:wrap;--navigation-layout-justify:flex-start;--navigation-layout-align:center}.wp-block-navigation.is-vertical{--navigation-layout-direction:column;--navigation-layout-justify:initial;--navigation-layout-align:flex-start}.wp-block-navigation.no-wrap{--navigation-layout-wrap:nowrap}.wp-block-navigation.items-justified-center{--navigation-layout-justification-setting:center;--navigation-layout-justify:center}.wp-block-navigation.items-justified-center.is-vertical{--navigation-layout-align:center}.wp-block-navigation.items-justified-right{--navigation-layout-justification-setting:flex-end;--navigation-layout-justify:flex-end}.wp-block-navigation.items-justified-right.is-vertical{--navigation-layout-align:flex-end}.wp-block-navigation.items-justified-space-between{--navigation-layout-justification-setting:space-between;--navigation-layout-justify:space-between}:where(.wp-block-navigation) ul li{padding:0}.wp-block-navigation .has-child .wp-block-navigation__submenu-container{align-items:normal;background-color:inherit;color:inherit;display:flex;flex-direction:column;opacity:0;position:absolute;z-index:2}@media not (prefers-reduced-motion){.wp-block-navigation .has-child .wp-block-navigation__submenu-container{transition:opacity .1s linear}}.wp-block-navigation .has-child .wp-block-navigation__submenu-container{height:0;overflow:hidden;visibility:hidden;width:0}.wp-block-navigation .has-child .wp-block-navigation__submenu-container>.wp-block-navigation-item>.wp-block-navigation-item__content{display:flex;flex-grow:1;padding:.5em 1em}.wp-block-navigation .has-child .wp-block-navigation__submenu-container>.wp-block-navigation-item>.wp-block-navigation-item__content .wp-block-navigation__submenu-icon{margin-left:auto;margin-right:0}.wp-block-navigation .has-child .wp-block-navigation__submenu-container .wp-block-navigation-item__content{margin:0}.wp-block-navigation .has-child .wp-block-navigation__submenu-container{left:-1px;top:100%}@media (min-width:782px){.wp-block-navigation .has-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container{left:100%;top:-1px}.wp-block-navigation .has-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container:before{background:transparent;content:"";display:block;height:100%;position:absolute;right:100%;width:.5em}.wp-block-navigation .has-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-icon{margin-right:.25em}.wp-block-navigation .has-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-icon svg{transform:rotate(-90deg)}}@media (hover:hover){.wp-block-navigation .has-child:not(.open-on-click):hover>.wp-block-navigation__submenu-container{height:auto;min-width:200px;opacity:1;overflow:visible;visibility:visible;width:auto}}.wp-block-navigation .has-child .wp-block-navigation-submenu__toggle[aria-expanded=true]~.wp-block-navigation__submenu-container,.wp-block-navigation .has-child:not(.open-on-click):not(.open-on-hover-click):focus-within>.wp-block-navigation__submenu-container{height:auto;min-width:200px;opacity:1;overflow:visible;visibility:visible;width:auto}.wp-block-navigation .has-child.open-always{align-items:var(--navigation-layout-align,initial);flex-direction:var(--navigation-layout-direction,initial);flex-wrap:var(--navigation-layout-wrap,wrap);gap:var(--wp--style--block-gap,2em)}.wp-block-navigation .has-child.open-always,.wp-block-navigation .has-child.open-always .wp-block-navigation-item{justify-content:var(--navigation-layout-justify,initial)}.wp-block-navigation .has-child.open-always .wp-block-navigation__submenu-container,.wp-block-navigation .has-child.open-always.wp-block-navigation-submenu{gap:var(--wp--style--block-gap,2em)}.wp-block-navigation .has-child.open-always .wp-block-navigation-item,.wp-block-navigation .has-child.open-always .wp-block-navigation__submenu-container,.wp-block-navigation .has-child.open-always.wp-block-navigation-submenu{padding-bottom:0;padding-top:0}.wp-block-navigation .has-child.open-always .wp-block-navigation__submenu-container{padding-left:var(--wp--style--block-gap,2em);padding-right:var(--wp--style--block-gap,2em)}.wp-block-navigation .has-child.open-always .wp-block-navigation__submenu-container .wp-block-navigation-item__content{padding:0}.wp-block-navigation .has-child.open-always .wp-block-navigation__submenu-container>.wp-block-navigation-item>.wp-block-navigation-item__content,.wp-block-navigation .has-child.open-always>.wp-block-navigation-item__content{flex-grow:0}.wp-block-navigation .has-child.open-always>.wp-block-navigation__submenu-container{background-color:transparent;border:none;color:inherit;flex-basis:100%;height:auto;opacity:1;overflow:visible;position:static;visibility:visible;width:auto}.wp-block-navigation.has-background .has-child .wp-block-navigation__submenu-container{left:0;top:100%}@media (min-width:782px){.wp-block-navigation.has-background .has-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container{left:100%;top:0}}.wp-block-navigation-submenu{display:flex;position:relative}.wp-block-navigation-submenu .wp-block-navigation__submenu-icon svg{stroke:currentColor}button.wp-block-navigation-item__content{background-color:transparent;border:none;color:currentColor;font-family:inherit;font-size:inherit;font-style:inherit;font-weight:inherit;letter-spacing:inherit;line-height:inherit;text-align:left;text-transform:inherit}.wp-block-navigation-submenu__toggle{cursor:pointer}.wp-block-navigation-submenu__toggle[aria-expanded=true]+.wp-block-navigation__submenu-icon>svg,.wp-block-navigation-submenu__toggle[aria-expanded=true]>svg{transform:rotate(180deg)}.wp-block-navigation-item.open-on-click .wp-block-navigation-submenu__toggle{padding-left:0;padding-right:.85em}.wp-block-navigation-item.open-on-click .wp-block-navigation-submenu__toggle+.wp-block-navigation__submenu-icon{margin-left:-.6em;pointer-events:none}.wp-block-navigation-item.open-on-click button.wp-block-navigation-item__content:not(.wp-block-navigation-submenu__toggle){padding:0}.wp-block-navigation .wp-block-page-list,.wp-block-navigation__container,.wp-block-navigation__responsive-close,.wp-block-navigation__responsive-container,.wp-block-navigation__responsive-container-content,.wp-block-navigation__responsive-dialog{gap:inherit}:where(.wp-block-navigation.has-background .wp-block-navigation-item a:not(.wp-element-button)),:where(.wp-block-navigation.has-background .wp-block-navigation-submenu a:not(.wp-element-button)){padding:.5em 1em}:where(.wp-block-navigation .wp-block-navigation__submenu-container .wp-block-navigation-item a:not(.wp-element-button)),:where(.wp-block-navigation .wp-block-navigation__submenu-container .wp-block-navigation-submenu a:not(.wp-element-button)),:where(.wp-block-navigation .wp-block-navigation__submenu-container .wp-block-navigation-submenu button.wp-block-navigation-item__content),:where(.wp-block-navigation .wp-block-navigation__submenu-container .wp-block-pages-list__item button.wp-block-navigation-item__content){padding:.5em 1em}.wp-block-navigation.items-justified-right .wp-block-navigation__container .has-child .wp-block-navigation__submenu-container,.wp-block-navigation.items-justified-right .wp-block-page-list>.has-child .wp-block-navigation__submenu-container,.wp-block-navigation.items-justified-space-between .wp-block-page-list>.has-child:last-child .wp-block-navigation__submenu-container,.wp-block-navigation.items-justified-space-between>.wp-block-navigation__container>.has-child:last-child .wp-block-navigation__submenu-container{left:auto;right:0}.wp-block-navigation.items-justified-right .wp-block-navigation__container .has-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container,.wp-block-navigation.items-justified-right .wp-block-page-list>.has-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container,.wp-block-navigation.items-justified-space-between .wp-block-page-list>.has-child:last-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container,.wp-block-navigation.items-justified-space-between>.wp-block-navigation__container>.has-child:last-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container{left:-1px;right:-1px}@media (min-width:782px){.wp-block-navigation.items-justified-right .wp-block-navigation__container .has-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container,.wp-block-navigation.items-justified-right .wp-block-page-list>.has-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container,.wp-block-navigation.items-justified-space-between .wp-block-page-list>.has-child:last-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container,.wp-block-navigation.items-justified-space-between>.wp-block-navigation__container>.has-child:last-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container{left:auto;right:100%}}.wp-block-navigation:not(.has-background) .wp-block-navigation__submenu-container{background-color:#fff;border:1px solid rgba(0,0,0,.15)}.wp-block-navigation.has-background .wp-block-navigation__submenu-container{background-color:inherit}.wp-block-navigation:not(.has-text-color) .wp-block-navigation__submenu-container{color:#000}.wp-block-navigation__container{align-items:var(--navigation-layout-align,initial);display:flex;flex-direction:var(--navigation-layout-direction,initial);flex-wrap:var(--navigation-layout-wrap,wrap);justify-content:var(--navigation-layout-justify,initial);list-style:none;margin:0;padding-left:0}.wp-block-navigation__container .is-responsive{display:none}.wp-block-navigation__container:only-child,.wp-block-page-list:only-child{flex-grow:1}@keyframes overlay-menu__fade-in-animation{0%{opacity:0;transform:translateY(.5em)}to{opacity:1;transform:translateY(0)}}.wp-block-navigation__responsive-container{bottom:0;display:none;left:0;position:fixed;right:0;top:0}.wp-block-navigation__responsive-container :where(.wp-block-navigation-item a){color:inherit}.wp-block-navigation__responsive-container .wp-block-navigation__responsive-container-content{align-items:var(--navigation-layout-align,initial);display:flex;flex-direction:var(--navigation-layout-direction,initial);flex-wrap:var(--navigation-layout-wrap,wrap);justify-content:var(--navigation-layout-justify,initial)}.wp-block-navigation__responsive-container:not(.is-menu-open.is-menu-open){background-color:inherit!important;color:inherit!important}.wp-block-navigation__responsive-container.is-menu-open{background-color:inherit;display:flex;flex-direction:column}@media not (prefers-reduced-motion){.wp-block-navigation__responsive-container.is-menu-open{animation:overlay-menu__fade-in-animation .1s ease-out;animation-fill-mode:forwards}}.wp-block-navigation__responsive-container.is-menu-open:not(.disable-default-overlay){padding:clamp(1rem,var(--wp--style--root--padding-top),20rem) clamp(1rem,var(--wp--style--root--padding-right),20rem) clamp(1rem,var(--wp--style--root--padding-bottom),20rem) clamp(1rem,var(--wp--style--root--padding-left),20rem)}.wp-block-navigation__responsive-container.is-menu-open{overflow:auto;z-index:100000}.wp-block-navigation__responsive-container.is-menu-open:not(.disable-default-overlay) .wp-block-navigation__responsive-container-content{padding-top:calc(2rem + 24px)}.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-container-content{align-items:var(--navigation-layout-justification-setting,inherit);display:flex;flex-direction:column;flex-wrap:nowrap;overflow:visible}.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-container-content,.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-container-content .wp-block-navigation__container,.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-container-content .wp-block-page-list{justify-content:flex-start}.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-container-content .wp-block-navigation__submenu-icon{display:none}.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-container-content .has-child .wp-block-navigation__submenu-container{border:none;height:auto;min-width:200px;opacity:1;overflow:initial;padding-left:2rem;padding-right:2rem;position:static;visibility:visible;width:auto}.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-container-content .wp-block-navigation__container,.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-container-content .wp-block-navigation__submenu-container{gap:inherit}.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-container-content .wp-block-navigation__submenu-container{padding-top:var(--wp--style--block-gap,2em)}.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-container-content .wp-block-navigation-item__content{padding:0}.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-container-content .wp-block-navigation-item,.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-container-content .wp-block-navigation__container,.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-container-content .wp-block-page-list{align-items:var(--navigation-layout-justification-setting,initial);display:flex;flex-direction:column}.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation-item,.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation-item .wp-block-navigation__submenu-container,.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__container,.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-page-list{background:transparent!important;color:inherit!important}.wp-block-navigation__responsive-container.is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__submenu-container.wp-block-navigation__submenu-container.wp-block-navigation__submenu-container.wp-block-navigation__submenu-container{left:auto;right:auto}.wp-block-navigation__responsive-container.disable-default-overlay .wp-block-navigation__overlay-container{display:none;width:100%}.wp-block-navigation__responsive-container.disable-default-overlay .wp-block-navigation__responsive-close{max-width:none}.wp-block-navigation__responsive-container.disable-default-overlay.is-menu-open .wp-block-navigation__responsive-container-content>:not(.wp-block-navigation__overlay-container){display:none}.wp-block-navigation__responsive-container.disable-default-overlay.is-menu-open .wp-block-navigation__responsive-container-content .wp-block-navigation__overlay-container{display:block}.wp-block-navigation__responsive-container.disable-default-overlay.is-menu-open .wp-block-navigation__responsive-container-content .wp-block-navigation__overlay-container .wp-block-navigation__submenu-container{left:0;right:auto}@media (min-width:600px){.wp-block-navigation__responsive-container:not(.hidden-by-default):not(.is-menu-open){background-color:inherit;display:block;position:relative;width:100%;z-index:auto}.wp-block-navigation__responsive-container:not(.hidden-by-default):not(.is-menu-open) .wp-block-navigation__responsive-container-close{display:none}.wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__submenu-container.wp-block-navigation__submenu-container.wp-block-navigation__submenu-container.wp-block-navigation__submenu-container{left:0}}.wp-block-navigation:not(.has-background) .wp-block-navigation__responsive-container.is-menu-open:not(.disable-default-overlay){background-color:#fff}.wp-block-navigation:not(.has-text-color) .wp-block-navigation__responsive-container.is-menu-open:not(.disable-default-overlay){color:#000}.wp-block-navigation__toggle_button_label{font-size:1rem;font-weight:700}.wp-block-navigation__responsive-container-close,.wp-block-navigation__responsive-container-open{background:transparent;border:none;color:currentColor;cursor:pointer;margin:0;padding:0;text-transform:inherit;vertical-align:middle}.wp-block-navigation__responsive-container-close svg,.wp-block-navigation__responsive-container-open svg{fill:currentColor;display:block;height:24px;pointer-events:none;width:24px}.wp-block-navigation__responsive-container-open{display:flex}.wp-block-navigation__responsive-container-open.wp-block-navigation__responsive-container-open.wp-block-navigation__responsive-container-open{font-family:inherit;font-size:inherit;font-weight:inherit}@media (min-width:600px){.wp-block-navigation__responsive-container-open:not(.always-shown){display:none}}.wp-block-navigation__responsive-container-close{position:absolute;right:0;top:0;z-index:2}.wp-block-navigation__responsive-container-close.wp-block-navigation__responsive-container-close.wp-block-navigation__responsive-container-close{font-family:inherit;font-size:inherit;font-weight:inherit}.disable-default-overlay .wp-block-navigation__responsive-container-close{right:clamp(1rem,var(--wp--style--root--padding-left),20rem);top:clamp(1rem,var(--wp--style--root--padding-left),20rem)}.wp-block-navigation__responsive-close{width:100%}.has-modal-open .wp-block-navigation__responsive-close{margin-left:auto;margin-right:auto;max-width:var(--wp--style--global--wide-size,100%)}.wp-block-navigation__responsive-close:focus{outline:none}.is-menu-open .wp-block-navigation__responsive-close,.is-menu-open .wp-block-navigation__responsive-container-content,.is-menu-open .wp-block-navigation__responsive-dialog{box-sizing:border-box}.wp-block-navigation__responsive-dialog{position:relative}.has-modal-open .admin-bar .is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-dialog{margin-top:46px}@media (min-width:782px){.has-modal-open .admin-bar .is-menu-open:where(:not(.disable-default-overlay)) .wp-block-navigation__responsive-dialog{margin-top:32px}}html.has-modal-open{overflow:hidden}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/navigation/style.min.css */
+</style>
+<style id="wp-block-button-inline-css">
+.wp-block-button__link{align-content:center;box-sizing:border-box;cursor:pointer;display:inline-block;height:100%;text-align:center;word-break:break-word}.wp-block-button__link.aligncenter{text-align:center}.wp-block-button__link.alignright{text-align:right}:where(.wp-block-button__link){border-radius:9999px;box-shadow:none;padding:calc(.667em + 2px) calc(1.333em + 2px);text-decoration:none}.wp-block-button[style*=text-decoration] .wp-block-button__link{text-decoration:inherit}.wp-block-buttons>.wp-block-button.has-custom-width{max-width:none}.wp-block-buttons>.wp-block-button.has-custom-width .wp-block-button__link{width:100%}.wp-block-buttons>.wp-block-button.has-custom-font-size .wp-block-button__link{font-size:inherit}.wp-block-buttons>.wp-block-button[class*=wp-block-button__width]{width:calc(var(--wp--block-button--width)*1% - var(--wp--style--block-gap, .5em)*(1 - var(--wp--block-button--width)/100))}.wp-block-buttons>.wp-block-button.wp-block-button__width-25{width:calc(25% - var(--wp--style--block-gap, .5em)*.75)}.wp-block-buttons>.wp-block-button.wp-block-button__width-50{width:calc(50% - var(--wp--style--block-gap, .5em)*.5)}.wp-block-buttons>.wp-block-button.wp-block-button__width-75{width:calc(75% - var(--wp--style--block-gap, .5em)*.25)}.wp-block-buttons>.wp-block-button.wp-block-button__width-100{flex-basis:100%;width:100%}.wp-block-buttons.is-vertical>.wp-block-button[class*=wp-block-button__width]{width:calc(var(--wp--block-button--width)*1%)}.wp-block-buttons.is-vertical>.wp-block-button.wp-block-button__width-25{width:25%}.wp-block-buttons.is-vertical>.wp-block-button.wp-block-button__width-50{width:50%}.wp-block-buttons.is-vertical>.wp-block-button.wp-block-button__width-75{width:75%}.wp-block-button.is-style-squared,.wp-block-button__link.wp-block-button.is-style-squared{border-radius:0}.wp-block-button.no-border-radius,.wp-block-button__link.no-border-radius{border-radius:0!important}:root :where(.wp-block-button .wp-block-button__link.is-style-outline),:root :where(.wp-block-button.is-style-outline>.wp-block-button__link){border:2px solid;padding:.667em 1.333em}:root :where(.wp-block-button .wp-block-button__link.is-style-outline:not(.has-text-color)),:root :where(.wp-block-button.is-style-outline>.wp-block-button__link:not(.has-text-color)){color:currentColor}:root :where(.wp-block-button .wp-block-button__link.is-style-outline:not(.has-background)),:root :where(.wp-block-button.is-style-outline>.wp-block-button__link:not(.has-background)){background-color:transparent;background-image:none}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/button/style.min.css */
+</style>
+<style id="wp-block-buttons-inline-css">
+.wp-block-buttons{box-sizing:border-box}.wp-block-buttons.is-vertical{flex-direction:column}.wp-block-buttons.is-vertical>.wp-block-button:last-child{margin-bottom:0}.wp-block-buttons>.wp-block-button{display:inline-block;margin:0}.wp-block-buttons.is-content-justification-left{justify-content:flex-start}.wp-block-buttons.is-content-justification-left.is-vertical{align-items:flex-start}.wp-block-buttons.is-content-justification-center{justify-content:center}.wp-block-buttons.is-content-justification-center.is-vertical{align-items:center}.wp-block-buttons.is-content-justification-right{justify-content:flex-end}.wp-block-buttons.is-content-justification-right.is-vertical{align-items:flex-end}.wp-block-buttons.is-content-justification-space-between{justify-content:space-between}.wp-block-buttons.aligncenter{text-align:center}.wp-block-buttons:not(.is-content-justification-space-between,.is-content-justification-right,.is-content-justification-left,.is-content-justification-center) .wp-block-button.aligncenter{margin-left:auto;margin-right:auto;width:100%}.wp-block-buttons[style*=text-decoration] .wp-block-button,.wp-block-buttons[style*=text-decoration] .wp-block-button__link{text-decoration:inherit}.wp-block-buttons.has-custom-font-size .wp-block-button__link{font-size:inherit}.wp-block-buttons .wp-block-button__link{width:100%}.wp-block-button.aligncenter{text-align:center}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/buttons/style.min.css */
+</style>
+<style id="wp-block-group-inline-css">
+.wp-block-group{box-sizing:border-box}:where(.wp-block-group.wp-block-group-is-layout-constrained){position:relative}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/group/style.min.css */
+</style>
+<style id="wp-block-group-theme-inline-css">
+:where(.wp-block-group.has-background){padding:1.25em 2.375em}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/group/theme.min.css */
+</style>
+<style id="wp-block-template-part-theme-inline-css">
+:root :where(.wp-block-template-part.has-background){margin-bottom:0;margin-top:0;padding:1.25em 2.375em}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/template-part/theme.min.css */
+</style>
+<style id="wp-block-heading-inline-css">
+h1:where(.wp-block-heading).has-background,h2:where(.wp-block-heading).has-background,h3:where(.wp-block-heading).has-background,h4:where(.wp-block-heading).has-background,h5:where(.wp-block-heading).has-background,h6:where(.wp-block-heading).has-background{padding:1.25em 2.375em}h1.has-text-align-left[style*=writing-mode]:where([style*=vertical-lr]),h1.has-text-align-right[style*=writing-mode]:where([style*=vertical-rl]),h2.has-text-align-left[style*=writing-mode]:where([style*=vertical-lr]),h2.has-text-align-right[style*=writing-mode]:where([style*=vertical-rl]),h3.has-text-align-left[style*=writing-mode]:where([style*=vertical-lr]),h3.has-text-align-right[style*=writing-mode]:where([style*=vertical-rl]),h4.has-text-align-left[style*=writing-mode]:where([style*=vertical-lr]),h4.has-text-align-right[style*=writing-mode]:where([style*=vertical-rl]),h5.has-text-align-left[style*=writing-mode]:where([style*=vertical-lr]),h5.has-text-align-right[style*=writing-mode]:where([style*=vertical-rl]),h6.has-text-align-left[style*=writing-mode]:where([style*=vertical-lr]),h6.has-text-align-right[style*=writing-mode]:where([style*=vertical-rl]){rotate:180deg}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/heading/style.min.css */
+</style>
+<style id="wp-block-paragraph-inline-css">
+.is-small-text{font-size:.875em}.is-regular-text{font-size:1em}.is-large-text{font-size:2.25em}.is-larger-text{font-size:3em}.has-drop-cap:not(:focus):first-letter{float:left;font-size:8.4em;font-style:normal;font-weight:100;line-height:.68;margin:.05em .1em 0 0;text-transform:uppercase}body.rtl .has-drop-cap:not(:focus):first-letter{float:none;margin-left:.1em}p.has-drop-cap.has-background{overflow:hidden}:root :where(p.has-background){padding:1.25em 2.375em}:where(p.has-text-color:not(.has-link-color)) a{color:inherit}p.has-text-align-left[style*="writing-mode:vertical-lr"],p.has-text-align-right[style*="writing-mode:vertical-rl"]{rotate:180deg}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/paragraph/style.min.css */
+</style>
+<style id="wp-block-columns-inline-css">
+.wp-block-columns{box-sizing:border-box;display:flex;flex-wrap:wrap!important}@media (min-width:782px){.wp-block-columns{flex-wrap:nowrap!important}}.wp-block-columns{align-items:normal!important}.wp-block-columns.are-vertically-aligned-top{align-items:flex-start}.wp-block-columns.are-vertically-aligned-center{align-items:center}.wp-block-columns.are-vertically-aligned-bottom{align-items:flex-end}@media (max-width:781px){.wp-block-columns:not(.is-not-stacked-on-mobile)>.wp-block-column{flex-basis:100%!important}}@media (min-width:782px){.wp-block-columns:not(.is-not-stacked-on-mobile)>.wp-block-column{flex-basis:0;flex-grow:1}.wp-block-columns:not(.is-not-stacked-on-mobile)>.wp-block-column[style*=flex-basis]{flex-grow:0}}.wp-block-columns.is-not-stacked-on-mobile{flex-wrap:nowrap!important}.wp-block-columns.is-not-stacked-on-mobile>.wp-block-column{flex-basis:0;flex-grow:1}.wp-block-columns.is-not-stacked-on-mobile>.wp-block-column[style*=flex-basis]{flex-grow:0}:where(.wp-block-columns){margin-bottom:1.75em}:where(.wp-block-columns.has-background){padding:1.25em 2.375em}.wp-block-column{flex-grow:1;min-width:0;overflow-wrap:break-word;word-break:break-word}.wp-block-column.is-vertically-aligned-top{align-self:flex-start}.wp-block-column.is-vertically-aligned-center{align-self:center}.wp-block-column.is-vertically-aligned-bottom{align-self:flex-end}.wp-block-column.is-vertically-aligned-stretch{align-self:stretch}.wp-block-column.is-vertically-aligned-bottom,.wp-block-column.is-vertically-aligned-center,.wp-block-column.is-vertically-aligned-top{width:100%}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/columns/style.min.css */
+</style>
+<style id="wp-block-details-inline-css">
+.wp-block-details{box-sizing:border-box}.wp-block-details summary{cursor:pointer}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/details/style.min.css */
+</style>
+<style id="wp-block-list-inline-css">
+ol,ul{box-sizing:border-box}:root :where(.wp-block-list.has-background){padding:1.25em 2.375em}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/list/style.min.css */
+</style>
+<style id="wp-block-separator-inline-css">
+@charset "UTF-8";.wp-block-separator{border:none;border-top:2px solid}:root :where(.wp-block-separator.is-style-dots){height:auto;line-height:1;text-align:center}:root :where(.wp-block-separator.is-style-dots):before{color:currentColor;content:"···";font-family:serif;font-size:1.5em;letter-spacing:2em;padding-left:2em}.wp-block-separator.is-style-dots{background:none!important;border:none!important}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/separator/style.min.css */
+</style>
+<style id="wp-block-separator-theme-inline-css">
+.wp-block-separator.has-css-opacity{opacity:.4}.wp-block-separator{border:none;border-bottom:2px solid;margin-left:auto;margin-right:auto}.wp-block-separator.has-alpha-channel-opacity{opacity:1}.wp-block-separator:not(.is-style-wide):not(.is-style-dots){width:100px}.wp-block-separator.has-background:not(.is-style-dots){border-bottom:none;height:1px}.wp-block-separator.has-background:not(.is-style-wide):not(.is-style-dots){height:2px}
+/*# sourceURL=https://nextaibuilder.com/wp-includes/blocks/separator/theme.min.css */
+</style>
+<style id="wp-block-library-inline-css">
+:root{--wp-block-synced-color:#7a00df;--wp-block-synced-color--rgb:122,0,223;--wp-bound-block-color:var(--wp-block-synced-color);--wp-editor-canvas-background:#ddd;--wp-admin-theme-color:#007cba;--wp-admin-theme-color--rgb:0,124,186;--wp-admin-theme-color-darker-10:#006ba1;--wp-admin-theme-color-darker-10--rgb:0,107,160.5;--wp-admin-theme-color-darker-20:#005a87;--wp-admin-theme-color-darker-20--rgb:0,90,135;--wp-admin-border-width-focus:2px}@media (min-resolution:192dpi){:root{--wp-admin-border-width-focus:1.5px}}.wp-element-button{cursor:pointer}:root .has-very-light-gray-background-color{background-color:#eee}:root .has-very-dark-gray-background-color{background-color:#313131}:root .has-very-light-gray-color{color:#eee}:root .has-very-dark-gray-color{color:#313131}:root .has-vivid-green-cyan-to-vivid-cyan-blue-gradient-background{background:linear-gradient(135deg,#00d084,#0693e3)}:root .has-purple-crush-gradient-background{background:linear-gradient(135deg,#34e2e4,#4721fb 50%,#ab1dfe)}:root .has-hazy-dawn-gradient-background{background:linear-gradient(135deg,#faaca8,#dad0ec)}:root .has-subdued-olive-gradient-background{background:linear-gradient(135deg,#fafae1,#67a671)}:root .has-atomic-cream-gradient-background{background:linear-gradient(135deg,#fdd79a,#004a59)}:root .has-nightshade-gradient-background{background:linear-gradient(135deg,#330968,#31cdcf)}:root .has-midnight-gradient-background{background:linear-gradient(135deg,#020381,#2874fc)}:root{--wp--preset--font-size--normal:16px;--wp--preset--font-size--huge:42px}.has-regular-font-size{font-size:1em}.has-larger-font-size{font-size:2.625em}.has-normal-font-size{font-size:var(--wp--preset--font-size--normal)}.has-huge-font-size{font-size:var(--wp--preset--font-size--huge)}:root .has-text-align-center{text-align:center}:root .has-text-align-left{text-align:left}:root .has-text-align-right{text-align:right}.has-fit-text{white-space:nowrap!important}#end-resizable-editor-section{display:none}.aligncenter{clear:both}.items-justified-left{justify-content:flex-start}.items-justified-center{justify-content:center}.items-justified-right{justify-content:flex-end}.items-justified-space-between{justify-content:space-between}.screen-reader-text{word-wrap:normal!important;border:0;clip-path:inset(50%);height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute;width:1px;word-break:normal!important}.screen-reader-text:focus{background-color:#ddd;clip-path:none;color:#444;display:block;font-size:1em;height:auto;left:5px;line-height:normal;padding:15px 23px 14px;text-decoration:none;top:5px;width:auto;z-index:100000}html :where(.has-border-color){border-style:solid}html :where([style^=border-color],[style*=";border-color"],[style*="; border-color"]){border-style:solid}html :where([style^=border-top-color],[style*=";border-top-color"],[style*="; border-top-color"]){border-top-style:solid}html :where([style^=border-right-color],[style*=";border-right-color"],[style*="; border-right-color"]){border-right-style:solid}html :where([style^=border-bottom-color],[style*=";border-bottom-color"],[style*="; border-bottom-color"]){border-bottom-style:solid}html :where([style^=border-left-color],[style*=";border-left-color"],[style*="; border-left-color"]){border-left-style:solid}html :where([style^=border-width],[style*=";border-width"],[style*="; border-width"]){border-style:solid}html :where([style^=border-top-width],[style*=";border-top-width"],[style*="; border-top-width"]){border-top-style:solid}html :where([style^=border-right-width],[style*=";border-right-width"],[style*="; border-right-width"]){border-right-style:solid}html :where([style^=border-bottom-width],[style*=";border-bottom-width"],[style*="; border-bottom-width"]){border-bottom-style:solid}html :where([style^=border-left-width],[style*=";border-left-width"],[style*="; border-left-width"]){border-left-style:solid}html :where(img[class*=wp-image-]){height:auto;max-width:100%}:where(figure){margin:0 0 1em}html :where(.is-position-sticky){--wp-admin--admin-bar--position-offset:var(--wp-admin--admin-bar--height,0px)}@media screen and (max-width:600px){html :where(.is-position-sticky){--wp-admin--admin-bar--position-offset:0px}}
+/*# sourceURL=/wp-includes/css/dist/block-library/common.min.css */
+</style>
+<style id="global-styles-inline-css">
+:root{--wp--preset--aspect-ratio--square: 1;--wp--preset--aspect-ratio--4-3: 4/3;--wp--preset--aspect-ratio--3-4: 3/4;--wp--preset--aspect-ratio--3-2: 3/2;--wp--preset--aspect-ratio--2-3: 2/3;--wp--preset--aspect-ratio--16-9: 16/9;--wp--preset--aspect-ratio--9-16: 9/16;--wp--preset--color--black: #000000;--wp--preset--color--cyan-bluish-gray: #abb8c3;--wp--preset--color--white: #ffffff;--wp--preset--color--pale-pink: #f78da7;--wp--preset--color--vivid-red: #cf2e2e;--wp--preset--color--luminous-vivid-orange: #ff6900;--wp--preset--color--luminous-vivid-amber: #fcb900;--wp--preset--color--light-green-cyan: #7bdcb5;--wp--preset--color--vivid-green-cyan: #00d084;--wp--preset--color--pale-cyan-blue: #8ed1fc;--wp--preset--color--vivid-cyan-blue: #0693e3;--wp--preset--color--vivid-purple: #9b51e0;--wp--preset--color--navy: #14213d;--wp--preset--color--navy-dark: #0b1735;--wp--preset--color--ink-2: #33415c;--wp--preset--color--muted: #5f6b80;--wp--preset--color--primary: #2a6fa8;--wp--preset--color--primary-hover: #1f5a8c;--wp--preset--color--link: #2a6fa8;--wp--preset--color--blue: #4a9ad4;--wp--preset--color--mint: #e8f2fb;--wp--preset--color--orange: #ff8c5a;--wp--preset--color--canvas: #f6f9fc;--wp--preset--color--surface: #ffffff;--wp--preset--color--hairline: #e3e8ee;--wp--preset--color--danger: #c0222e;--wp--preset--color--success: #1f7a45;--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple: linear-gradient(135deg,rgb(6,147,227) 0%,rgb(155,81,224) 100%);--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan: linear-gradient(135deg,rgb(122,220,180) 0%,rgb(0,208,130) 100%);--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange: linear-gradient(135deg,rgb(252,185,0) 0%,rgb(255,105,0) 100%);--wp--preset--gradient--luminous-vivid-orange-to-vivid-red: linear-gradient(135deg,rgb(255,105,0) 0%,rgb(207,46,46) 100%);--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray: linear-gradient(135deg,rgb(238,238,238) 0%,rgb(169,184,195) 100%);--wp--preset--gradient--cool-to-warm-spectrum: linear-gradient(135deg,rgb(74,234,220) 0%,rgb(151,120,209) 20%,rgb(207,42,186) 40%,rgb(238,44,130) 60%,rgb(251,105,98) 80%,rgb(254,248,76) 100%);--wp--preset--gradient--blush-light-purple: linear-gradient(135deg,rgb(255,206,236) 0%,rgb(152,150,240) 100%);--wp--preset--gradient--blush-bordeaux: linear-gradient(135deg,rgb(254,205,165) 0%,rgb(254,45,45) 50%,rgb(107,0,62) 100%);--wp--preset--gradient--luminous-dusk: linear-gradient(135deg,rgb(255,203,112) 0%,rgb(199,81,192) 50%,rgb(65,88,208) 100%);--wp--preset--gradient--pale-ocean: linear-gradient(135deg,rgb(255,245,203) 0%,rgb(182,227,212) 50%,rgb(51,167,181) 100%);--wp--preset--gradient--electric-grass: linear-gradient(135deg,rgb(202,248,128) 0%,rgb(113,206,126) 100%);--wp--preset--gradient--midnight: linear-gradient(135deg,rgb(2,3,129) 0%,rgb(40,116,252) 100%);--wp--preset--gradient--hero: linear-gradient(135deg, #4a9ad4 0%, #e8f4fd 55%, #6fb4dc 100%);--wp--preset--gradient--cover-blue: linear-gradient(135deg, #4a9ad4 0%, #e8f4fd 100%);--wp--preset--gradient--cover-navy: linear-gradient(135deg, #0d1a3a 0%, #3a4556 100%);--wp--preset--font-size--small: 13px;--wp--preset--font-size--medium: clamp(14px, 0.875rem + ((1vw - 3.2px) * 0.682), 20px);--wp--preset--font-size--large: clamp(22.041px, 1.378rem + ((1vw - 3.2px) * 1.586), 36px);--wp--preset--font-size--x-large: clamp(25.014px, 1.563rem + ((1vw - 3.2px) * 1.93), 42px);--wp--preset--font-size--xs: 0.8125rem;--wp--preset--font-size--sm: 0.9375rem;--wp--preset--font-size--base: 1rem;--wp--preset--font-size--md: clamp(1.0625rem, 1.063rem + ((1vw - 0.2rem) * 0.227), 1.1875rem);--wp--preset--font-size--lg: clamp(1.375rem, 1.375rem + ((1vw - 0.2rem) * 0.455), 1.625rem);--wp--preset--font-size--xl: clamp(2rem, 2rem + ((1vw - 0.2rem) * 1.818), 3rem);--wp--preset--font-size--2-xl: clamp(2.375rem, 2.375rem + ((1vw - 0.2rem) * 2.045), 3.5rem);--wp--preset--font-size--hero: clamp(2.5rem, 2.5rem + ((1vw - 0.2rem) * 3.182), 4.25rem);--wp--preset--font-family--sans: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;--wp--preset--font-family--mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;--wp--preset--spacing--20: 0.75rem;--wp--preset--spacing--30: 1rem;--wp--preset--spacing--40: 1.5rem;--wp--preset--spacing--50: clamp(1.75rem, 3vw, 2.5rem);--wp--preset--spacing--60: clamp(2.5rem, 5vw, 4rem);--wp--preset--spacing--70: clamp(3rem, 7vw, 5.5rem);--wp--preset--spacing--80: 5.06rem;--wp--preset--spacing--10: 0.5rem;--wp--preset--shadow--natural: 6px 6px 9px rgba(0, 0, 0, 0.2);--wp--preset--shadow--deep: 12px 12px 50px rgba(0, 0, 0, 0.4);--wp--preset--shadow--sharp: 6px 6px 0px rgba(0, 0, 0, 0.2);--wp--preset--shadow--outlined: 6px 6px 0px -3px rgb(255, 255, 255), 6px 6px rgb(0, 0, 0);--wp--preset--shadow--crisp: 6px 6px 0px rgb(0, 0, 0);--wp--preset--shadow--ring: 0 1px 3px rgba(0,55,112,0.08);--wp--preset--shadow--card: 0 8px 24px rgba(0,55,112,0.08), 0 2px 6px rgba(0,55,112,0.04);--wp--custom--radius--sm: 16px;--wp--custom--radius--md: 20px;--wp--custom--radius--lg: 30px;--wp--custom--radius--xl: 40px;--wp--custom--radius--pill: 9999px;--wp--custom--ring: rgba(26, 39, 68, 0.12);--wp--custom--ring-strong: rgba(26, 39, 68, 0.2);}.wp-block-button{--wp--preset--dimension--25: 25%;--wp--preset--dimension--50: 50%;--wp--preset--dimension--75: 75%;--wp--preset--dimension--100: 100%;}:root { --wp--style--global--content-size: 720px;--wp--style--global--wide-size: 1200px; }:where(body) { margin: 0; }.wp-site-blocks { padding-top: var(--wp--style--root--padding-top); padding-bottom: var(--wp--style--root--padding-bottom); }.has-global-padding { padding-right: var(--wp--style--root--padding-right); padding-left: var(--wp--style--root--padding-left); }.has-global-padding > .alignfull { margin-right: calc(var(--wp--style--root--padding-right) * -1); margin-left: calc(var(--wp--style--root--padding-left) * -1); }.has-global-padding :where(:not(.alignfull.is-layout-flow) > .has-global-padding:not(.wp-block-block, .alignfull)) { padding-right: 0; padding-left: 0; }.has-global-padding :where(:not(.alignfull.is-layout-flow) > .has-global-padding:not(.wp-block-block, .alignfull)) > .alignfull { margin-left: 0; margin-right: 0; }.wp-site-blocks > .alignleft { float: left; margin-right: 2em; }.wp-site-blocks > .alignright { float: right; margin-left: 2em; }.wp-site-blocks > .aligncenter { justify-content: center; margin-left: auto; margin-right: auto; }:where(.wp-site-blocks) > * { margin-block-start: 1.25rem; margin-block-end: 0; }:where(.wp-site-blocks) > :first-child { margin-block-start: 0; }:where(.wp-site-blocks) > :last-child { margin-block-end: 0; }:root { --wp--style--block-gap: 1.25rem; }:root :where(.is-layout-flow) > :first-child{margin-block-start: 0;}:root :where(.is-layout-flow) > :last-child{margin-block-end: 0;}:root :where(.is-layout-flow) > *{margin-block-start: 1.25rem;margin-block-end: 0;}:root :where(.is-layout-constrained) > :first-child{margin-block-start: 0;}:root :where(.is-layout-constrained) > :last-child{margin-block-end: 0;}:root :where(.is-layout-constrained) > *{margin-block-start: 1.25rem;margin-block-end: 0;}:root :where(.is-layout-flex){gap: 1.25rem;}:root :where(.is-layout-grid){gap: 1.25rem;}.is-layout-flow > .alignleft{float: left;margin-inline-start: 0;margin-inline-end: 2em;}.is-layout-flow > .alignright{float: right;margin-inline-start: 2em;margin-inline-end: 0;}.is-layout-flow > .aligncenter{margin-left: auto !important;margin-right: auto !important;}.is-layout-constrained > .alignleft{float: left;margin-inline-start: 0;margin-inline-end: 2em;}.is-layout-constrained > .alignright{float: right;margin-inline-start: 2em;margin-inline-end: 0;}.is-layout-constrained > .aligncenter{margin-left: auto !important;margin-right: auto !important;}.is-layout-constrained > :where(:not(.alignleft):not(.alignright):not(.alignfull)){max-width: var(--wp--style--global--content-size);margin-left: auto !important;margin-right: auto !important;}.is-layout-constrained > .alignwide{max-width: var(--wp--style--global--wide-size);}body .is-layout-flex{display: flex;}.is-layout-flex{flex-wrap: wrap;align-items: center;}.is-layout-flex > :is(*, div){margin: 0;}body .is-layout-grid{display: grid;}.is-layout-grid > :is(*, div){margin: 0;}body{background-color: #ffffff;color: var(--wp--preset--color--navy);font-family: var(--wp--preset--font-family--sans);font-size: var(--wp--preset--font-size--base);font-weight: 400;line-height: 1.6;--wp--style--root--padding-top: 0px;--wp--style--root--padding-right: clamp(1rem, 5vw, 5rem);--wp--style--root--padding-bottom: 0px;--wp--style--root--padding-left: clamp(1rem, 5vw, 5rem);}a:where(:not(.wp-element-button)){color: var(--wp--preset--color--link);text-decoration: none;}:root :where(a:where(:not(.wp-element-button)):hover){color: var(--wp--preset--color--primary-hover);text-decoration: underline;}:root :where(a:where(:not(.wp-element-button)):focus-visible){outline-color: var(--wp--preset--color--primary);outline-offset: 2px;outline-style: solid;outline-width: 2px;}h1, h2, h3, h4, h5, h6{color: var(--wp--preset--color--navy);font-weight: 300;letter-spacing: -0.025em;line-height: 1.08;}h1{font-size: var(--wp--preset--font-size--2xl);letter-spacing: -0.03em;line-height: 1.04;}h2{font-size: var(--wp--preset--font-size--xl);letter-spacing: -0.025em;line-height: 1.1;}h3{font-size: var(--wp--preset--font-size--lg);font-weight: 400;letter-spacing: -0.012em;line-height: 1.2;}h4{font-size: var(--wp--preset--font-size--md);font-weight: 500;letter-spacing: -0.01em;}:root :where(.wp-element-button, .wp-block-button__link){background-color: var(--wp--preset--color--primary);border-radius: 9999px;border-width: 0;color: #ffffff;font-family: inherit;font-size: clamp(0.875rem, 0.875rem + ((1vw - 0.2rem) * 0.227), 1rem);font-style: inherit;font-weight: 500;letter-spacing: inherit;line-height: 1.25;padding-top: 0.7rem;padding-right: 1.35rem;padding-bottom: 0.7rem;padding-left: 1.35rem;text-decoration: none;text-transform: inherit;}:root :where(.wp-element-button:hover, .wp-block-button__link:hover){background-color: var(--wp--preset--color--primary-hover);color: #ffffff;}:root :where(.wp-element-button:focus-visible, .wp-block-button__link:focus-visible){outline-color: var(--wp--preset--color--primary);outline-offset: 3px;outline-style: solid;outline-width: 2px;}.has-black-color{color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-color{color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-color{color: var(--wp--preset--color--white) !important;}.has-pale-pink-color{color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-color{color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-color{color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-color{color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-color{color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-color{color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-color{color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-color{color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-color{color: var(--wp--preset--color--vivid-purple) !important;}.has-navy-color{color: var(--wp--preset--color--navy) !important;}.has-navy-dark-color{color: var(--wp--preset--color--navy-dark) !important;}.has-ink-2-color{color: var(--wp--preset--color--ink-2) !important;}.has-muted-color{color: var(--wp--preset--color--muted) !important;}.has-primary-color{color: var(--wp--preset--color--primary) !important;}.has-primary-hover-color{color: var(--wp--preset--color--primary-hover) !important;}.has-link-color{color: var(--wp--preset--color--link) !important;}.has-blue-color{color: var(--wp--preset--color--blue) !important;}.has-mint-color{color: var(--wp--preset--color--mint) !important;}.has-orange-color{color: var(--wp--preset--color--orange) !important;}.has-canvas-color{color: var(--wp--preset--color--canvas) !important;}.has-surface-color{color: var(--wp--preset--color--surface) !important;}.has-hairline-color{color: var(--wp--preset--color--hairline) !important;}.has-danger-color{color: var(--wp--preset--color--danger) !important;}.has-success-color{color: var(--wp--preset--color--success) !important;}.has-black-background-color{background-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-background-color{background-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-background-color{background-color: var(--wp--preset--color--white) !important;}.has-pale-pink-background-color{background-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-background-color{background-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-background-color{background-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-background-color{background-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-background-color{background-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-background-color{background-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-background-color{background-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-background-color{background-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-background-color{background-color: var(--wp--preset--color--vivid-purple) !important;}.has-navy-background-color{background-color: var(--wp--preset--color--navy) !important;}.has-navy-dark-background-color{background-color: var(--wp--preset--color--navy-dark) !important;}.has-ink-2-background-color{background-color: var(--wp--preset--color--ink-2) !important;}.has-muted-background-color{background-color: var(--wp--preset--color--muted) !important;}.has-primary-background-color{background-color: var(--wp--preset--color--primary) !important;}.has-primary-hover-background-color{background-color: var(--wp--preset--color--primary-hover) !important;}.has-link-background-color{background-color: var(--wp--preset--color--link) !important;}.has-blue-background-color{background-color: var(--wp--preset--color--blue) !important;}.has-mint-background-color{background-color: var(--wp--preset--color--mint) !important;}.has-orange-background-color{background-color: var(--wp--preset--color--orange) !important;}.has-canvas-background-color{background-color: var(--wp--preset--color--canvas) !important;}.has-surface-background-color{background-color: var(--wp--preset--color--surface) !important;}.has-hairline-background-color{background-color: var(--wp--preset--color--hairline) !important;}.has-danger-background-color{background-color: var(--wp--preset--color--danger) !important;}.has-success-background-color{background-color: var(--wp--preset--color--success) !important;}.has-black-border-color{border-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-border-color{border-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-border-color{border-color: var(--wp--preset--color--white) !important;}.has-pale-pink-border-color{border-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-border-color{border-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-border-color{border-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-border-color{border-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-border-color{border-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-border-color{border-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-border-color{border-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-border-color{border-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-border-color{border-color: var(--wp--preset--color--vivid-purple) !important;}.has-navy-border-color{border-color: var(--wp--preset--color--navy) !important;}.has-navy-dark-border-color{border-color: var(--wp--preset--color--navy-dark) !important;}.has-ink-2-border-color{border-color: var(--wp--preset--color--ink-2) !important;}.has-muted-border-color{border-color: var(--wp--preset--color--muted) !important;}.has-primary-border-color{border-color: var(--wp--preset--color--primary) !important;}.has-primary-hover-border-color{border-color: var(--wp--preset--color--primary-hover) !important;}.has-link-border-color{border-color: var(--wp--preset--color--link) !important;}.has-blue-border-color{border-color: var(--wp--preset--color--blue) !important;}.has-mint-border-color{border-color: var(--wp--preset--color--mint) !important;}.has-orange-border-color{border-color: var(--wp--preset--color--orange) !important;}.has-canvas-border-color{border-color: var(--wp--preset--color--canvas) !important;}.has-surface-border-color{border-color: var(--wp--preset--color--surface) !important;}.has-hairline-border-color{border-color: var(--wp--preset--color--hairline) !important;}.has-danger-border-color{border-color: var(--wp--preset--color--danger) !important;}.has-success-border-color{border-color: var(--wp--preset--color--success) !important;}.has-vivid-cyan-blue-to-vivid-purple-gradient-background{background: var(--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple) !important;}.has-light-green-cyan-to-vivid-green-cyan-gradient-background{background: var(--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan) !important;}.has-luminous-vivid-amber-to-luminous-vivid-orange-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange) !important;}.has-luminous-vivid-orange-to-vivid-red-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-orange-to-vivid-red) !important;}.has-very-light-gray-to-cyan-bluish-gray-gradient-background{background: var(--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray) !important;}.has-cool-to-warm-spectrum-gradient-background{background: var(--wp--preset--gradient--cool-to-warm-spectrum) !important;}.has-blush-light-purple-gradient-background{background: var(--wp--preset--gradient--blush-light-purple) !important;}.has-blush-bordeaux-gradient-background{background: var(--wp--preset--gradient--blush-bordeaux) !important;}.has-luminous-dusk-gradient-background{background: var(--wp--preset--gradient--luminous-dusk) !important;}.has-pale-ocean-gradient-background{background: var(--wp--preset--gradient--pale-ocean) !important;}.has-electric-grass-gradient-background{background: var(--wp--preset--gradient--electric-grass) !important;}.has-midnight-gradient-background{background: var(--wp--preset--gradient--midnight) !important;}.has-hero-gradient-background{background: var(--wp--preset--gradient--hero) !important;}.has-cover-blue-gradient-background{background: var(--wp--preset--gradient--cover-blue) !important;}.has-cover-navy-gradient-background{background: var(--wp--preset--gradient--cover-navy) !important;}.has-small-font-size{font-size: var(--wp--preset--font-size--small) !important;}.has-medium-font-size{font-size: var(--wp--preset--font-size--medium) !important;}.has-large-font-size{font-size: var(--wp--preset--font-size--large) !important;}.has-x-large-font-size{font-size: var(--wp--preset--font-size--x-large) !important;}.has-xs-font-size{font-size: var(--wp--preset--font-size--xs) !important;}.has-sm-font-size{font-size: var(--wp--preset--font-size--sm) !important;}.has-base-font-size{font-size: var(--wp--preset--font-size--base) !important;}.has-md-font-size{font-size: var(--wp--preset--font-size--md) !important;}.has-lg-font-size{font-size: var(--wp--preset--font-size--lg) !important;}.has-xl-font-size{font-size: var(--wp--preset--font-size--xl) !important;}.has-2-xl-font-size{font-size: var(--wp--preset--font-size--2-xl) !important;}.has-hero-font-size{font-size: var(--wp--preset--font-size--hero) !important;}.has-sans-font-family{font-family: var(--wp--preset--font-family--sans) !important;}.has-mono-font-family{font-family: var(--wp--preset--font-family--mono) !important;}
+:root :where(.wp-block-details){border-bottom-color: var(--wp--custom--ring);border-bottom-width: 1px;border-bottom-style: solid;padding-top: 1.5rem;padding-bottom: 1.5rem;}
+:root :where(.wp-block-navigation){font-size: var(--wp--preset--font-size--sm);font-weight: 500;}
+:root :where(.wp-block-separator){color: var(--wp--custom--ring);}
+/*# sourceURL=global-styles-inline-css */
+</style>
+<style id="block-style-variation-styles-inline-css">
+:root :where(.wp-block-button.is-style-outline--2 .wp-block-button__link){background: transparent none;background-color: #ffffff;border-color: var(--wp--preset--color--primary);border-width: 1px;border-style: solid;color: var(--wp--preset--color--primary);padding-top: 0.667em;padding-right: 1.33em;padding-bottom: 0.667em;padding-left: 1.33em;}
+/*# sourceURL=block-style-variation-styles-inline-css */
+</style>
+<style id="wp-emoji-styles-inline-css">
+
+	img.wp-smiley, img.emoji {
+		display: inline !important;
+		border: none !important;
+		box-shadow: none !important;
+		height: 1em !important;
+		width: 1em !important;
+		margin: 0 0.07em !important;
+		vertical-align: -0.1em !important;
+		background: none !important;
+		padding: 0 !important;
+	}
+/*# sourceURL=wp-emoji-styles-inline-css */
+</style>
+<link rel="stylesheet" id="woocommerce-blocktheme-css" href="https://nextaibuilder.com/wp-content/plugins/woocommerce/assets/css/woocommerce-blocktheme.css?ver=11.2.1" media="all">
+<style id="core-block-supports-inline-css">
+.wp-container-core-navigation-is-layout-a5f10338{gap:1.75rem;justify-content:center;}.wp-container-core-group-is-layout-2f20ec05{flex-wrap:nowrap;justify-content:space-between;}.wp-container-core-group-is-layout-874249e6 > :where(:not(.alignleft):not(.alignright):not(.alignfull)){max-width:1180px;margin-left:auto !important;margin-right:auto !important;}.wp-container-core-group-is-layout-874249e6 > .alignwide{max-width:1180px;}.wp-container-core-group-is-layout-874249e6 .alignfull{max-width:none;}.wp-container-core-columns-is-layout-89c98654{flex-wrap:nowrap;}.wp-container-core-group-is-layout-40a8439e > :where(:not(.alignleft):not(.alignright):not(.alignfull)){max-width:1200px;margin-left:auto !important;margin-right:auto !important;}.wp-container-core-group-is-layout-40a8439e > .alignwide{max-width:1200px;}.wp-container-core-group-is-layout-40a8439e .alignfull{max-width:none;}.wp-container-core-group-is-layout-4334fd02 > :where(:not(.alignleft):not(.alignright):not(.alignfull)){max-width:1180px;margin-left:auto !important;margin-right:auto !important;}.wp-container-core-group-is-layout-4334fd02 > .alignwide{max-width:1180px;}.wp-container-core-group-is-layout-4334fd02 .alignfull{max-width:none;}.wp-container-core-group-is-layout-a63e1596 > *{margin-block-start:0;margin-block-end:0;}.wp-container-core-group-is-layout-a63e1596 > * + *{margin-block-start:0;margin-block-end:0;}.wp-elements-1 a:where(:not(.wp-element-button)){color:var(--wp--preset--color--ink-2);}.wp-container-core-columns-is-layout-fa4ae643{flex-wrap:nowrap;gap:1.25rem var(--wp--preset--spacing--50);}.wp-container-core-group-is-layout-276a2242 > :where(:not(.alignleft):not(.alignright):not(.alignfull)){max-width:1180px;margin-left:auto !important;margin-right:auto !important;}.wp-container-core-group-is-layout-276a2242 > .alignwide{max-width:1180px;}.wp-container-core-group-is-layout-276a2242 .alignfull{max-width:none;}
+/*# sourceURL=core-block-supports-inline-css */
+</style>
+<style id="wp-block-template-skip-link-inline-css">
+/*! This file is auto-generated */
+.skip-link.screen-reader-text{border:0;clip-path:inset(50%);height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute!important;width:1px;word-wrap:normal!important;word-break:normal!important}.skip-link.screen-reader-text:focus{background-color:#eee;clip-path:none;color:#444;display:block;font-size:1em;height:auto;left:5px;line-height:normal;padding:15px 23px 14px;text-decoration:none;top:5px;width:auto;z-index:100000}
+/*# sourceURL=/wp-includes/css/wp-block-template-skip-link.min.css */
+</style>
+<link rel="stylesheet" id="tutor-icon-css" href="https://nextaibuilder.com/wp-content/plugins/tutor/assets/css/tutor-icon.min.css?ver=4.1.1" media="all">
+<link rel="stylesheet" id="tutor-css" href="https://nextaibuilder.com/wp-content/plugins/tutor/assets/css/tutor.min.css?ver=4.1.1" media="all">
+<link rel="stylesheet" id="tutor-frontend-css" href="https://nextaibuilder.com/wp-content/plugins/tutor/assets/css/tutor-front.min.css?ver=4.1.1" media="all">
+<style id="tutor-frontend-inline-css">
+:root{--tutor-color-primary:#3E64DE;--tutor-color-primary-rgb:62, 100, 222;--tutor-color-primary-hover:#2B49CA;--tutor-color-primary-hover-rgb:43, 73, 202;--tutor-body-color:#212327;--tutor-body-color-rgb:33, 35, 39;--tutor-border-color:#E3E5EB;--tutor-border-color-rgb:227, 229, 235;--tutor-color-gray:#CDCFD5;--tutor-color-gray-rgb:205, 207, 213;}
+/*# sourceURL=tutor-frontend-inline-css */
+</style>
+<link rel="stylesheet" id="tutor-cart-button-css" href="https://nextaibuilder.com/wp-content/plugins/tutor/assets/blocks/cart-button/index.css?ver=4.1.1" media="all">
+<link rel="stylesheet" id="woocommerce-layout-css" href="https://nextaibuilder.com/wp-content/plugins/woocommerce/assets/css/woocommerce-layout.css?ver=11.2.1" media="all">
+<link rel="stylesheet" id="woocommerce-smallscreen-css" href="https://nextaibuilder.com/wp-content/plugins/woocommerce/assets/css/woocommerce-smallscreen.css?ver=11.2.1" media="only screen and (max-width: 768px)">
+<link rel="stylesheet" id="woocommerce-general-css" href="https://nextaibuilder.com/wp-content/plugins/woocommerce/assets/css/woocommerce.css?ver=11.2.1" media="all">
+<style id="woocommerce-inline-inline-css">
+.woocommerce form .form-row .required { visibility: visible; }
+/*# sourceURL=woocommerce-inline-inline-css */
+</style>
+<link rel="stylesheet" id="nextaibuilder-css" href="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/css/theme.css?ver=1791725366" media="all">
+<script id="jquery-core-js" src="https://nextaibuilder.com/wp-includes/js/jquery/jquery.min.js?ver=3.7.1"></script>
+<script id="jquery-migrate-js" src="https://nextaibuilder.com/wp-includes/js/jquery/jquery-migrate.min.js?ver=3.4.1"></script>
+<script data-wp-strategy="defer" defer="" id="wc-jquery-blockui-js" src="https://nextaibuilder.com/wp-content/plugins/woocommerce/assets/js/jquery-blockui/jquery.blockUI.min.js?ver=2.7.0-wc.11.2.1"></script>
+<script id="wc-add-to-cart-js-extra">
+var wc_add_to_cart_params = {"ajax_url":"/wp-admin/admin-ajax.php","wc_ajax_url":"/?wc-ajax=%%endpoint%%","i18n_view_cart":"View cart","cart_url":"https://nextaibuilder.com/cart/","is_cart":"","cart_redirect_after_add":"no"};
+//# sourceURL=wc-add-to-cart-js-extra
+</script>
+<script data-wp-strategy="defer" defer="" id="wc-add-to-cart-js" src="https://nextaibuilder.com/wp-content/plugins/woocommerce/assets/js/frontend/add-to-cart.min.js?ver=11.2.1"></script>
+<script data-wp-strategy="defer" defer="" id="wc-js-cookie-js" src="https://nextaibuilder.com/wp-content/plugins/woocommerce/assets/js/js-cookie/js.cookie.min.js?ver=2.1.4-wc.11.2.1"></script>
+<script id="woocommerce-js-extra">
+var woocommerce_params = {"ajax_url":"/wp-admin/admin-ajax.php","wc_ajax_url":"/?wc-ajax=%%endpoint%%","i18n_password_show":"Show password","i18n_password_hide":"Hide password"};
+//# sourceURL=woocommerce-js-extra
+</script>
+<script data-wp-strategy="defer" defer="" id="woocommerce-js" src="https://nextaibuilder.com/wp-content/plugins/woocommerce/assets/js/frontend/woocommerce.min.js?ver=11.2.1"></script>
+<link rel="https://api.w.org/" href="https://nextaibuilder.com/wp-json/"><link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://nextaibuilder.com/xmlrpc.php?rsd">
+<meta name="generator" content="WordPress 7.1.3">
+<meta name="generator" content="TutorLMS 4.1.1">
+<meta name="generator" content="WooCommerce 11.2.1">
+<link rel="describedby" href="https://nextaibuilder.com/llms.txt">
+<script id="wp-importmap" type="importmap">
+{"imports":{"@wordpress/interactivity":"https://nextaibuilder.com/wp-includes/js/dist/script-modules/interactivity/index.min.js?ver=efaa5193bbad9c60ffd1"}}
+</script>
+<link rel="modulepreload" href="https://nextaibuilder.com/wp-includes/js/dist/script-modules/interactivity/index.min.js?ver=efaa5193bbad9c60ffd1" id="@wordpress/interactivity-js-modulepreload" fetchpriority="low">
+	<noscript><style>.woocommerce-product-gallery{ opacity: 1 !important; }</style></noscript>
+	<style class="wp-fonts-local">
+@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url('https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/fonts/inter.woff2') format('woff2');}
+@font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400 700;font-display:swap;src:url('https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/fonts/jetbrains-mono.woff2') format('woff2');}
+</style>
+</head>
+
+<body class="home blog wp-embed-responsive wp-theme-nextaibuilder theme-nextaibuilder tutor-lms woocommerce-uses-block-theme woocommerce-block-theme-has-button-styles woocommerce-js">
+
+<a class="skip-link screen-reader-text" id="wp-skip-link" href="#wp--skip-link--target">Skip to content</a><div class="wp-site-blocks"><header class="wp-block-template-part">
+<div class="wp-block-group nab-header has-surface-background-color has-background has-global-padding is-layout-constrained wp-container-core-group-is-layout-874249e6 wp-block-group-is-layout-constrained" style="padding-top:0.875rem;padding-bottom:0.875rem">
+	
+	<div class="wp-block-group is-content-justification-space-between is-nowrap is-layout-flex wp-container-core-group-is-layout-2f20ec05 wp-block-group-is-layout-flex">
+		
+<a class="nab-logo" href="https://nextaibuilder.com/" aria-label="nextaibuilder home">
+	<svg class="nab-logo__mark" width="28" height="28" viewBox="0 0 56 56" fill="none" aria-hidden="true">
+		<defs>
+			<linearGradient id="nabDeep" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1a2744"></stop><stop offset="100%" stop-color="#4a90c4"></stop></linearGradient>
+			<linearGradient id="nabSky" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#7bb8e0"></stop><stop offset="100%" stop-color="#4a9ad4"></stop></linearGradient>
+			<linearGradient id="nabPale" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#a8d4f0"></stop><stop offset="100%" stop-color="#d4e8f7"></stop></linearGradient>
+			<linearGradient id="nabOrange" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff8c5a"></stop><stop offset="50%" stop-color="#ff6347"></stop><stop offset="100%" stop-color="#d73027"></stop></linearGradient>
+		</defs>
+		<rect x="24" y="0" width="8" height="10" fill="url(#nabDeep)"></rect><rect x="24" y="46" width="8" height="10" fill="url(#nabDeep)"></rect>
+		<rect x="0" y="24" width="10" height="8" fill="url(#nabDeep)"></rect><rect x="46" y="24" width="10" height="8" fill="url(#nabDeep)"></rect>
+		<rect x="8" y="8" width="7" height="7" fill="url(#nabSky)"></rect><rect x="41" y="8" width="7" height="7" fill="url(#nabSky)"></rect>
+		<rect x="8" y="41" width="7" height="7" fill="url(#nabSky)"></rect><rect x="41" y="41" width="7" height="7" fill="url(#nabSky)"></rect>
+		<rect x="16" y="10" width="8" height="8" fill="url(#nabSky)"></rect><rect x="32" y="10" width="8" height="8" fill="url(#nabSky)"></rect>
+		<rect x="10" y="16" width="8" height="8" fill="url(#nabSky)"></rect><rect x="38" y="16" width="8" height="8" fill="url(#nabSky)"></rect>
+		<rect x="16" y="38" width="8" height="8" fill="url(#nabSky)"></rect><rect x="32" y="38" width="8" height="8" fill="url(#nabSky)"></rect>
+		<rect x="10" y="32" width="8" height="8" fill="url(#nabSky)"></rect><rect x="38" y="32" width="8" height="8" fill="url(#nabSky)"></rect>
+		<rect x="18" y="18" width="20" height="20" fill="url(#nabPale)"></rect><rect x="20" y="20" width="16" height="16" fill="url(#nabSky)"></rect>
+		<rect x="22" y="22" width="12" height="12" fill="url(#nabDeep)"></rect><rect x="24" y="24" width="8" height="8" fill="url(#nabOrange)"></rect>
+	</svg>
+	<span class="nab-logo__text">
+		<span class="nab-logo__pill"><span class="nab-logo__dot"></span>Next</span>
+		<span class="nab-logo__word">aibuilder</span>
+	</span>
+</a>
+
+
+
+		<nav aria-label="Main" class="is-responsive items-justified-center nab-nav wp-block-navigation is-content-justification-center is-layout-flex wp-container-core-navigation-is-layout-a5f10338 wp-block-navigation-is-layout-flex" data-wp-interactive="core/navigation" data-wp-context="{&quot;overlayOpenedBy&quot;:{&quot;click&quot;:false,&quot;hover&quot;:false,&quot;focus&quot;:false},&quot;type&quot;:&quot;overlay&quot;,&quot;roleAttribute&quot;:&quot;&quot;,&quot;ariaLabel&quot;:&quot;Menu&quot;}"><button aria-haspopup="dialog" aria-label="Open menu" class="wp-block-navigation__responsive-container-open" data-wp-on--click="actions.openMenuOnClick" data-wp-on--keydown="actions.handleMenuKeydown"><svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7.5h16v1.5H4z"></path><path d="M4 15h16v1.5H4z"></path></svg></button>
+				<div class="wp-block-navigation__responsive-container" id="modal-1" data-wp-class--has-modal-open="state.isMenuOpen" data-wp-class--is-menu-open="state.isMenuOpen" data-wp-watch="callbacks.initMenu" data-wp-on--keydown="actions.handleMenuKeydown" data-wp-on--focusout="actions.handleMenuFocusout" tabindex="-1">
+					<div class="wp-block-navigation__responsive-close" tabindex="-1">
+						<div class="wp-block-navigation__responsive-dialog" data-wp-bind--aria-modal="state.ariaModal" data-wp-bind--aria-label="state.ariaLabel" data-wp-bind--role="state.roleAttribute">
+							<button aria-label="Close menu" class="wp-block-navigation__responsive-container-close" data-wp-on--click="actions.closeMenuOnClick"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="m13.06 12 6.47-6.47-1.06-1.06L12 10.94 5.53 4.47 4.47 5.53 10.94 12l-6.47 6.47 1.06 1.06L12 13.06l6.47 6.47 1.06-1.06L13.06 12Z"></path></svg></button>
+							<div class="wp-block-navigation__responsive-container-content" data-wp-watch="callbacks.focusFirstElement" id="modal-1-content">
+								<ul class="wp-block-navigation__container is-responsive items-justified-center nab-nav wp-block-navigation"><li class="wp-block-navigation-item wp-block-navigation-link"><a class="wp-block-navigation-item__content" href="/courses/"><span class="wp-block-navigation-item__label">Courses</span></a></li><li class="wp-block-navigation-item wp-block-navigation-link"><a class="wp-block-navigation-item__content" href="/courses/?format=live"><span class="wp-block-navigation-item__label">Live cohorts</span></a></li><li class="wp-block-navigation-item wp-block-navigation-link"><a class="wp-block-navigation-item__content" href="/guides/"><span class="wp-block-navigation-item__label">Guides</span></a></li><li class="wp-block-navigation-item wp-block-navigation-link"><a class="wp-block-navigation-item__content" href="/about/"><span class="wp-block-navigation-item__label">About</span></a></li><li class="wp-block-navigation-item nab-nav__signin wp-block-navigation-link"><a class="wp-block-navigation-item__content" href="/dashboard/"><span class="wp-block-navigation-item__label">Sign in</span></a></li></ul>
+								
+							</div>
+						</div>
+					</div>
+				</div></nav>
+
+		
+		<div class="wp-block-buttons nab-header__cta is-layout-flex wp-block-buttons-is-layout-flex">
+			
+			<div class="wp-block-button has-custom-font-size has-sm-font-size"><a class="wp-block-button__link wp-element-button" href="/courses/" style="padding-top:0.5rem;padding-right:1.125rem;padding-bottom:0.5rem;padding-left:1.125rem">Get started</a></div>
+			
+		</div>
+		
+	</div>
+	
+</div>
+
+</header>
+
+<main id="wp--skip-link--target" class="wp-block-group is-layout-flow wp-container-core-group-is-layout-a63e1596 wp-block-group-is-layout-flow" style="margin-top:0">
+	
+<section class="wp-block-group nab-hero has-global-padding is-layout-constrained wp-container-core-group-is-layout-40a8439e wp-block-group-is-layout-constrained">
+	
+	<div class="nab-mesh" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+	
+	
+	<div class="wp-block-columns are-vertically-aligned-center nab-hero__grid is-layout-flex wp-container-core-columns-is-layout-89c98654 wp-block-columns-is-layout-flex">
+		
+		<div class="wp-block-column is-vertically-aligned-center is-layout-flow wp-block-column-is-layout-flow" style="flex-basis:46%">
+						
+			<h1 class="wp-block-heading nab-hero__title has-hero-font-size">Ship a real AI product in five weeks</h1>
+			
+			
+			<p class="nab-hero__lede wp-block-paragraph">A hands-on program for founders, product managers and engineers. You plan, build and deploy your own product with Claude Code and the Claude API, with an instructor reviewing your work every week.</p>
+			
+			
+			<div class="wp-block-buttons nab-hero__actions is-layout-flex wp-block-buttons-is-layout-flex">
+				
+				<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="https://nextaibuilder.com/courses/build-production-ready-ai-agents-live/">Join the live cohort</a></div>
+				
+				
+				<div class="wp-block-button is-style-outline is-style-outline--2"><a class="wp-block-button__link wp-element-button" href="#curriculum">See the curriculum</a></div>
+				
+			</div>
+			
+			<div class="nab-proof"><span class="nab-proof__faces"><img src="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/gregg-laroche.jpg" alt="" width="36" height="36"><img src="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/gabor-mayer.jpg" alt="" width="36" height="36"><img src="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/orsolya-meckl.jpg" alt="" width="36" height="36"><img src="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/giuseppe-spano.jpg" alt="" width="36" height="36"></span><span class="nab-proof__rating"><span>Recommended by product leaders at Google and PreVeil</span></span><ul class="nab-proof__notes"><li>Full refund within 2 weeks</li><li>Pay in 3 monthly payments</li><li>Card or bank transfer</li></ul></div>
+		</div>
+		
+		
+		<div class="wp-block-column is-vertically-aligned-center is-layout-flow wp-block-column-is-layout-flow">
+				<div class="nab-visual" aria-hidden="true">
+		<div class="nab-visual__term">
+			<div class="nab-visual__bar"><span></span><span></span><span></span><b>claude — your-product</b></div>
+			<div class="nab-visual__code">
+				<p><span class="p">$</span> claude</p>
+				<p class="u">› Read docs/PRD.md and build the onboarding flow. Write tests first.</p>
+				<p class="a">● Reading docs/PRD.md (3 user stories, 9 acceptance criteria)</p>
+				<p class="a">● Creating src/onboarding/checklist.tsx</p>
+				<p class="a">● Writing tests/onboarding.test.ts — 12 tests</p>
+				<p class="ok">✓ 12 passed · ready for review</p>
+			</div>
+		</div>
+		<div class="nab-visual__toast"><span>✓</span><p><b>Instructor review</b>Ship it. Clean tests and a clear PRD.</p></div>
+					<div class="nab-visual__progress">
+				<p class="nab-visual__label">Your progress</p>
+									<p class="done"><span>1</span>AI-Native Development Foundations</p>
+									<p class="now"><span>2</span>Designing Your Agentic AI Employee</p>
+									<p class=""><span>3</span>Connecting Real Tools</p>
+							</div>
+			</div>
+	
+		</div>
+		
+	</div>
+	
+	
+	<div class="nab-logos">
+		<p>Alumni work at teams including</p>
+		<ul>
+			<li><span class="nab-logos__mark"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"></path><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"></path><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"></path><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"></path></svg></span>Google</li>
+			<li><span class="nab-logos__mark"><img src="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/logos/preveil.png" alt="" width="28" height="28"></span>PreVeil</li>
+			<li><span class="nab-logos__mark nab-logos__mark--mono" style="--c:#0f6e6e">IT</span>Inventio IT</li>
+			<li><span class="nab-logos__mark nab-logos__mark--mono" style="--c:#7a3fb0">O</span>Orshe</li>
+		</ul>
+	</div>
+	
+</section>
+
+
+	
+<section class="wp-block-group nab-band nab-band--xp has-global-padding is-layout-constrained wp-container-core-group-is-layout-40a8439e wp-block-group-is-layout-constrained">
+	
+	<div class="wp-block-group nab-band__head is-layout-flow wp-block-group-is-layout-flow">
+		
+		<p class="nab-kicker wp-block-paragraph">How you learn</p>
+		
+		
+		<h2 class="wp-block-heading">Built so you actually finish</h2>
+		
+		
+		<p class="nab-lede wp-block-paragraph">Most online courses lose people at installation day. Here, every step has a check, a helper and a person behind it.</p>
+		
+	</div>
+	
+		<div class="nab-xp">
+		<article class="nab-xp__tile nab-xp__tile--wide">
+			<div class="nab-xp__text">
+				<h3>Your setup, checked by AI</h3>
+				<p>Install each tool with a short video, upload a screenshot, and get a pass or a specific fix in under a minute. No one starts week one with a broken laptop.</p>
+			</div>
+			<div class="nab-xp__ui nab-ui-steps" aria-hidden="true">
+				<p class="is-done"><i></i>Install Node.js<b>Passed</b></p>
+				<p class="is-done"><i></i>Install Claude Code<b>Passed</b></p>
+				<p class="is-now"><i></i>Authenticate your Anthropic account<b>Checking…</b></p>
+				<p class="nab-ui-steps__note">Screenshot shows “Logged in as maya@…”. Looks good.</p>
+			</div>
+		</article>
+		<article class="nab-xp__tile">
+			<div class="nab-xp__ui nab-ui-session" aria-hidden="true">
+				<p class="nab-ui-session__when">Every week · 6:00 PM</p>
+				<p class="nab-ui-session__title">AI-Native Development Foundations</p>
+				<span class="nab-ui-session__btn">Join live session</span>
+			</div>
+			<div class="nab-xp__text">
+				<h3>Build live, every week</h3>
+				<p>Three-hour sessions where you build alongside the instructor. Recordings are up within a day if you miss one.</p>
+			</div>
+		</article>
+		<article class="nab-xp__tile">
+			<div class="nab-xp__ui nab-ui-chat" aria-hidden="true">
+				<p class="me">npm says EACCES when I install Claude Code</p>
+				<p class="ai">That’s a folder permission issue. Run this once, then install again: <code>npm config set prefix ~/.npm-global</code></p>
+			</div>
+			<div class="nab-xp__text">
+				<h3>Stuck at 11pm? Ask the AI helper</h3>
+				<p>Describe the error or paste a screenshot. It knows the step you’re on.</p>
+			</div>
+		</article>
+		<article class="nab-xp__tile">
+			<div class="nab-xp__ui nab-ui-review" aria-hidden="true">
+				<p class="nab-ui-review__file">src/agents/triage.ts</p>
+				<p class="nab-ui-review__note"><b>Aleem</b> Nice. Add a test for the empty inbox case before you ship.</p>
+			</div>
+			<div class="nab-xp__text">
+				<h3>Reviewed by your instructor</h3>
+				<p>Your homework is your product. Get direct feedback on it, not on toy exercises.</p>
+			</div>
+		</article>
+		<article class="nab-xp__tile">
+			<div class="nab-xp__ui nab-ui-cert" aria-hidden="true">
+				<p class="nab-ui-cert__kicker">Certificate of completion</p>
+				<p class="nab-ui-cert__name">Maya Okafor</p>
+				<span class="nab-ui-cert__btn">Add to LinkedIn</span>
+			</div>
+			<div class="nab-xp__text">
+				<h3>Proof you shipped</h3>
+				<p>A verifiable certificate and a live product you can show in interviews and to customers.</p>
+			</div>
+		</article>
+	</div>
+	
+</section>
+
+
+	
+<section class="wp-block-group nab-band has-global-padding is-layout-constrained wp-container-core-group-is-layout-40a8439e wp-block-group-is-layout-constrained">
+	
+	<div class="wp-block-group nab-band__head is-layout-flow wp-block-group-is-layout-flow">
+		
+		<p class="nab-kicker wp-block-paragraph">Student projects</p>
+		
+		
+		<h2 class="wp-block-heading">Real products, shipped in five weeks</h2>
+		
+		
+		<p class="nab-lede wp-block-paragraph">Every student leaves with something running for real users. A few recent examples.</p>
+		
+	</div>
+	
+	
+</section>
+
+
+	
+<section id="curriculum" class="wp-block-group nab-band nab-band--soft has-global-padding is-layout-constrained wp-container-core-group-is-layout-40a8439e wp-block-group-is-layout-constrained">
+	
+	<div class="wp-block-group nab-band__head is-layout-flow wp-block-group-is-layout-flow">
+		
+		<p class="nab-kicker wp-block-paragraph">How it works</p>
+		
+		
+		<h2 class="wp-block-heading">Five weeks from idea to production</h2>
+		
+		
+		<p class="nab-lede wp-block-paragraph">One focused session a week, with homework you apply to your own product. The same curriculum powers the live cohort and the self-paced course.</p>
+		
+	</div>
+	
+	<ol class="nab-timeline"><li><div class="nab-timeline__when"><b>Week 1</b></div><div class="nab-timeline__what"><h3>AI-Native Development Foundations</h3><ul><li>Claude Code, Cursor &amp; Top-Tier Models</li><li>Prompting &amp; Context Engineering for Production Work</li></ul></div></li><li><div class="nab-timeline__when"><b>Week 2</b></div><div class="nab-timeline__what"><h3>Designing Your Agentic AI Employee</h3><ul><li>Designing Your First AI Agent Employee</li><li>Tool Use &amp; the MCP Pattern</li></ul></div></li><li><div class="nab-timeline__when"><b>Week 3</b></div><div class="nab-timeline__what"><h3>Connecting Real Tools</h3><ul><li>Jira + Confluence Integration</li><li>Slack + GitHub Integration</li></ul></div></li><li><div class="nab-timeline__when"><b>Week 4</b></div><div class="nab-timeline__what"><h3>Design-to-Code &amp; Quality</h3><ul><li>Figma-to-Code Workflows</li><li>Testing Agents &amp; Quality Gates</li></ul></div></li><li><div class="nab-timeline__when"><b>Week 5</b></div><div class="nab-timeline__what"><h3>Shipping to Production</h3><ul><li>CI/CD &amp; Deployment with AI Agents</li><li>Capstone: Ship Your Agentic Product</li></ul></div></li></ol>
+</section>
+
+
+	
+<section class="wp-block-group nab-band nab-band--soft has-global-padding is-layout-constrained wp-container-core-group-is-layout-40a8439e wp-block-group-is-layout-constrained">
+	
+	<div class="wp-block-group nab-band__head is-layout-flow wp-block-group-is-layout-flow">
+		
+		<p class="nab-kicker wp-block-paragraph">Reviews</p>
+		
+		
+		<h2 class="wp-block-heading">What builders say after shipping</h2>
+		
+		
+		<p class="nab-lede wp-block-paragraph">From founders, product managers and engineers who went through the program.</p>
+		
+	</div>
+	
+	<div class="nab-rv"><div class="nab-rv__top"><figure class="nab-rv__spot"><span class="nab-rv__stars" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg></span><blockquote>I have run product teams for twenty years and this is the first course that actually changed how my engineers and I work together. The Reviewer agent is in every PR we ship now.</blockquote><figcaption><img class="nab-rv__avatar" src="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/gregg-laroche.jpg" alt="" width="56" height="56" loading="lazy"><span><b>Gregg Laroche</b><small>VP Product Management, PreVeil</small></span></figcaption></figure></div><div class="nab-rv__grid"><figure class="nab-rv__card"><span class="nab-rv__stars" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg></span><blockquote>Certifications do not move careers. Shipped products do. By the Capstone you have a public repo, a live AI feature and a release tag.</blockquote><figcaption><img class="nab-rv__avatar" src="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/gabor-mayer.jpg" alt="" width="44" height="44" loading="lazy"><span><b>Gabor Mayer</b><small>Product Manager, Google</small></span></figcaption></figure><figure class="nab-rv__card"><span class="nab-rv__stars" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg></span><blockquote>I came in skeptical and left with a Jira epic, a Confluence PRD and Figma flows for a product I had been stuck on for months.</blockquote><figcaption><img class="nab-rv__avatar" src="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/orsolya-meckl.jpg" alt="" width="44" height="44" loading="lazy"><span><b>Orsolya Meckl</b><small>Product Owner, Orshe</small></span></figcaption></figure><figure class="nab-rv__card"><span class="nab-rv__stars" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg></span><blockquote>I built three agents in four weeks. My triage agent has been running on its own for two months.</blockquote><figcaption><img class="nab-rv__avatar" src="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/giuseppe-spano.jpg" alt="" width="44" height="44" loading="lazy"><span><b>Giuseppe Spanò</b><small>Software Engineer</small></span></figcaption></figure><figure class="nab-rv__card"><span class="nab-rv__stars" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg></span><blockquote>The n8n + LangGraph hybrid is now the backbone of three of my clients. What used to be a custom integration project is a one-week build.</blockquote><figcaption><img class="nab-rv__avatar" src="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/danny-chevilly.jpg" alt="" width="44" height="44" loading="lazy"><span><b>Danny Chevilly</b><small>IT Consultant, Inventio IT A/S</small></span></figcaption></figure><figure class="nab-rv__card"><span class="nab-rv__stars" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg><svg viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z"></path></svg></span><blockquote>By Lesson 11 my one annoying Friday task was a scheduled agent, and I had my Friday afternoons back.</blockquote><figcaption><span class="nab-rv__avatar nab-rv__avatar--initials" aria-hidden="true" style="width:44px;height:44px">S</span><span><b>Shamik</b><small>Founder</small></span></figcaption></figure></div></div>
+</section>
+
+
+	
+<section class="wp-block-group nab-band has-global-padding is-layout-constrained wp-container-core-group-is-layout-40a8439e wp-block-group-is-layout-constrained">
+	<div class="nab-instructor"><div class="nab-instructor__text"><p class="nab-kicker">Your instructor</p><h2>Aleem Haider</h2><p class="nab-instructor__role">Founder &amp; Lead Instructor</p><p class="nab-instructor__bio">Builder, educator, and AI product enthusiast. Helping founders ship real AI products.</p></div></div>
+</section>
+
+
+	
+<section id="pricing" class="wp-block-group nab-band has-global-padding is-layout-constrained wp-container-core-group-is-layout-40a8439e wp-block-group-is-layout-constrained">
+	
+	<div class="wp-block-group nab-band__head is-layout-flow wp-block-group-is-layout-flow">
+		
+		<p class="nab-kicker wp-block-paragraph">Pricing</p>
+		
+		
+		<h2 class="wp-block-heading">One price, everything included</h2>
+		
+		
+		<p class="nab-lede wp-block-paragraph">Pay in full or in three monthly payments, by card or bank transfer. Full refund within two weeks if it isn’t for you.</p>
+		
+	</div>
+	
+	<div class="nab-pricing"><article class="nab-price nab-price--featured"><p class="nab-price__name">Live cohort</p><p class="nab-price__when">Next cohort dates announced soon</p><p class="nab-price__amount">$3,000</p><p class="nab-price__plan">or 3 monthly payments of $1,000</p><a class="nab-btn nab-btn--light" href="https://nextaibuilder.com/courses/build-production-ready-ai-agents-live/">Join the live cohort</a><ul><li>10 live sessions, 3 hours each</li><li>Recordings of every session within 24 hours</li><li>Direct instructor access and live Q&amp;A</li><li>AI-checked tool setup steps</li><li>Certificate of completion</li></ul></article><article class="nab-price"><p class="nab-price__name">Self-paced</p><p class="nab-price__when">Start today, learn at your own pace</p><p class="nab-price__amount">$200</p><p class="nab-price__plan">or 3 monthly payments of $67</p><a class="nab-btn" href="https://nextaibuilder.com/courses/build-production-ready-ai-agents-recorded/">Start self-paced</a><ul><li>10 recorded lessons</li><li>Lifetime access, including curriculum updates</li><li>AI-checked tool setup steps</li><li>Certificate of completion</li></ul></article></div>
+	<div class="nab-guarantee"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="m8.5 12 2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg><p><b>Try it for two weeks.</b> If the program isn’t right for you, ask within two weeks of the start date for a full refund. No questions asked. <a href="https://nextaibuilder.com/refund-policy/">Refund policy</a></p></div>
+</section>
+
+
+	
+<section class="wp-block-group nab-band nab-faq has-global-padding is-layout-constrained wp-container-core-group-is-layout-4334fd02 wp-block-group-is-layout-constrained">
+	
+	<div class="wp-block-columns nab-faq__grid is-layout-flex wp-container-core-columns-is-layout-89c98654 wp-block-columns-is-layout-flex">
+		
+		<div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow" style="flex-basis:34%">
+			
+			<p class="nab-kicker wp-block-paragraph">FAQ</p>
+			
+			
+			<h2 class="wp-block-heading">Questions before you join</h2>
+			
+		</div>
+		
+		
+		<div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow">
+						
+			<details class="wp-block-details is-layout-flow wp-block-details-is-layout-flow"><summary>What is the difference between recorded and live cohorts?</summary>
+				
+				<p class="wp-block-paragraph">Recorded courses are self-paced: watch the video lessons any time and rewatch as often as you like. Live cohorts run on a fixed schedule with real-time instructor sessions, Q&amp;A and peer collaboration. Both follow the same curriculum.</p>
+				
+			</details>
+			
+						
+			<details class="wp-block-details is-layout-flow wp-block-details-is-layout-flow"><summary>Can I pay in installments?</summary>
+				
+				<p class="wp-block-paragraph">Yes. Every course offers a 3-installment plan at no extra cost. The first payment is taken at checkout and the other two 30 and 60 days later.</p>
+				
+			</details>
+			
+						
+			<details class="wp-block-details is-layout-flow wp-block-details-is-layout-flow"><summary>Can I pay by bank transfer?</summary>
+				
+				<p class="wp-block-paragraph">Yes. Choose bank transfer at checkout and upload your payment receipt. We confirm it and activate your enrollment, usually within one business day.</p>
+				
+			</details>
+			
+						
+			<details class="wp-block-details is-layout-flow wp-block-details-is-layout-flow"><summary>Do I get lifetime access to course materials?</summary>
+				
+				<p class="wp-block-paragraph">Yes. Once enrolled you keep access to all course materials, including updates to the curriculum.</p>
+				
+			</details>
+			
+						
+			<details class="wp-block-details is-layout-flow wp-block-details-is-layout-flow"><summary>What if I miss a live session?</summary>
+				
+				<p class="wp-block-paragraph">Every live session is recorded and posted to your student dashboard within 24 hours.</p>
+				
+			</details>
+			
+						
+			<details class="wp-block-details is-layout-flow wp-block-details-is-layout-flow"><summary>What tools do I need to get started?</summary>
+				
+				<p class="wp-block-paragraph">A computer and an internet connection. The guided setup steps walk you through installing everything else, and our AI checks each step from a screenshot.</p>
+				
+			</details>
+			
+						
+			<details class="wp-block-details is-layout-flow wp-block-details-is-layout-flow"><summary>Is there a refund policy?</summary>
+				
+				<p class="wp-block-paragraph">Yes. You get a full refund within 2 weeks of the cohort start date, no questions asked. See the refund policy page for details.</p>
+				
+			</details>
+			
+					</div>
+		
+	</div>
+	
+</section>
+
+
+	
+<section class="wp-block-group nab-cta has-global-padding is-layout-constrained wp-container-core-group-is-layout-4334fd02 wp-block-group-is-layout-constrained">
+	
+	<div class="wp-block-group nab-cta__inner is-layout-flow wp-block-group-is-layout-flow">
+		
+		<h2 class="wp-block-heading nab-cta__title">Start building your AI product</h2>
+		
+		
+		<p class="nab-cta__text wp-block-paragraph">Five weeks from now you could have a working AI product with real users. Join the next live cohort, or start the self-paced course today.</p>
+		
+		<p class="nab-cta__actions"><a class="nab-btn nab-btn--light" href="https://nextaibuilder.com/courses/build-production-ready-ai-agents-live/">Join the live cohort</a><a class="nab-btn nab-btn--clear" href="https://nextaibuilder.com/courses/build-production-ready-ai-agents-recorded/">Start self-paced today</a></p>
+	</div>
+	
+</section>
+
+
+	<div class="nab-sticky" data-nab-sticky="" hidden=""><div class="nab-sticky__inner"><p><span class="nab-sticky__bit">Build Production-Ready Products Using AI Agents</span><span class="nab-sticky__sep" aria-hidden="true"> · </span><span class="nab-sticky__bit">$3,000 or 3 × $1,000</span></p><a class="nab-btn" href="https://nextaibuilder.com/courses/build-production-ready-ai-agents-live/"><span class="nab-sticky__long">Reserve your seat</span><span class="nab-sticky__short">Reserve</span></a><button type="button" class="nab-sticky__close" aria-label="Hide">×</button></div></div><script>(function(){var b=document.querySelector("[data-nab-sticky]");if(!b||!("IntersectionObserver"in window))return;try{if(sessionStorage.getItem("nabStickyOff"))return;}catch(e){}var hide=document.querySelectorAll(".nab-hero,.nab-pricing,.nab-cta,.nab-footer"),seen=new Set();var io=new IntersectionObserver(function(es){es.forEach(function(e){e.isIntersecting?seen.add(e.target):seen.delete(e.target)});b.hidden=seen.size>0;},{threshold:0});hide.forEach(function(el){io.observe(el)});b.querySelector(".nab-sticky__close").addEventListener("click",function(){b.remove();io.disconnect();try{sessionStorage.setItem("nabStickyOff","1")}catch(e){}});})();</script>
+</main>
+
+<footer class="wp-block-template-part">
+<div class="wp-block-group nab-footer has-navy-color has-canvas-background-color has-text-color has-background has-link-color wp-elements-1 has-global-padding is-layout-constrained wp-container-core-group-is-layout-276a2242 wp-block-group-is-layout-constrained" style="padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--40)">
+	
+	<div class="wp-block-columns is-layout-flex wp-container-core-columns-is-layout-fa4ae643 wp-block-columns-is-layout-flex">
+		
+		<div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow" style="flex-basis:40%">
+			
+			<p class="wp-block-paragraph" style="font-size:clamp(0.875rem, 0.875rem + ((1vw - 0.2rem) * 0.682), 1.25rem);font-weight:800">nextaibuilder</p>
+			
+			
+			<p class="nab-footer__about has-sm-font-size wp-block-paragraph">Live and recorded cohorts that teach you to ship production AI products with the Anthropic Claude API, from prompts to pipelines.</p>
+			
+		</div>
+		
+
+		
+		<div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow">
+			
+			<h2 class="wp-block-heading nab-footer__heading">Learn</h2>
+			
+			
+			<ul class="wp-block-list nab-footer__links">
+				<li><a href="/courses/">All courses</a></li>
+				<li><a href="/courses/?format=live">Live cohorts</a></li>
+				<li><a href="/courses/?format=recorded">Recorded courses</a></li>
+				<li><a href="/sign-in/">Student sign in</a></li>
+			</ul>
+			
+		</div>
+		
+
+		
+		<div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow">
+			
+			<h2 class="wp-block-heading nab-footer__heading">Free resources</h2>
+			
+			
+			<ul class="wp-block-list nab-footer__links">
+				<li><a href="/guides/">Guides</a></li>
+				<li><a href="/resources/">Resources</a></li>
+			</ul>
+			
+		</div>
+		
+
+		
+		<div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow">
+			
+			<h2 class="wp-block-heading nab-footer__heading">Company</h2>
+			
+			
+			<ul class="wp-block-list nab-footer__links">
+				<li><a href="/about/">About</a></li>
+				<li><a href="/refund-policy/">Refund policy</a></li>
+			</ul>
+			
+		</div>
+		
+	</div>
+	
+
+	
+	<hr class="wp-block-separator has-text-color has-alpha-channel-opacity has-background is-style-wide" style="margin-top:var(--wp--preset--spacing--50);margin-bottom:var(--wp--preset--spacing--30);background-color:#e3e8ee;color:#e3e8ee">
+	
+
+	
+	<p class="nab-footer__legal has-xs-font-size wp-block-paragraph">© 2026 nextaibuilder. All rights reserved.</p>
+	
+</div>
+
+</footer>
+</div>
+<script type="speculationrules">
+{"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/wp-*.php","/wp-admin/*","/wp-content/uploads/*","/wp-content/*","/wp-content/plugins/*","/wp-content/themes/nextaibuilder/*","/*\\?(.+)"]}},{"not":{"selector_matches":"a[rel~=\"nofollow\"]"}},{"not":{"selector_matches":".no-prefetch, .no-prefetch a"}}]},"eagerness":"conservative"}]}
+</script>
+<script data-wp-router-options="{&quot;loadOnClientNavigation&quot;:true}" fetchpriority="low" id="@wordpress/block-library/navigation/view-js-module" src="https://nextaibuilder.com/wp-includes/js/dist/script-modules/block-library/navigation/view.min.js?ver=1bf28ded04f9f188bdcb" type="module"></script>
+	<script>
+		(function () {
+			var c = document.body.className;
+			c = c.replace(/woocommerce-no-js/, 'woocommerce-js');
+			document.body.className = c;
+		})();
+	</script>
+	<link rel="stylesheet" id="wc-blocks-style-css" href="https://nextaibuilder.com/wp-content/plugins/woocommerce/assets/client/blocks/wc-blocks.css?ver=wc-11.2.1" media="all">
+<script id="wp-hooks-js" src="https://nextaibuilder.com/wp-includes/js/dist/hooks.min.js?ver=f0f188028580e8dc1255"></script>
+<script id="wp-i18n-js" src="https://nextaibuilder.com/wp-includes/js/dist/i18n.min.js?ver=1dfe7db3940c23ea9216"></script>
+<script id="wp-i18n-js-after">
+wp.i18n.setLocaleData( { 'text direction\u0004ltr': [ 'ltr' ] } );
+//# sourceURL=wp-i18n-js-after
+</script>
+<script id="react-js" src="https://nextaibuilder.com/wp-includes/js/dist/vendor/react.min.js?ver=18.3.1.1"></script>
+<script id="react-dom-js" src="https://nextaibuilder.com/wp-includes/js/dist/vendor/react-dom.min.js?ver=18.3.1.1"></script>
+<script id="wp-escape-html-js" src="https://nextaibuilder.com/wp-includes/js/dist/escape-html.min.js?ver=87ebe53e97bba59805a5"></script>
+<script id="wp-element-js" src="https://nextaibuilder.com/wp-includes/js/dist/element.min.js?ver=4a4370b2b349066fd440"></script>
+<script id="tutor-script-js-extra">
+var _tutorobject = {"ajaxurl":"https://nextaibuilder.com/wp-admin/admin-ajax.php","home_url":"https://nextaibuilder.com","site_url":"https://nextaibuilder.com","site_title":"nextaibuilder","base_path":"/","tutor_url":"https://nextaibuilder.com/wp-content/plugins/tutor/","tutor_pro_url":null,"nonce_key":"_tutor_nonce","_tutor_nonce":"72e269c826","loading_icon_url":"https://nextaibuilder.com/wp-admin/images/wpspin_light.gif","placeholder_img_src":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/placeholder.svg","enable_lesson_classic_editor":"","tutor_frontend_dashboard_url":"https://nextaibuilder.com/dashboard/","is_dashboard_page":"","wp_date_format":"MMMM d, yyyy","start_of_week":"1","is_admin":"","is_admin_bar_showing":"","addons_data":[{"name":"Course Bundle","description":"Group multiple courses to sell together.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/course-bundle/thumbnail.svg","base_name":"course-bundle","is_enabled":0},{"name":"Subscription","description":"Manage subscription","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/subscription/thumbnail.png","base_name":"subscription","is_enabled":0},{"name":"Content Bank","description":"Create content once and use it across multiple courses.","is_new":true,"url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/content-bank/thumbnail.png","base_name":"content-bank","is_enabled":0},{"name":"Social Login","description":"Let users register & login through social networks.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/social-login/thumbnail.svg","base_name":"social-login","is_enabled":0},{"name":"Content Drip","description":"Unlock lessons by schedule or when students meet a specific condition.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/content-drip/thumbnail.png","base_name":"content-drip","is_enabled":0},{"name":"Tutor Multi Instructors","description":"Collaborate and add multiple instructors to a course.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-multi-instructors/thumbnail.png","base_name":"tutor-multi-instructors","is_enabled":0},{"name":"Tutor Assignments","description":"Assess student learning with assignments.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-assignments/thumbnail.png","base_name":"tutor-assignments","is_enabled":0},{"name":"Tutor Course Preview","description":"Offer free previews of specific lessons before enrollment.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-course-preview/thumbnail.png","base_name":"tutor-course-preview","is_enabled":0},{"name":"Tutor Course Attachments","description":"Add unlimited attachments/ private files to any Tutor course","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-course-attachments/thumbnail.png","base_name":"tutor-course-attachments","is_enabled":0},{"name":"Tutor Google Meet Integration","description":"Host live classes with Google Meet, directly from your lesson page.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/google-meet/thumbnail.png","base_name":"google-meet","is_enabled":0},{"name":"Tutor Report","description":"Check your course performance through Tutor Report stats.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-report/thumbnail.png","base_name":"tutor-report","is_enabled":0},{"name":"Email","description":"Send automated and customized emails for various Tutor events.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-email/thumbnail.png","base_name":"tutor-email","is_enabled":0},{"name":"Calendar","description":"Enable to let students view all your course events in one place.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/calendar/thumbnail.png","base_name":"calendar","is_enabled":0},{"name":"Notifications","description":"Keep students and instructors notified of course events on their dashboard.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-notifications/thumbnail.png","base_name":"tutor-notifications","is_enabled":0},{"name":"Google Classroom Integration","description":"Enable to integrate Tutor LMS with Google Classroom.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/google-classroom/thumbnail.png","base_name":"google-classroom","is_enabled":0},{"name":"Tutor Zoom Integration","description":"Connect Tutor LMS with Zoom to host live online classes.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-zoom/thumbnail.png","base_name":"tutor-zoom","is_enabled":0},{"name":"Quiz Export/Import","description":"Save time by exporting/importing quiz data with easy options.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/quiz-import-export/thumbnail.png","base_name":"quiz-import-export","is_enabled":0},{"name":"Enrollment","description":"Enable to manually enroll students in your courses.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/enrollments/thumbnail.png","base_name":"enrollments","is_enabled":0},{"name":"Tutor Certificate","description":"Enable to award certificates upon course completion.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-certificate/thumbnail.png","base_name":"tutor-certificate","is_enabled":0},{"name":"Gradebook","description":"Track student progress with a centralized gradebook.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/gradebook/thumbnail.png","base_name":"gradebook","is_enabled":0},{"name":"Tutor Prerequisites","description":"Set course prerequisites to guide learning paths effectively.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-prerequisites/thumbnail.png","base_name":"tutor-prerequisites","is_enabled":0},{"name":"BuddyPress","description":"Boost engagement with social features through BuddyPress for Tutor LMS.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/buddypress/thumbnail.png","base_name":"buddypress","is_enabled":0},{"name":"WooCommerce Subscriptions","description":"Capture Residual Revenue with Recurring Payments.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/wc-subscriptions/thumbnail.png","base_name":"wc-subscriptions","is_enabled":0},{"name":"Paid Memberships Pro","description":"Boost revenue by selling course memberships.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/pmpro/thumbnail.png","base_name":"pmpro","is_enabled":0},{"name":"Restrict Content Pro","description":"Enable to manage content access through Restrict Content Pro. ","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/restrict-content-pro/thumbnail.png","base_name":"restrict-content-pro","is_enabled":0},{"name":"Weglot","description":"Translate & manage multilingual courses for global reach.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-weglot/thumbnail.png","base_name":"tutor-weglot","is_enabled":0},{"name":"WPML","description":"Create multilingual courses, lessons, dashboard and more.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-wpml/thumbnail.png","base_name":"tutor-wpml","is_enabled":0},{"name":"H5P","description":"Integrate H5P to add interactivity and engagement to your courses.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/h5p/thumbnail.png","base_name":"h5p","is_enabled":0}],"current_user":[],"content_change_event":"tutor_content_changed_event","is_tutor_course_edit":"","current_page":"","quiz_answer_display_time":"0","is_ssl":"1","course_list_page_url":"https://nextaibuilder.com/wp-admin/admin.php?page=tutor","course_post_type":"courses","tutor_currency":{"symbol":"$","currency":"USD","position":"left","thousand_separator":",","decimal_separator":".","no_of_decimal":"2"},"local":"en_US","settings":{"monetize_by":"wc"},"max_upload_size":"268435456","monetize_by":"wc","kids_icons_registry":[],"is_kids_mode":"","user_preferences":[],"is_legacy_learning_mode":"","course_slug":"courses","lesson_slug":"lessons","quiz_slug":"quizzes","is_tour_completed":"","legal_consent_display_places":["student_registration","login","checkout"]};
+//# sourceURL=tutor-script-js-extra
+</script>
+<script id="tutor-script-js" src="https://nextaibuilder.com/wp-content/plugins/tutor/assets/js/tutor.js?ver=4.1.1"></script>
+<script id="jquery-ui-core-js-before">
+jQuery.uiBackCompat = true;
+//# sourceURL=jquery-ui-core-js-before
+</script>
+<script id="jquery-ui-core-js" src="https://nextaibuilder.com/wp-includes/js/jquery/ui/core.min.js?ver=1.14.2"></script>
+<script id="jquery-ui-mouse-js" src="https://nextaibuilder.com/wp-includes/js/jquery/ui/mouse.min.js?ver=1.14.2"></script>
+<script id="jquery-ui-sortable-js" src="https://nextaibuilder.com/wp-includes/js/jquery/ui/sortable.min.js?ver=1.14.2"></script>
+<script id="jquery-touch-punch-js" src="https://nextaibuilder.com/wp-includes/js/jquery/jquery.ui.touch-punch.js?ver=0.2.2"></script>
+<script id="tutor-social-share-js" src="https://nextaibuilder.com/wp-content/plugins/tutor/assets/lib/SocialShare/SocialShare.min.js?ver=4.1.1"></script>
+<script id="moment-js" src="https://nextaibuilder.com/wp-includes/js/dist/vendor/moment.min.js?ver=2.30.1"></script>
+<script id="moment-js-after">
+moment.updateLocale( 'en_US', {"months":["January","February","March","April","May","June","July","August","September","October","November","December"],"monthsShort":["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],"weekdays":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],"weekdaysShort":["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],"week":{"dow":1},"longDateFormat":{"LT":"g:i a","LTS":null,"L":null,"LL":"F j, Y","LLL":"F j, Y g:i a","LLLL":null}} );
+//# sourceURL=moment-js-after
+</script>
+<script id="wp-deprecated-js" src="https://nextaibuilder.com/wp-includes/js/dist/deprecated.min.js?ver=fe587bac92b7d0ef760e"></script>
+<script id="wp-date-js" src="https://nextaibuilder.com/wp-includes/js/dist/date.min.js?ver=8173fc0fc12b7bb7eaf0"></script>
+<script id="wp-date-js-after">
+wp.date.setSettings( {"l10n":{"locale":"en_US","months":["January","February","March","April","May","June","July","August","September","October","November","December"],"monthsShort":["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],"weekdays":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],"weekdaysShort":["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],"meridiem":{"am":"am","pm":"pm","AM":"AM","PM":"PM"},"relative":{"future":"%s from now","past":"%s ago","s":"a second","ss":"%d seconds","m":"a minute","mm":"%d minutes","h":"an hour","hh":"%d hours","d":"a day","dd":"%d days","M":"a month","MM":"%d months","y":"a year","yy":"%d years"},"startOfWeek":1},"formats":{"time":"g:i a","date":"F j, Y","datetime":"F j, Y g:i a","datetimeAbbreviated":"M j, Y g:i a"},"timezone":{"offset":0,"offsetFormatted":"0","string":"UTC","abbr":"UTC"}} );
+//# sourceURL=wp-date-js-after
+</script>
+<script id="tutor-frontend-js-extra">
+var _tutorobject = {"ajaxurl":"https://nextaibuilder.com/wp-admin/admin-ajax.php","home_url":"https://nextaibuilder.com","site_url":"https://nextaibuilder.com","site_title":"nextaibuilder","base_path":"/","tutor_url":"https://nextaibuilder.com/wp-content/plugins/tutor/","tutor_pro_url":null,"nonce_key":"_tutor_nonce","_tutor_nonce":"72e269c826","loading_icon_url":"https://nextaibuilder.com/wp-admin/images/wpspin_light.gif","placeholder_img_src":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/placeholder.svg","enable_lesson_classic_editor":"","tutor_frontend_dashboard_url":"https://nextaibuilder.com/dashboard/","is_dashboard_page":"","wp_date_format":"MMMM d, yyyy","start_of_week":"1","is_admin":"","is_admin_bar_showing":"","addons_data":[{"name":"Course Bundle","description":"Group multiple courses to sell together.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/course-bundle/thumbnail.svg","base_name":"course-bundle","is_enabled":0},{"name":"Subscription","description":"Manage subscription","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/subscription/thumbnail.png","base_name":"subscription","is_enabled":0},{"name":"Content Bank","description":"Create content once and use it across multiple courses.","is_new":true,"url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/content-bank/thumbnail.png","base_name":"content-bank","is_enabled":0},{"name":"Social Login","description":"Let users register & login through social networks.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/social-login/thumbnail.svg","base_name":"social-login","is_enabled":0},{"name":"Content Drip","description":"Unlock lessons by schedule or when students meet a specific condition.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/content-drip/thumbnail.png","base_name":"content-drip","is_enabled":0},{"name":"Tutor Multi Instructors","description":"Collaborate and add multiple instructors to a course.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-multi-instructors/thumbnail.png","base_name":"tutor-multi-instructors","is_enabled":0},{"name":"Tutor Assignments","description":"Assess student learning with assignments.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-assignments/thumbnail.png","base_name":"tutor-assignments","is_enabled":0},{"name":"Tutor Course Preview","description":"Offer free previews of specific lessons before enrollment.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-course-preview/thumbnail.png","base_name":"tutor-course-preview","is_enabled":0},{"name":"Tutor Course Attachments","description":"Add unlimited attachments/ private files to any Tutor course","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-course-attachments/thumbnail.png","base_name":"tutor-course-attachments","is_enabled":0},{"name":"Tutor Google Meet Integration","description":"Host live classes with Google Meet, directly from your lesson page.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/google-meet/thumbnail.png","base_name":"google-meet","is_enabled":0},{"name":"Tutor Report","description":"Check your course performance through Tutor Report stats.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-report/thumbnail.png","base_name":"tutor-report","is_enabled":0},{"name":"Email","description":"Send automated and customized emails for various Tutor events.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-email/thumbnail.png","base_name":"tutor-email","is_enabled":0},{"name":"Calendar","description":"Enable to let students view all your course events in one place.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/calendar/thumbnail.png","base_name":"calendar","is_enabled":0},{"name":"Notifications","description":"Keep students and instructors notified of course events on their dashboard.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-notifications/thumbnail.png","base_name":"tutor-notifications","is_enabled":0},{"name":"Google Classroom Integration","description":"Enable to integrate Tutor LMS with Google Classroom.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/google-classroom/thumbnail.png","base_name":"google-classroom","is_enabled":0},{"name":"Tutor Zoom Integration","description":"Connect Tutor LMS with Zoom to host live online classes.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-zoom/thumbnail.png","base_name":"tutor-zoom","is_enabled":0},{"name":"Quiz Export/Import","description":"Save time by exporting/importing quiz data with easy options.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/quiz-import-export/thumbnail.png","base_name":"quiz-import-export","is_enabled":0},{"name":"Enrollment","description":"Enable to manually enroll students in your courses.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/enrollments/thumbnail.png","base_name":"enrollments","is_enabled":0},{"name":"Tutor Certificate","description":"Enable to award certificates upon course completion.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-certificate/thumbnail.png","base_name":"tutor-certificate","is_enabled":0},{"name":"Gradebook","description":"Track student progress with a centralized gradebook.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/gradebook/thumbnail.png","base_name":"gradebook","is_enabled":0},{"name":"Tutor Prerequisites","description":"Set course prerequisites to guide learning paths effectively.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-prerequisites/thumbnail.png","base_name":"tutor-prerequisites","is_enabled":0},{"name":"BuddyPress","description":"Boost engagement with social features through BuddyPress for Tutor LMS.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/buddypress/thumbnail.png","base_name":"buddypress","is_enabled":0},{"name":"WooCommerce Subscriptions","description":"Capture Residual Revenue with Recurring Payments.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/wc-subscriptions/thumbnail.png","base_name":"wc-subscriptions","is_enabled":0},{"name":"Paid Memberships Pro","description":"Boost revenue by selling course memberships.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/pmpro/thumbnail.png","base_name":"pmpro","is_enabled":0},{"name":"Restrict Content Pro","description":"Enable to manage content access through Restrict Content Pro. ","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/restrict-content-pro/thumbnail.png","base_name":"restrict-content-pro","is_enabled":0},{"name":"Weglot","description":"Translate & manage multilingual courses for global reach.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-weglot/thumbnail.png","base_name":"tutor-weglot","is_enabled":0},{"name":"WPML","description":"Create multilingual courses, lessons, dashboard and more.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/tutor-wpml/thumbnail.png","base_name":"tutor-wpml","is_enabled":0},{"name":"H5P","description":"Integrate H5P to add interactivity and engagement to your courses.","url":"https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/addons/h5p/thumbnail.png","base_name":"h5p","is_enabled":0}],"current_user":[],"content_change_event":"tutor_content_changed_event","is_tutor_course_edit":"","current_page":"","quiz_answer_display_time":"0","is_ssl":"1","course_list_page_url":"https://nextaibuilder.com/wp-admin/admin.php?page=tutor","course_post_type":"courses","tutor_currency":{"symbol":"$","currency":"USD","position":"left","thousand_separator":",","decimal_separator":".","no_of_decimal":"2"},"local":"en_US","settings":{"monetize_by":"wc"},"max_upload_size":"268435456","monetize_by":"wc","kids_icons_registry":[],"is_kids_mode":"","user_preferences":[],"is_legacy_learning_mode":"","course_slug":"courses","lesson_slug":"lessons","quiz_slug":"quizzes","is_tour_completed":"","legal_consent_display_places":["student_registration","login","checkout"]};
+//# sourceURL=tutor-frontend-js-extra
+</script>
+<script id="tutor-frontend-js" src="https://nextaibuilder.com/wp-content/plugins/tutor/assets/js/tutor-front.js?ver=4.1.1"></script>
+<script data-wp-strategy="defer" defer="" id="nextaibuilder-ui-js" src="https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/js/ui.js?ver=1791725366"></script>
+<script id="sourcebuster-js-js" src="https://nextaibuilder.com/wp-content/plugins/woocommerce/assets/js/sourcebuster/sourcebuster.min.js?ver=11.2.1"></script>
+<script id="wc-order-attribution-js-extra">
+var wc_order_attribution = {"params":{"lifetime":1.0e-5,"session":30,"base64":false,"ajaxurl":"https://nextaibuilder.com/wp-admin/admin-ajax.php","prefix":"wc_order_attribution_","allowTracking":true},"fields":{"source_type":"current.typ","referrer":"current_add.rf","utm_campaign":"current.cmp","utm_source":"current.src","utm_medium":"current.mdm","utm_content":"current.cnt","utm_id":"current.id","utm_term":"current.trm","utm_source_platform":"current.plt","utm_creative_format":"current.fmt","utm_marketing_tactic":"current.tct","session_entry":"current_add.ep","session_start_time":"current_add.fd","session_pages":"session.pgs","session_count":"udata.vst","user_agent":"udata.uag"}};
+//# sourceURL=wc-order-attribution-js-extra
+</script>
+<script id="wc-order-attribution-js" src="https://nextaibuilder.com/wp-content/plugins/woocommerce/assets/js/frontend/order-attribution.min.js?ver=11.2.1"></script>
+<script id="wp-emoji-settings" type="application/json">
+{"baseUrl":"https://s.w.org/images/core/emoji/17.0.2/72x72/","ext":".png","svgUrl":"https://s.w.org/images/core/emoji/17.0.2/svg/","svgExt":".svg","source":{"concatemoji":"https://nextaibuilder.com/wp-includes/js/wp-emoji-release.min.js?ver=7.1.3"}}
+</script>
+<script type="module">
+/*! This file is auto-generated */
+var e="script#wp-emoji-settings",t=document.querySelector(e);if(!(t instanceof HTMLScriptElement))throw new Error("Element missing: "+e);const r=JSON.parse(t.text),s=(window._wpemojiSettings=r,"wpEmojiSettingsSupports"),o=["flag","emoji"];function i(e){try{var t={supportTests:e,timestamp:(new Date).valueOf()};sessionStorage.setItem(s,JSON.stringify(t))}catch(e){}}function c(e,t,n){e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(t,0,0);t=new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data);e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(n,0,0);const r=new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data);return t.every((e,t)=>e===r[t])}function p(e,t){e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(t,0,0);var n=e.getImageData(16,16,1,1);for(let e=0;e<n.data.length;e++)if(0!==n.data[e])return!1;return!0}function u(e,t,n,r){switch(t){case"flag":return n(e,"\ud83c\udff3\ufe0f\u200d\u26a7\ufe0f","\ud83c\udff3\ufe0f\u200b\u26a7\ufe0f")?!1:!n(e,"\ud83c\udde8\ud83c\uddf6","\ud83c\udde8\u200b\ud83c\uddf6")&&!n(e,"\ud83c\udff4\udb40\udc67\udb40\udc62\udb40\udc65\udb40\udc6e\udb40\udc67\udb40\udc7f","\ud83c\udff4\u200b\udb40\udc67\u200b\udb40\udc62\u200b\udb40\udc65\u200b\udb40\udc6e\u200b\udb40\udc67\u200b\udb40\udc7f");case"emoji":return!r(e,"\ud83e\u1fac8")}return!1}function f(e,t,n,r){let a;const s=(a="undefined"!=typeof WorkerGlobalScope&&self instanceof WorkerGlobalScope?new OffscreenCanvas(300,150):document.createElement("canvas")).getContext("2d",{willReadFrequently:!0}),o=(s.textBaseline="top",s.font="600 32px Arial",{});return e.forEach(e=>{o[e]=t(s,e,n,r)}),o}function a(e){var t=document.createElement("script");t.src=e,t.defer=!0,document.head.appendChild(t)}r.supports={everything:!0,everythingExceptFlag:!0},new Promise(t=>{let n=function(){try{var e=JSON.parse(sessionStorage.getItem(s));if("object"==typeof e&&"number"==typeof e.timestamp&&(new Date).valueOf()<e.timestamp+604800&&"object"==typeof e.supportTests)return e.supportTests}catch(e){}return null}();if(!n){if("undefined"!=typeof Worker&&"undefined"!=typeof OffscreenCanvas&&"undefined"!=typeof URL&&URL.createObjectURL&&"undefined"!=typeof Blob)try{var e="postMessage("+f.toString()+"("+[JSON.stringify(o),u.toString(),c.toString(),p.toString()].join(",")+"));",r=new Blob([e],{type:"text/javascript"});const a=new Worker(URL.createObjectURL(r),{name:"wpTestEmojiSupports"});return void(a.onmessage=e=>{i(n=e.data),a.terminate(),t(n)})}catch(e){}i(n=f(o,u,c,p))}t(n)}).then(e=>{for(const n in e)r.supports[n]=e[n],r.supports.everything=r.supports.everything&&r.supports[n],"flag"!==n&&(r.supports.everythingExceptFlag=r.supports.everythingExceptFlag&&r.supports[n]);var t;r.supports.everythingExceptFlag=r.supports.everythingExceptFlag&&!r.supports.flag,r.supports.everything||((t=r.source||{}).concatemoji?a(t.concatemoji):t.wpemoji&&t.twemoji&&(a(t.twemoji),a(t.wpemoji)))});
+//# sourceURL=https://nextaibuilder.com/wp-includes/js/wp-emoji-loader.min.js
+</script>
+
+
+
+
+<div class="widget_shopping_cart_live_region screen-reader-text" role="status"></div></body></html>

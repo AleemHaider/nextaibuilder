@@ -1,0 +1,1334 @@
+{
+ "sitemap_urls": [
+  "https://nextaibuilder.com/guides/ship-production-ai-product-claude-api/",
+  "https://nextaibuilder.com/resources/claude-api-prompt-debugging-checklist/",
+  "https://nextaibuilder.com/",
+  "https://nextaibuilder.com/about/",
+  "https://nextaibuilder.com/refund-policy/",
+  "https://nextaibuilder.com/apply/",
+  "https://nextaibuilder.com/courses/build-production-ready-ai-agents-live/",
+  "https://nextaibuilder.com/courses/build-production-ready-ai-agents-recorded/",
+  "https://nextaibuilder.com/guides/",
+  "https://nextaibuilder.com/resources/",
+  "https://nextaibuilder.com/courses/"
+ ],
+ "pages": {
+  "https://nextaibuilder.com/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/",
+   "title": "Claude AI Course: Build & Ship AI Products \u2013 nextaibuilder",
+   "desc": "Live and recorded cohorts that teach you to ship production AI products with the Anthropic Claude API, from prompts to pipelines.",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/",
+   "og_title": "Claude AI Course: Build & Ship AI Products \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Ship a real AI product in five weeks"
+   ],
+   "h2": [
+    "Built so you actually finish",
+    "Real products, shipped in five weeks",
+    "Five weeks from idea to production",
+    "What builders say after shipping",
+    "Aleem Haider",
+    "One price, everything included",
+    "Questions before you join",
+    "Start building your AI product",
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/gregg-laroche.webp",
+     "alt": "",
+     "w": "36",
+     "h": "36",
+     "loading": null
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/gabor-mayer.webp",
+     "alt": "",
+     "w": "36",
+     "h": "36",
+     "loading": null
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/orsolya-meckl.webp",
+     "alt": "",
+     "w": "36",
+     "h": "36",
+     "loading": null
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/giuseppe-spano.webp",
+     "alt": "",
+     "w": "36",
+     "h": "36",
+     "loading": null
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/logos/preveil.png",
+     "alt": "",
+     "w": "28",
+     "h": "28",
+     "loading": null
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/gregg-laroche.webp",
+     "alt": "",
+     "w": "56",
+     "h": "56",
+     "loading": "lazy"
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/gabor-mayer.webp",
+     "alt": "",
+     "w": "44",
+     "h": "44",
+     "loading": "lazy"
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/orsolya-meckl.webp",
+     "alt": "",
+     "w": "44",
+     "h": "44",
+     "loading": "lazy"
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/giuseppe-spano.webp",
+     "alt": "",
+     "w": "44",
+     "h": "44",
+     "loading": "lazy"
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/danny-chevilly.webp",
+     "alt": "",
+     "w": "44",
+     "h": "44",
+     "loading": "lazy"
+    }
+   ],
+   "jsonld_types": [
+    [
+     "EducationalOrganization"
+    ],
+    [
+     "WebSite",
+     "FAQPage",
+     "Person"
+    ]
+   ],
+   "jsonld": [
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "EducationalOrganization",
+       "@id": "https://nextaibuilder.com/#organization",
+       "name": "nextaibuilder",
+       "url": "https://nextaibuilder.com/",
+       "logo": {
+        "@type": "ImageObject",
+        "url": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/icon-512.png",
+        "width": 512,
+        "height": 512
+       },
+       "description": "Live and recorded cohorts that teach you to ship production AI products with the Anthropic Claude API, from prompts to pipelines.",
+       "image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+       "email": "aleem@nextaibuilder.com",
+       "founder": {
+        "@id": "https://nextaibuilder.com/about/#instructor"
+       },
+       "knowsAbout": [
+        "Claude API",
+        "Claude Code",
+        "AI agents",
+        "Model Context Protocol",
+        "Prompt engineering",
+        "LLM evaluation",
+        "AI product development"
+       ]
+      }
+     ]
+    },
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "WebSite",
+       "@id": "https://nextaibuilder.com/#website",
+       "url": "https://nextaibuilder.com/",
+       "name": "nextaibuilder",
+       "publisher": {
+        "@id": "https://nextaibuilder.com/#organization"
+       },
+       "inLanguage": "en"
+      },
+      {
+       "@type": "FAQPage",
+       "mainEntity": [
+        {
+         "@type": "Question",
+         "name": "What is the difference between recorded and live cohorts?",
+         "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Recorded courses are self-paced: watch the video lessons any time and rewatch as often as you like. Live cohorts run on a fixed schedule with real-time instructor sessions, Q&A and peer collaboration. Both follow the same curriculum."
+         }
+        },
+        {
+         "@type": "Question",
+         "name": "Can I pay in installments?",
+         "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Every course offers a 3-installment plan at no extra cost. The first payment is taken at checkout and the other two 30 and 60 days later."
+         }
+        },
+        {
+         "@type": "Question",
+         "name": "Can I pay by bank transfer?",
+         "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Choose bank transfer at checkout and upload your payment receipt. We confirm it and activate your enrollment, usually within one business day."
+         }
+        },
+        {
+         "@type": "Question",
+         "name": "Do I get lifetime access to course materials?",
+         "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Once enrolled you keep access to all course materials, including updates to the curriculum."
+         }
+        },
+        {
+         "@type": "Question",
+         "name": "What if I miss a live session?",
+         "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Every live session is recorded and posted to your student dashboard within 24 hours."
+         }
+        },
+        {
+         "@type": "Question",
+         "name": "What tools do I need to get started?",
+         "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A computer and an internet connection. The guided setup steps walk you through installing everything else, and our AI checks each step from a screenshot."
+         }
+        },
+        {
+         "@type": "Question",
+         "name": "Is there a refund policy?",
+         "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. You get a full refund within 2 weeks of the cohort start date, no questions asked. See the refund policy page for details."
+         }
+        }
+       ]
+      },
+      {
+       "@type": "Person",
+       "@id": "https://nextaibuilder.com/about/#instructor",
+       "name": "Aleem Haider",
+       "jobTitle": "Founder & Lead Instructor",
+       "url": "https://nextaibuilder.com/about/",
+       "worksFor": {
+        "@id": "https://nextaibuilder.com/#organization"
+       }
+      }
+     ]
+    }
+   ],
+   "words": 1229,
+   "xrobots": null,
+   "links": 26
+  },
+  "https://nextaibuilder.com/guides/ship-production-ai-product-claude-api/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/guides/ship-production-ai-product-claude-api/",
+   "title": "How to Ship a Production AI Product with the Claude API \u2013 nextaibuilder",
+   "desc": "A practical roadmap for going from a prompt in a playground to a real AI product in production \u2014 architecture, evals, cost control, and the mistakes that stall most teams.",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/guides/ship-production-ai-product-claude-api/",
+   "og_title": "How to Ship a Production AI Product with the Claude API \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "How to Ship a Production AI Product with the Claude API"
+   ],
+   "h2": [
+    "1. Start with the failure modes, not the happy path",
+    "2. Separate \u201cprompting\u201d from \u201cproduct logic\u201d",
+    "3. Build evals before you scale traffic",
+    "4. Design for partial failure, not just total failure",
+    "5. Control cost the same way you control latency",
+    "6. Ship behind a flag, watch real usage, then widen",
+    "Start building your AI product",
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [],
+   "jsonld_types": [
+    [
+     "Article"
+    ],
+    [
+     "BreadcrumbList"
+    ]
+   ],
+   "jsonld": [
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "Article",
+       "headline": "How to Ship a Production AI Product with the Claude API",
+       "description": "A practical roadmap for going from a prompt in a playground to a real AI product in production \u2014 architecture, evals, cost control, and the mistakes that stall most teams.",
+       "url": "https://nextaibuilder.com/guides/ship-production-ai-product-claude-api/",
+       "datePublished": "2026-10-11T13:15:57+00:00",
+       "dateModified": "2026-10-11T13:15:57+00:00",
+       "author": {
+        "@type": "Person",
+        "@id": "https://nextaibuilder.com/about/#instructor",
+        "name": "Aleem Haider",
+        "jobTitle": "Founder & Lead Instructor",
+        "url": "https://nextaibuilder.com/about/",
+        "worksFor": {
+         "@id": "https://nextaibuilder.com/#organization"
+        }
+       },
+       "publisher": {
+        "@id": "https://nextaibuilder.com/#organization",
+        "@type": "Organization",
+        "name": "nextaibuilder",
+        "logo": {
+         "@type": "ImageObject",
+         "url": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/icon-512.png"
+        }
+       },
+       "image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+       "mainEntityOfPage": "https://nextaibuilder.com/guides/ship-production-ai-product-claude-api/",
+       "inLanguage": "en"
+      }
+     ]
+    },
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "BreadcrumbList",
+       "itemListElement": [
+        {
+         "@type": "ListItem",
+         "position": 1,
+         "name": "Home",
+         "item": "https://nextaibuilder.com/"
+        },
+        {
+         "@type": "ListItem",
+         "position": 2,
+         "name": "Guides",
+         "item": "https://nextaibuilder.com/guides/"
+        },
+        {
+         "@type": "ListItem",
+         "position": 3,
+         "name": "How to Ship a Production AI Product with the Claude API",
+         "item": "https://nextaibuilder.com/guides/ship-production-ai-product-claude-api/"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "words": 707,
+   "xrobots": null,
+   "links": 20
+  },
+  "https://nextaibuilder.com/resources/claude-api-prompt-debugging-checklist/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/resources/claude-api-prompt-debugging-checklist/",
+   "title": "Claude API Prompt Debugging Checklist \u2013 nextaibuilder",
+   "desc": "A free, practical checklist for diagnosing why a Claude API prompt is producing wrong, inconsistent, or malformed output \u2014 the questions to ask before you touch the wording.",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/resources/claude-api-prompt-debugging-checklist/",
+   "og_title": "Claude API Prompt Debugging Checklist \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Claude API Prompt Debugging Checklist"
+   ],
+   "h2": [
+    "1. Is the output actually wrong, or unparsed?",
+    "2. Is the context actually what you think it is?",
+    "3. Is the failure input-dependent or consistent?",
+    "4. Are your instructions in tension with each other?",
+    "5. Only now, touch the wording",
+    "6. If it\u2019s still inconsistent",
+    "Start building your AI product",
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [],
+   "jsonld_types": [
+    [
+     "Article"
+    ],
+    [
+     "BreadcrumbList"
+    ]
+   ],
+   "jsonld": [
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "Article",
+       "headline": "Claude API Prompt Debugging Checklist",
+       "description": "A free, practical checklist for diagnosing why a Claude API prompt is producing wrong, inconsistent, or malformed output \u2014 the questions to ask before you touch the wording.",
+       "url": "https://nextaibuilder.com/resources/claude-api-prompt-debugging-checklist/",
+       "datePublished": "2026-10-11T13:15:57+00:00",
+       "dateModified": "2026-10-11T13:15:57+00:00",
+       "author": {
+        "@type": "Person",
+        "@id": "https://nextaibuilder.com/about/#instructor",
+        "name": "Aleem Haider",
+        "jobTitle": "Founder & Lead Instructor",
+        "url": "https://nextaibuilder.com/about/",
+        "worksFor": {
+         "@id": "https://nextaibuilder.com/#organization"
+        }
+       },
+       "publisher": {
+        "@id": "https://nextaibuilder.com/#organization",
+        "@type": "Organization",
+        "name": "nextaibuilder",
+        "logo": {
+         "@type": "ImageObject",
+         "url": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/icon-512.png"
+        }
+       },
+       "image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+       "mainEntityOfPage": "https://nextaibuilder.com/resources/claude-api-prompt-debugging-checklist/",
+       "inLanguage": "en"
+      }
+     ]
+    },
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "BreadcrumbList",
+       "itemListElement": [
+        {
+         "@type": "ListItem",
+         "position": 1,
+         "name": "Home",
+         "item": "https://nextaibuilder.com/"
+        },
+        {
+         "@type": "ListItem",
+         "position": 2,
+         "name": "Resources",
+         "item": "https://nextaibuilder.com/resources/"
+        },
+        {
+         "@type": "ListItem",
+         "position": 3,
+         "name": "Claude API Prompt Debugging Checklist",
+         "item": "https://nextaibuilder.com/resources/claude-api-prompt-debugging-checklist/"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "words": 556,
+   "xrobots": null,
+   "links": 22
+  },
+  "https://nextaibuilder.com/about/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/about/",
+   "title": "About \u2013 nextaibuilder",
+   "desc": "We help builders ship real AI products. nextaibuilder is a cohort-based learning platform where founders, developers, and product people learn to build and ship AI products with live sessions, real\u2026",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/about/",
+   "og_title": "About \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "We help builders ship real AI products."
+   ],
+   "h2": [
+    "What we stand for",
+    "Who teaches",
+    "Aleem Haider",
+    "Start building your AI product",
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [],
+   "jsonld_types": [
+    [
+     "AboutPage",
+     "Person"
+    ]
+   ],
+   "jsonld": [
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "AboutPage",
+       "url": "https://nextaibuilder.com/about/",
+       "name": "About",
+       "about": {
+        "@id": "https://nextaibuilder.com/#organization"
+       }
+      },
+      {
+       "@type": "Person",
+       "@id": "https://nextaibuilder.com/about/#instructor",
+       "name": "Aleem Haider",
+       "jobTitle": "Founder & Lead Instructor",
+       "url": "https://nextaibuilder.com/about/",
+       "worksFor": {
+        "@id": "https://nextaibuilder.com/#organization"
+       }
+      }
+     ]
+    }
+   ],
+   "words": 228,
+   "xrobots": null,
+   "links": 18
+  },
+  "https://nextaibuilder.com/refund-policy/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/refund-policy/",
+   "title": "Refund policy \u2013 nextaibuilder",
+   "desc": "Live cohorts: full refund within 2 weeks of the cohort start date, no questions asked. Recorded courses: full refund within 2 weeks of purchase, no questions asked. If you paid\u2026",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/refund-policy/",
+   "og_title": "Refund policy \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Refund policy"
+   ],
+   "h2": [
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [],
+   "jsonld_types": [],
+   "jsonld": [],
+   "words": 118,
+   "xrobots": null,
+   "links": 16
+  },
+  "https://nextaibuilder.com/apply/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/apply/",
+   "title": "Apply to the Agentic AI Engineer program \u2013 nextaibuilder",
+   "desc": "Apply to the nextaibuilder Agentic AI Engineer program. Choose a 6-month or 1-year track; we review every application and reply within two working days.",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/apply/",
+   "og_title": "Apply to the Agentic AI Engineer program \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Apply to the Agentic AI Engineer program"
+   ],
+   "h2": [
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [],
+   "jsonld_types": [],
+   "jsonld": [],
+   "words": 109,
+   "xrobots": null,
+   "links": 16
+  },
+  "https://nextaibuilder.com/courses/build-production-ready-ai-agents-live/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/courses/build-production-ready-ai-agents-live/",
+   "title": "Build Production-Ready Products Using AI Agents (Live Cohort)",
+   "desc": "Build and ship a real AI product in a live, instructor-led cohort. Live online cohort with weekly instructor sessions, recordings and AI-checked setup. $3,000\u2026",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/courses/build-production-ready-ai-agents-live/",
+   "og_title": "Build Production-Ready Products Using AI Agents (Live Cohort)",
+   "og_image": "https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/placeholder.svg",
+   "tw": "summary_large_image",
+   "h1": [
+    "Build Production-Ready Products Using AI Agents"
+   ],
+   "h2": [
+    "What you\u2019ll learn",
+    "About this course",
+    "Syllabus",
+    "Your instructor",
+    "Aleem Haider",
+    "Reviews",
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/demo/instructor.webp",
+     "alt": "",
+     "w": "28",
+     "h": "28",
+     "loading": null
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/demo/cover-live.webp",
+     "alt": "",
+     "w": "1200",
+     "h": "675",
+     "loading": null
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/gregg-laroche.webp",
+     "alt": "",
+     "w": "56",
+     "h": "56",
+     "loading": "lazy"
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/gabor-mayer.webp",
+     "alt": "",
+     "w": "44",
+     "h": "44",
+     "loading": "lazy"
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/orsolya-meckl.webp",
+     "alt": "",
+     "w": "44",
+     "h": "44",
+     "loading": "lazy"
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/giuseppe-spano.webp",
+     "alt": "",
+     "w": "44",
+     "h": "44",
+     "loading": "lazy"
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/danny-chevilly.webp",
+     "alt": "",
+     "w": "44",
+     "h": "44",
+     "loading": "lazy"
+    }
+   ],
+   "jsonld_types": [
+    [
+     "Course"
+    ],
+    [
+     "BreadcrumbList"
+    ]
+   ],
+   "jsonld": [
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "Course",
+       "name": "Build Production-Ready Products Using AI Agents",
+       "description": "Build and ship a real AI product in a live, instructor-led cohort. Live online cohort with weekly instructor sessions, recordings and AI-checked setup. $3,000\u2026",
+       "url": "https://nextaibuilder.com/courses/build-production-ready-ai-agents-live/",
+       "provider": {
+        "@id": "https://nextaibuilder.com/#organization",
+        "@type": "EducationalOrganization",
+        "name": "nextaibuilder",
+        "url": "https://nextaibuilder.com/"
+       },
+       "offers": {
+        "@type": "Offer",
+        "category": "Paid",
+        "price": 3000,
+        "priceCurrency": "USD",
+        "url": "https://nextaibuilder.com/courses/build-production-ready-ai-agents-live/",
+        "availability": "https://schema.org/InStock"
+       },
+       "hasCourseInstance": {
+        "@type": "CourseInstance",
+        "courseMode": "Online",
+        "courseWorkload": "PT30H",
+        "instructor": {
+         "@type": "Person",
+         "@id": "https://nextaibuilder.com/about/#instructor",
+         "name": "Aleem Haider",
+         "jobTitle": "Founder & Lead Instructor",
+         "url": "https://nextaibuilder.com/about/",
+         "worksFor": {
+          "@id": "https://nextaibuilder.com/#organization"
+         }
+        },
+        "courseSchedule": {
+         "@type": "Schedule",
+         "repeatFrequency": "P1W",
+         "repeatCount": 5
+        }
+       },
+       "inLanguage": "en",
+       "image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/demo/cover-live.webp",
+       "educationalLevel": "Intermediate",
+       "syllabusSections": [
+        {
+         "@type": "Syllabus",
+         "name": "Week 1 \u2014 AI-Native Development Foundations",
+         "description": "Session 1 \u2014 Claude Code, Cursor &#038; Top-Tier Models; Session 2 \u2014 Prompting &#038; Context Engineering for Production Work"
+        },
+        {
+         "@type": "Syllabus",
+         "name": "Week 2 \u2014 Designing Your Agentic AI Employee",
+         "description": "Session 3 \u2014 Designing Your First AI Agent Employee; Session 4 \u2014 Tool Use &#038; the MCP Pattern"
+        },
+        {
+         "@type": "Syllabus",
+         "name": "Week 3 \u2014 Connecting Real Tools",
+         "description": "Session 5 \u2014 Jira + Confluence Integration; Session 6 \u2014 Slack + GitHub Integration"
+        },
+        {
+         "@type": "Syllabus",
+         "name": "Week 4 \u2014 Design-to-Code &#038; Quality",
+         "description": "Session 7 \u2014 Figma-to-Code Workflows; Session 8 \u2014 Testing Agents &#038; Quality Gates"
+        },
+        {
+         "@type": "Syllabus",
+         "name": "Week 5 \u2014 Shipping to Production",
+         "description": "Session 9 \u2014 CI/CD &#038; Deployment with AI Agents; Session 10 \u2014 Capstone: Ship Your Agentic Product"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "BreadcrumbList",
+       "itemListElement": [
+        {
+         "@type": "ListItem",
+         "position": 1,
+         "name": "Home",
+         "item": "https://nextaibuilder.com/"
+        },
+        {
+         "@type": "ListItem",
+         "position": 2,
+         "name": "Courses",
+         "item": "https://nextaibuilder.com/courses/"
+        },
+        {
+         "@type": "ListItem",
+         "position": 3,
+         "name": "Build Production-Ready Products Using AI Agents",
+         "item": "https://nextaibuilder.com/courses/build-production-ready-ai-agents-live/"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "words": 627,
+   "xrobots": null,
+   "links": 20
+  },
+  "https://nextaibuilder.com/courses/build-production-ready-ai-agents-recorded/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/courses/build-production-ready-ai-agents-recorded/",
+   "title": "Build Production-Ready Products Using AI Agents (Self-Paced)",
+   "desc": "Learn to build and ship a production-ready AI product at your own pace. Self-paced video course with lifetime access and AI-checked setup. $200, or 3 monthly\u2026",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/courses/build-production-ready-ai-agents-recorded/",
+   "og_title": "Build Production-Ready Products Using AI Agents (Self-Paced)",
+   "og_image": "https://nextaibuilder.com/wp-content/plugins/tutor/assets/images/placeholder.svg",
+   "tw": "summary_large_image",
+   "h1": [
+    "Build Production-Ready Products Using AI Agents"
+   ],
+   "h2": [
+    "What you\u2019ll learn",
+    "About this course",
+    "Syllabus",
+    "Your instructor",
+    "Aleem Haider",
+    "Reviews",
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/demo/instructor.webp",
+     "alt": "",
+     "w": "28",
+     "h": "28",
+     "loading": null
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/demo/cover-recorded.webp",
+     "alt": "",
+     "w": "1200",
+     "h": "675",
+     "loading": null
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/gregg-laroche.webp",
+     "alt": "",
+     "w": "56",
+     "h": "56",
+     "loading": "lazy"
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/gabor-mayer.webp",
+     "alt": "",
+     "w": "44",
+     "h": "44",
+     "loading": "lazy"
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/orsolya-meckl.webp",
+     "alt": "",
+     "w": "44",
+     "h": "44",
+     "loading": "lazy"
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/giuseppe-spano.webp",
+     "alt": "",
+     "w": "44",
+     "h": "44",
+     "loading": "lazy"
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/testimonials/danny-chevilly.webp",
+     "alt": "",
+     "w": "44",
+     "h": "44",
+     "loading": "lazy"
+    }
+   ],
+   "jsonld_types": [
+    [
+     "Course"
+    ],
+    [
+     "BreadcrumbList"
+    ]
+   ],
+   "jsonld": [
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "Course",
+       "name": "Build Production-Ready Products Using AI Agents",
+       "description": "Learn to build and ship a production-ready AI product at your own pace. Self-paced video course with lifetime access and AI-checked setup. $200, or 3 monthly\u2026",
+       "url": "https://nextaibuilder.com/courses/build-production-ready-ai-agents-recorded/",
+       "provider": {
+        "@id": "https://nextaibuilder.com/#organization",
+        "@type": "EducationalOrganization",
+        "name": "nextaibuilder",
+        "url": "https://nextaibuilder.com/"
+       },
+       "offers": {
+        "@type": "Offer",
+        "category": "Paid",
+        "price": 200,
+        "priceCurrency": "USD",
+        "url": "https://nextaibuilder.com/courses/build-production-ready-ai-agents-recorded/",
+        "availability": "https://schema.org/InStock"
+       },
+       "hasCourseInstance": {
+        "@type": "CourseInstance",
+        "courseMode": "Online",
+        "courseWorkload": "PT30H",
+        "instructor": {
+         "@type": "Person",
+         "@id": "https://nextaibuilder.com/about/#instructor",
+         "name": "Aleem Haider",
+         "jobTitle": "Founder & Lead Instructor",
+         "url": "https://nextaibuilder.com/about/",
+         "worksFor": {
+          "@id": "https://nextaibuilder.com/#organization"
+         }
+        }
+       },
+       "inLanguage": "en",
+       "image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/demo/cover-recorded.webp",
+       "educationalLevel": "Intermediate",
+       "syllabusSections": [
+        {
+         "@type": "Syllabus",
+         "name": "Week 1 \u2014 AI-Native Development Foundations",
+         "description": "Session 1 \u2014 Claude Code, Cursor &#038; Top-Tier Models; Session 2 \u2014 Prompting &#038; Context Engineering for Production Work"
+        },
+        {
+         "@type": "Syllabus",
+         "name": "Week 2 \u2014 Designing Your Agentic AI Employee",
+         "description": "Session 3 \u2014 Designing Your First AI Agent Employee; Session 4 \u2014 Tool Use &#038; the MCP Pattern"
+        },
+        {
+         "@type": "Syllabus",
+         "name": "Week 3 \u2014 Connecting Real Tools",
+         "description": "Session 5 \u2014 Jira + Confluence Integration; Session 6 \u2014 Slack + GitHub Integration"
+        },
+        {
+         "@type": "Syllabus",
+         "name": "Week 4 \u2014 Design-to-Code &#038; Quality",
+         "description": "Session 7 \u2014 Figma-to-Code Workflows; Session 8 \u2014 Testing Agents &#038; Quality Gates"
+        },
+        {
+         "@type": "Syllabus",
+         "name": "Week 5 \u2014 Shipping to Production",
+         "description": "Session 9 \u2014 CI/CD &#038; Deployment with AI Agents; Session 10 \u2014 Capstone: Ship Your Agentic Product"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "BreadcrumbList",
+       "itemListElement": [
+        {
+         "@type": "ListItem",
+         "position": 1,
+         "name": "Home",
+         "item": "https://nextaibuilder.com/"
+        },
+        {
+         "@type": "ListItem",
+         "position": 2,
+         "name": "Courses",
+         "item": "https://nextaibuilder.com/courses/"
+        },
+        {
+         "@type": "ListItem",
+         "position": 3,
+         "name": "Build Production-Ready Products Using AI Agents",
+         "item": "https://nextaibuilder.com/courses/build-production-ready-ai-agents-recorded/"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "words": 604,
+   "xrobots": null,
+   "links": 20
+  },
+  "https://nextaibuilder.com/guides/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/guides/",
+   "title": "Guides to Building AI Products with Claude \u2013 nextaibuilder",
+   "desc": "Long-form, practical guides on building and shipping production AI products with the Claude API: architecture, evals, cost control and agents.",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/guides/",
+   "og_title": "Guides to Building AI Products with Claude \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Guides"
+   ],
+   "h2": [
+    "How to Ship a Production AI Product with the Claude API",
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [],
+   "jsonld_types": [],
+   "jsonld": [],
+   "words": 124,
+   "xrobots": null,
+   "links": 17
+  },
+  "https://nextaibuilder.com/resources/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/resources/",
+   "title": "Free Claude API Checklists & Resources \u2013 nextaibuilder",
+   "desc": "Free checklists and references for building with the Claude API: prompt debugging, evals, agents and shipping AI features to production.",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/resources/",
+   "og_title": "Free Claude API Checklists & Resources \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Resources"
+   ],
+   "h2": [
+    "Claude API Prompt Debugging Checklist",
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [],
+   "jsonld_types": [],
+   "jsonld": [],
+   "words": 113,
+   "xrobots": null,
+   "links": 17
+  },
+  "https://nextaibuilder.com/courses/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/courses/",
+   "title": "AI Product & Claude API Courses \u2013 nextaibuilder",
+   "desc": "Browse nextaibuilder\u2019s live cohorts and self-paced courses on building and shipping production AI products with the Claude API.",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/courses/",
+   "og_title": "AI Product & Claude API Courses \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Courses"
+   ],
+   "h2": [
+    "Course list",
+    "Start building your AI product",
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/demo/cover-live.webp",
+     "alt": "",
+     "w": "1200",
+     "h": "675",
+     "loading": "lazy"
+    },
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/demo/cover-recorded.webp",
+     "alt": "",
+     "w": "1200",
+     "h": "675",
+     "loading": "lazy"
+    }
+   ],
+   "jsonld_types": [],
+   "jsonld": [],
+   "words": 196,
+   "xrobots": null,
+   "links": 22
+  },
+  "https://nextaibuilder.com/courses/?format=live": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/courses/?format=live",
+   "title": "AI Product & Claude API Courses \u2013 nextaibuilder",
+   "desc": "Browse nextaibuilder\u2019s live cohorts and self-paced courses on building and shipping production AI products with the Claude API.",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/courses/",
+   "og_title": "AI Product & Claude API Courses \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Courses"
+   ],
+   "h2": [
+    "Course list",
+    "Start building your AI product",
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/demo/cover-live.webp",
+     "alt": "",
+     "w": "1200",
+     "h": "675",
+     "loading": "lazy"
+    }
+   ],
+   "jsonld_types": [],
+   "jsonld": [],
+   "words": 167,
+   "xrobots": null,
+   "links": 21
+  },
+  "https://nextaibuilder.com/dashboard/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/sign-in/?redirect_to=https%3A%2F%2Fnextaibuilder.com%2Fdashboard%2F",
+   "title": "Sign in \u2013 nextaibuilder",
+   "desc": "Live and recorded cohorts that teach you to ship production AI products with the Anthropic Claude API, from prompts to pipelines.",
+   "robots": "noindex, follow",
+   "canon": "https://nextaibuilder.com/sign-in/",
+   "og_title": "Sign in \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Sign in"
+   ],
+   "h2": [
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [],
+   "jsonld_types": [],
+   "jsonld": [],
+   "words": 86,
+   "xrobots": null,
+   "links": 17
+  },
+  "https://nextaibuilder.com/courses/?format=recorded": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/courses/?format=recorded",
+   "title": "AI Product & Claude API Courses \u2013 nextaibuilder",
+   "desc": "Browse nextaibuilder\u2019s live cohorts and self-paced courses on building and shipping production AI products with the Claude API.",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/courses/",
+   "og_title": "AI Product & Claude API Courses \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Courses"
+   ],
+   "h2": [
+    "Course list",
+    "Start building your AI product",
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [
+    {
+     "src": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/demo/cover-recorded.webp",
+     "alt": "",
+     "w": "1200",
+     "h": "675",
+     "loading": "lazy"
+    }
+   ],
+   "jsonld_types": [],
+   "jsonld": [],
+   "words": 164,
+   "xrobots": null,
+   "links": 21
+  },
+  "https://nextaibuilder.com/sign-in/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/sign-in/",
+   "title": "Sign in \u2013 nextaibuilder",
+   "desc": "Live and recorded cohorts that teach you to ship production AI products with the Anthropic Claude API, from prompts to pipelines.",
+   "robots": "noindex, follow",
+   "canon": "https://nextaibuilder.com/sign-in/",
+   "og_title": "Sign in \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Sign in"
+   ],
+   "h2": [
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [],
+   "jsonld_types": [],
+   "jsonld": [],
+   "words": 86,
+   "xrobots": null,
+   "links": 17
+  },
+  "https://nextaibuilder.com/guides/ship-production-ai-product-claude-api.html": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/guides/ship-production-ai-product-claude-api/",
+   "title": "How to Ship a Production AI Product with the Claude API \u2013 nextaibuilder",
+   "desc": "A practical roadmap for going from a prompt in a playground to a real AI product in production \u2014 architecture, evals, cost control, and the mistakes that stall most teams.",
+   "robots": "max-image-preview:large",
+   "canon": "https://nextaibuilder.com/guides/ship-production-ai-product-claude-api/",
+   "og_title": "How to Ship a Production AI Product with the Claude API \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "How to Ship a Production AI Product with the Claude API"
+   ],
+   "h2": [
+    "1. Start with the failure modes, not the happy path",
+    "2. Separate \u201cprompting\u201d from \u201cproduct logic\u201d",
+    "3. Build evals before you scale traffic",
+    "4. Design for partial failure, not just total failure",
+    "5. Control cost the same way you control latency",
+    "6. Ship behind a flag, watch real usage, then widen",
+    "Start building your AI product",
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [],
+   "jsonld_types": [
+    [
+     "Article"
+    ],
+    [
+     "BreadcrumbList"
+    ]
+   ],
+   "jsonld": [
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "Article",
+       "headline": "How to Ship a Production AI Product with the Claude API",
+       "description": "A practical roadmap for going from a prompt in a playground to a real AI product in production \u2014 architecture, evals, cost control, and the mistakes that stall most teams.",
+       "url": "https://nextaibuilder.com/guides/ship-production-ai-product-claude-api/",
+       "datePublished": "2026-10-11T13:15:57+00:00",
+       "dateModified": "2026-10-11T13:15:57+00:00",
+       "author": {
+        "@type": "Person",
+        "@id": "https://nextaibuilder.com/about/#instructor",
+        "name": "Aleem Haider",
+        "jobTitle": "Founder & Lead Instructor",
+        "url": "https://nextaibuilder.com/about/",
+        "worksFor": {
+         "@id": "https://nextaibuilder.com/#organization"
+        }
+       },
+       "publisher": {
+        "@id": "https://nextaibuilder.com/#organization",
+        "@type": "Organization",
+        "name": "nextaibuilder",
+        "logo": {
+         "@type": "ImageObject",
+         "url": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/icon-512.png"
+        }
+       },
+       "image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+       "mainEntityOfPage": "https://nextaibuilder.com/guides/ship-production-ai-product-claude-api/",
+       "inLanguage": "en"
+      }
+     ]
+    },
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "BreadcrumbList",
+       "itemListElement": [
+        {
+         "@type": "ListItem",
+         "position": 1,
+         "name": "Home",
+         "item": "https://nextaibuilder.com/"
+        },
+        {
+         "@type": "ListItem",
+         "position": 2,
+         "name": "Guides",
+         "item": "https://nextaibuilder.com/guides/"
+        },
+        {
+         "@type": "ListItem",
+         "position": 3,
+         "name": "How to Ship a Production AI Product with the Claude API",
+         "item": "https://nextaibuilder.com/guides/ship-production-ai-product-claude-api/"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "words": 707,
+   "xrobots": null,
+   "links": 20
+  },
+  "https://nextaibuilder.com/courses/build-production-ready-ai-agents-live/preview/21/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/courses/build-production-ready-ai-agents-live/preview/21/",
+   "title": "Session 1 \u2014 Claude Code, Cursor & Top-Tier Models \u2013 Free preview",
+   "desc": "Live and recorded cohorts that teach you to ship production AI products with the Anthropic Claude API, from prompts to pipelines.",
+   "robots": "noindex, follow",
+   "canon": null,
+   "og_title": "Session 1 \u2014 Claude Code, Cursor & Top-Tier Models \u2013 Free preview",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Session 1 \u2014 Claude Code, Cursor & Top-Tier Models"
+   ],
+   "h2": [
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [],
+   "jsonld_types": [],
+   "jsonld": [],
+   "words": 106,
+   "xrobots": null,
+   "links": 17
+  },
+  "https://nextaibuilder.com/courses/build-production-ready-ai-agents-recorded/preview/38/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/courses/build-production-ready-ai-agents-recorded/preview/38/",
+   "title": "Session 1 \u2014 Claude Code, Cursor & Top-Tier Models \u2013 Free preview",
+   "desc": "Live and recorded cohorts that teach you to ship production AI products with the Anthropic Claude API, from prompts to pipelines.",
+   "robots": "noindex, follow",
+   "canon": null,
+   "og_title": "Session 1 \u2014 Claude Code, Cursor & Top-Tier Models \u2013 Free preview",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Session 1 \u2014 Claude Code, Cursor & Top-Tier Models"
+   ],
+   "h2": [
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [],
+   "jsonld_types": [],
+   "jsonld": [],
+   "words": 106,
+   "xrobots": null,
+   "links": 17
+  },
+  "https://nextaibuilder.com/my-account/lost-password/": {
+   "status": 200,
+   "final": "https://nextaibuilder.com/my-account/lost-password/",
+   "title": "Lost password \u2013 nextaibuilder",
+   "desc": "Live and recorded cohorts that teach you to ship production AI products with the Anthropic Claude API, from prompts to pipelines.",
+   "robots": "noindex, follow",
+   "canon": "https://nextaibuilder.com/my-account/",
+   "og_title": "My account \u2013 nextaibuilder",
+   "og_image": "https://nextaibuilder.com/wp-content/themes/nextaibuilder/assets/images/og-image.png",
+   "tw": "summary_large_image",
+   "h1": [
+    "Lost password"
+   ],
+   "h2": [
+    "Learn",
+    "Free resources",
+    "Company"
+   ],
+   "imgs": [],
+   "jsonld_types": [],
+   "jsonld": [],
+   "words": 95,
+   "xrobots": "noindex",
+   "links": 16
+  }
+ }
+}

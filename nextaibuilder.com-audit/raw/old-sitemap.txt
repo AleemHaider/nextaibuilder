@@ -1,0 +1,5 @@
+https://nextaibuilder.com/
+https://nextaibuilder.com/guides/
+https://nextaibuilder.com/resources/
+https://nextaibuilder.com/guides/ship-production-ai-product-claude-api.html
+https://nextaibuilder.com/resources/claude-api-prompt-debugging-checklist.html
