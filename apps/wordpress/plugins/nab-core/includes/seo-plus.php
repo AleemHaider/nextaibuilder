@@ -507,3 +507,26 @@ add_action(
 	},
 	100
 );
+
+/* ---------------- Search engine verification ---------------- */
+
+// Google Search Console and Bing Webmaster Tools ownership tags.
+// Set with: wp option update nab_google_verification <code>  (and nab_bing_verification).
+add_action(
+	'wp_head',
+	static function () {
+		if ( ! is_front_page() ) {
+			return;
+		}
+		$tags = array(
+			'google-site-verification' => (string) get_option( 'nab_google_verification', '' ),
+			'msvalidate.01'            => (string) get_option( 'nab_bing_verification', '' ),
+		);
+		foreach ( $tags as $name => $code ) {
+			if ( '' !== $code ) {
+				echo '<meta name="' . esc_attr( $name ) . '" content="' . esc_attr( $code ) . '">' . "\n";
+			}
+		}
+	},
+	1
+);
