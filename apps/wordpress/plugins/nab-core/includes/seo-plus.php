@@ -273,6 +273,9 @@ function nab_seo_description( $desc ) {
 	if ( is_category( 'guides' ) ) {
 		return __( 'Long-form, practical guides on building and shipping production AI products with the Claude API: architecture, evals, cost control and agents.', 'nab-core' );
 	}
+	if ( is_page( 'about' ) ) {
+		return __( 'nextaibuilder is a cohort-based school where founders, product managers and engineers learn to build and ship production AI products with Claude.', 'nab-core' );
+	}
 	if ( is_page( 'apply' ) ) {
 		return __( 'Apply to the nextaibuilder Agentic AI Engineer program. Choose a 6-month or 1-year track; we review every application and reply within two working days.', 'nab-core' );
 	}

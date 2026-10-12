@@ -67,7 +67,7 @@ for (const w of WIDTHS) {
       if (m) A.A1.push(`${path}: PHP ${m[0].replace(/<\/?b>/g, '')}`);
     }
     const r = await page.evaluate(({ w, phone }) => {
-      const out = { sw: document.documentElement.scrollWidth, over: [], img: [], small: [], tap: [], h1: 0, skips: [], empty: [], header: 0, links: [] };
+      const out = { sw: document.documentElement.scrollWidth, over: [], img: [], suspect: [], small: [], tap: [], h1: 0, skips: [], empty: [], header: 0, links: [] };
       const clipped = (el) => { for (let e = el.parentElement; e && e !== document.body; e = e.parentElement) if (/(auto|scroll|hidden|clip)/.test(getComputedStyle(e).overflowX)) return true; return false; };
       const visible = (el) => { const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return s.display !== 'none' && s.visibility !== 'hidden' && r.width > 1 && r.height > 1; };
       const name = (el) => el.tagName.toLowerCase() + (el.classList[0] ? '.' + el.classList[0] : '');
@@ -85,7 +85,7 @@ for (const w of WIDTHS) {
       }
       for (const img of document.images) {
         if (!visible(img)) continue;
-        if (!img.complete || !img.naturalWidth) out.img.push(`broken: ${img.currentSrc || img.src}`);
+        if (!img.complete || !img.naturalWidth) out.suspect.push(img.currentSrc || img.src);
         if (!img.hasAttribute('alt')) out.img.push(`no alt: ${(img.currentSrc || img.src).split('/').pop()}`);
       }
       out.h1 = [...document.querySelectorAll('h1')].filter(visible).length;
@@ -106,6 +106,11 @@ for (const w of WIDTHS) {
       out.links = [...document.querySelectorAll('a[href]')].map((a) => a.href).filter((h) => h.startsWith(location.origin) && !h.includes('/wp-admin') && !h.includes('logout'));
       return out;
     }, { w, phone: w < 768 });
+    // An image interrupted mid-load reports as broken; only count it if a fresh load fails too.
+    for (const src of r.suspect) {
+      const ok = await page.evaluate((src) => new Promise((res) => { const i = new Image(); i.onload = () => res(i.naturalWidth > 0); i.onerror = () => res(false); i.src = src + (src.includes('?') ? '&' : '?') + 'qa=' + Date.now(); setTimeout(() => res(false), 10000); }), src);
+      if (!ok) r.img.push(`broken: ${src}`);
+    }
     if (!path.includes('no-such-page')) r.links.forEach((l) => internalLinks.add(l.split('#')[0]));
     if (r.sw > w) A.A2.push(`${tag}: page is ${r.sw}px wide`);
     if (r.over.length) A.A3.push(`${tag}: ${[...new Set(r.over)].slice(0, 4).join(', ')}`);
@@ -477,7 +482,8 @@ if (LOCAL) {
         await Promise.all([page.waitForNavigation({ timeout: 30000 }), enroll.click()]);
         await page.waitForLoadState('networkidle');
         if (!/checkout/.test(page.url())) d5.push(`Enroll went to ${page.url().replace(BASE, '')}, not checkout`);
-        await page.waitForSelector('.wc-block-components-order-summary-item, .woocommerce-checkout-review-order-table', { timeout: 20000 }).catch(() => d5.push('order summary never finished loading'));
+        // The summary first renders an empty placeholder with the same class; wait for real text.
+        await page.waitForFunction(() => [...document.querySelectorAll('.wc-block-components-order-summary-item, .woocommerce-checkout-review-order-table')].some((e) => e.innerText.trim().length > 10), null, { timeout: 20000 }).catch(() => d5.push('order summary never finished loading'));
         const t = await page.evaluate(() => document.body.innerText);
         if (!/Build Production-Ready/i.test(t)) d5.push('course not in the order summary');
         const addr = await page.$$eval('input[name*="address"], input[name*="postcode"], input[name*="city"], input[id*="address"]', (els) => els.filter((e) => e.offsetParent).map((e) => e.name || e.id));

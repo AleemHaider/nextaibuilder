@@ -340,7 +340,7 @@ HTML;
 				'post_name'     => $a['slug'],
 				'post_title'    => $a['title'],
 				'post_excerpt'  => $a['excerpt'],
-				'post_content'  => $a['content'],
+				'post_content'  => wp_slash( $a['content'] ), // wp_insert_post() unslashes; keeps \n in code samples.
 				'post_category' => array( (int) $term['term_id'] ),
 			)
 		);
