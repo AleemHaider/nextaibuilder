@@ -878,3 +878,95 @@ pre, code, kbd, samp { font-variant-ligatures: none; font-feature-settings: "lig
 /* Locked lessons in the course sidebar (marked by nab-core). */
 .nab-lesson-locked { opacity: 0.6; }
 .nab-lock-badge { display: inline-block; margin-left: 0.4rem; padding: 0 0.4rem; border-radius: 9999px; background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); font-size: 0.75rem; color: var(--ink-2); vertical-align: middle; }
+
+/* ================================================================ About, Guides and Resources pages */
+.nab-section-title { margin: 0 0 0.75rem; font-size: var(--wp--preset--font-size--xl); font-weight: 400; letter-spacing: -0.02em; color: var(--ink); }
+.nab-section-text { max-width: 640px; margin: 0 0 2rem; color: var(--muted); font-size: var(--wp--preset--font-size--md); line-height: 1.55; }
+/* No photo yet: let the instructor text use the full width instead of a half-empty grid. */
+.nab-instructor:not(:has(.nab-instructor__photo)) { grid-template-columns: minmax(0, 1fr); }
+.nab-instructor:not(:has(.nab-instructor__photo)) .nab-instructor__text > * { max-width: 760px; }
+
+/* Archive header (Guides, Resources) */
+.nab-archive-hero { padding-block: clamp(3rem, 7vw, 5rem) clamp(2rem, 4vw, 3rem); background: linear-gradient(180deg, var(--pale) 0%, #fff 100%); }
+.nab-archive-head > * { max-width: 760px; }
+.nab-archive-head__title { margin: 0.4rem 0 1rem; font-size: clamp(2.5rem, 6vw, 4rem); font-weight: 400; letter-spacing: -0.03em; line-height: 1.1; color: var(--ink); }
+.nab-archive-head__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; margin: 1.5rem 0 0; font-size: var(--wp--preset--font-size--sm); color: var(--muted); }
+.nab-archive-head__meta a { display: inline-block; padding-block: 12px; margin-block: -12px; color: var(--blue); font-weight: 500; text-decoration: none; }
+.nab-archive-head__meta a:hover { text-decoration: underline; }
+.nab-archive-body { padding-block: clamp(2rem, 4vw, 3rem) var(--band); }
+.nab-archive-body > * + * { margin-top: clamp(3rem, 6vw, 4.5rem) !important; }
+
+/* Guides reading path: numbered steps joined by a line */
+.nab-path { margin: 0; padding: 0; list-style: none; counter-reset: none; }
+.nab-path__step { position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 1.25rem; padding-bottom: 1.25rem; }
+.nab-path__step:not(:last-child)::before { content: ""; position: absolute; left: 21px; top: 48px; bottom: 4px; width: 2px; background: var(--line); }
+.nab-path__num { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 9999px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); color: var(--ink-2); font-weight: 500; }
+.nab-path__step--first .nab-path__num { background: var(--blue); box-shadow: none; color: #fff; }
+.nab-path__body { padding: 1.5rem 1.75rem; border-radius: var(--r-lg); background: #fff; box-shadow: 0 0 0 1px var(--line), var(--shadow-1); transition: box-shadow 0.15s; }
+.nab-path__body:hover { box-shadow: 0 0 0 1px #c9d6e3, var(--shadow-2); }
+.nab-path__label { margin: 0 0 0.35rem; color: var(--blue); font-size: var(--wp--preset--font-size--sm); font-weight: 500; }
+.nab-path__title { margin: 0 0 0.6rem; font-size: 1.375rem; font-weight: 500; letter-spacing: -0.015em; line-height: 1.3; }
+.nab-path__title a, .nab-post-card__title a { color: var(--ink); text-decoration: none; }
+.nab-path__title a::after, .nab-post-card__title a::after { content: ""; position: absolute; inset: 0; }
+.nab-path__body, .nab-post-card { position: relative; }
+.nab-path__title a:hover, .nab-post-card__title a:hover { color: var(--blue); }
+.nab-path__title a:focus-visible, .nab-post-card__title a:focus-visible { outline: none; }
+.nab-path__body:has(a:focus-visible), .nab-post-card:has(a:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
+.nab-path__text { max-width: 68ch; margin: 0 0 0.9rem; color: var(--muted); }
+
+/* Article cards */
+.nab-post-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 1.25rem; }
+.nab-post-card { display: flex; flex-direction: column; padding: 1.5rem; border-radius: var(--r-lg); background: #fff; box-shadow: 0 0 0 1px var(--line), var(--shadow-1); transition: box-shadow 0.15s; }
+.nab-post-card:hover { box-shadow: 0 0 0 1px #c9d6e3, var(--shadow-2); }
+.nab-post-card__cat { margin: 0 0 0.5rem; color: var(--blue); font-size: var(--wp--preset--font-size--sm); font-weight: 500; }
+.nab-post-card__title { margin: 0 0 0.6rem; font-size: 1.2rem; font-weight: 500; letter-spacing: -0.01em; line-height: 1.35; }
+.nab-post-card__text { flex: 1; margin: 0 0 1rem; color: var(--muted); font-size: var(--wp--preset--font-size--sm); line-height: 1.6; }
+.nab-post-card__meta { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; color: var(--muted); font-size: 0.8125rem; }
+.nab-post-card__meta span + time::before { content: ""; }
+.nab-band--soft .nab-post-card, .nab-band--soft .nab-path__body { box-shadow: 0 0 0 1px var(--line); }
+
+/* About */
+.nab-about-hero { padding-block: clamp(3.5rem, 8vw, 6rem) clamp(1rem, 3vw, 2rem); background: radial-gradient(1000px 420px at 85% -10%, var(--pale), transparent 70%), #fff; }
+.nab-about-hero__text > * { max-width: 760px; }
+.nab-about-hero__title { margin: 0.5rem 0 1.25rem; font-size: clamp(2.25rem, 5.5vw, 3.75rem); font-weight: 400; letter-spacing: -0.035em; line-height: 1.05; color: var(--ink); }
+.nab-about-hero__actions { margin: 2rem 0 1.75rem !important; gap: 0.75rem; }
+.nab-about-why { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: clamp(1.5rem, 5vw, 5rem); }
+.nab-about-why__text p { margin: 0 0 1.1rem; font-size: var(--wp--preset--font-size--md); line-height: 1.65; color: var(--ink-2); }
+.nab-principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 1.25rem; margin: 0; padding: 0; list-style: none; }
+.nab-principles li { padding: 1.5rem; border-radius: var(--r-lg); background: #fff; box-shadow: 0 0 0 1px var(--line); border-top: 3px solid var(--blue); }
+.nab-principles h3, .nab-weeks h3 { margin: 0 0 0.5rem; font-size: 1.125rem; font-weight: 500; letter-spacing: -0.01em; color: var(--ink); }
+.nab-principles p, .nab-weeks p { margin: 0; color: var(--muted); font-size: var(--wp--preset--font-size--sm); line-height: 1.6; }
+.nab-weeks { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.nab-weeks li { position: relative; padding: 1.25rem; border-radius: var(--r-lg); background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); }
+.nab-weeks li:last-child { background: var(--navy); box-shadow: none; }
+.nab-weeks li:last-child h3 { color: #fff; }
+.nab-weeks li:last-child p { color: #c5cfe0; }
+.nab-weeks__n { display: block; margin-bottom: 0.75rem; color: var(--blue); font-size: var(--wp--preset--font-size--sm); font-weight: 500; }
+.nab-weeks li:last-child .nab-weeks__n { color: var(--orange); }
+.nab-about-more { margin-top: 1.5rem !important; }
+.nab-about-more a { display: inline-block; padding-block: 12px; margin-block: -12px; color: var(--blue); font-weight: 500; }
+@media (max-width: 1024px) { .nab-weeks { grid-template-columns: repeat(2, minmax(0, 1fr)); } .nab-weeks li:last-child { grid-column: 1 / -1; } }
+@media (max-width: 781px) { .nab-about-why { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) {
+	.nab-weeks { grid-template-columns: minmax(0, 1fr); }
+	.nab-path__step { grid-template-columns: 36px minmax(0, 1fr); gap: 0.85rem; }
+	.nab-path__num { width: 36px; height: 36px; }
+	.nab-path__step:not(:last-child)::before { left: 17px; top: 40px; }
+	.nab-path__body { padding: 1.25rem; }
+	.nab-path__title { font-size: 1.2rem; }
+}
+/* About hero: text left, facts card right (stacked below 900px). */
+.nab-about-hero.is-layout-constrained { display: grid; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) {
+	.nab-about-hero.is-layout-constrained { grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); column-gap: clamp(2rem, 5vw, 4.5rem); align-items: center; padding-inline: max(var(--gutter), calc((100% - 1180px) / 2)) !important; }
+	.nab-about-hero.is-layout-constrained > * { max-width: none !important; margin-inline: 0 !important; }
+}
+.nab-glance { margin-top: 2.5rem; padding: 1.75rem; border-radius: var(--r-xl); background: #fff; box-shadow: 0 0 0 1px var(--line), var(--shadow-2); }
+@media (min-width: 900px) { .nab-glance { margin-top: 0; } }
+.nab-glance__title { margin: 0 0 1.25rem; color: var(--ink); font-weight: 500; }
+.nab-glance dl { display: grid; gap: 1rem; margin: 0; }
+.nab-glance dl > div { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); align-items: baseline; gap: 0.75rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
+.nab-glance dt { color: var(--blue); font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; }
+.nab-glance dd { margin: 0; color: var(--ink-2); font-size: var(--wp--preset--font-size--sm); }
+.nab-glance__alt { margin: 1.1rem 0 0; color: var(--muted); font-size: var(--wp--preset--font-size--sm); }
+.nab-glance__alt a { color: var(--blue); font-weight: 500; }

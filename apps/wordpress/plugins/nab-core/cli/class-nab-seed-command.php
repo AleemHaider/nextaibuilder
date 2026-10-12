@@ -245,40 +245,8 @@ class NAB_Seed_Command {
 	 * Static pages: About and Refund policy.
 	 */
 	private function pages() {
-		$about = <<<'HTML'
-<!-- wp:group {"tagName":"section","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|60"}}},"backgroundColor":"surface","layout":{"type":"constrained","contentSize":"1180px"}} -->
-<section class="wp-block-group has-surface-background-color has-background" style="padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--60)">
-<!-- wp:heading {"level":1,"className":"nab-section__title","fontSize":"2xl"} --><h1 class="wp-block-heading nab-section__title has-2-xl-font-size">We help builders ship real AI products.</h1><!-- /wp:heading -->
-<!-- wp:paragraph {"className":"nab-section__lede"} --><p class="nab-section__lede">nextaibuilder is a cohort-based learning platform where founders, developers, and product people learn to build and ship AI products with live sessions, real projects, and a community that actually shows up.</p><!-- /wp:paragraph -->
-</section>
-<!-- /wp:group -->
-<!-- wp:group {"tagName":"section","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|60"}}},"layout":{"type":"constrained","contentSize":"1180px"}} -->
-<section class="wp-block-group" style="padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--60)">
-<!-- wp:heading {"className":"nab-section__title"} --><h2 class="wp-block-heading nab-section__title">What we stand for</h2><!-- /wp:heading -->
-<!-- wp:columns {"className":"nab-audience__grid"} -->
-<div class="wp-block-columns nab-audience__grid">
-<!-- wp:column --><div class="wp-block-column"><!-- wp:heading {"level":3} --><h3 class="wp-block-heading">Build, don't just learn</h3><!-- /wp:heading --><!-- wp:paragraph {"textColor":"muted"} --><p class="has-muted-color has-text-color">Every cohort ends with a deployed, production-grade project, not a certificate you forget about.</p><!-- /wp:paragraph --></div><!-- /wp:column -->
-<!-- wp:column --><div class="wp-block-column"><!-- wp:heading {"level":3} --><h3 class="wp-block-heading">Community first</h3><!-- /wp:heading --><!-- wp:paragraph {"textColor":"muted"} --><p class="has-muted-color has-text-color">You learn faster alongside people who share your goals. We keep cohorts intentionally small.</p><!-- /wp:paragraph --></div><!-- /wp:column -->
-</div>
-<!-- /wp:columns -->
-<!-- wp:columns {"className":"nab-audience__grid"} -->
-<div class="wp-block-columns nab-audience__grid">
-<!-- wp:column --><div class="wp-block-column"><!-- wp:heading {"level":3} --><h3 class="wp-block-heading">AI-native curriculum</h3><!-- /wp:heading --><!-- wp:paragraph {"textColor":"muted"} --><p class="has-muted-color has-text-color">We update every cohort as the tools evolve. No stale content, just what's relevant right now.</p><!-- /wp:paragraph --></div><!-- /wp:column -->
-<!-- wp:column --><div class="wp-block-column"><!-- wp:heading {"level":3} --><h3 class="wp-block-heading">Transparent pricing</h3><!-- /wp:heading --><!-- wp:paragraph {"textColor":"muted"} --><p class="has-muted-color has-text-color">Installment plans, bank transfer, and no hidden fees. Education should be accessible.</p><!-- /wp:paragraph --></div><!-- /wp:column -->
-</div>
-<!-- /wp:columns -->
-</section>
-<!-- /wp:group -->
-<!-- wp:group {"tagName":"section","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|60"}}},"backgroundColor":"surface","layout":{"type":"constrained","contentSize":"1180px"}} -->
-<section class="wp-block-group has-surface-background-color has-background" style="padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--60)">
-<!-- wp:heading {"className":"nab-section__title"} --><h2 class="wp-block-heading nab-section__title">Who teaches</h2><!-- /wp:heading -->
-<!-- wp:heading {"level":2,"fontSize":"lg"} --><h2 class="wp-block-heading has-lg-font-size">Aleem Haider</h2><!-- /wp:heading -->
-<!-- wp:paragraph {"textColor":"muted","fontSize":"sm"} --><p class="has-muted-color has-text-color has-sm-font-size">Founder &amp; Lead Instructor</p><!-- /wp:paragraph -->
-<!-- wp:paragraph --><p>Builder, educator, and AI product enthusiast. Helping founders ship real AI products.</p><!-- /wp:paragraph -->
-</section>
-<!-- /wp:group -->
-<!-- wp:pattern {"slug":"nextaibuilder/cta"} /-->
-HTML;
+		// The About page lives in the theme pattern (themes/nextaibuilder/patterns/about.php).
+		$about = '<!-- wp:pattern {"slug":"nextaibuilder/about"} /-->';
 
 		$refund = <<<'HTML'
 <!-- wp:paragraph --><p><strong>Live cohorts:</strong> full refund within 2 weeks of the cohort start date, no questions asked.</p><!-- /wp:paragraph -->
