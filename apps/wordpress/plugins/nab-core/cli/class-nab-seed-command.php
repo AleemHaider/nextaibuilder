@@ -16,9 +16,19 @@ class NAB_Seed_Command {
 	/**
 	 * Configure WooCommerce + Tutor and import courses, pages and articles.
 	 *
+	 * ## OPTIONS
+	 *
+	 * [--only=<part>]
+	 * : Import just one part, leaving everything else untouched.
+	 * ---
+	 * options:
+	 *   - articles
+	 * ---
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     wp nab seed
+	 *     wp nab seed --only=articles
 	 *
 	 * @param array $args       Positional args.
 	 * @param array $assoc_args Flags.
@@ -27,6 +37,15 @@ class NAB_Seed_Command {
 		$data = json_decode( (string) file_get_contents( NAB_CORE_DIR . 'cli/seed-data.json' ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions -- local file.
 		if ( ! $data ) {
 			WP_CLI::error( 'Could not read cli/seed-data.json' );
+		}
+
+		if ( 'articles' === ( $assoc_args['only'] ?? '' ) ) {
+			foreach ( $data['articles'] as $article ) {
+				$id = $this->article( $article );
+				WP_CLI::log( sprintf( 'Article #%d %s', $id, $article['title'] ) );
+			}
+			WP_CLI::success( 'Articles imported.' );
+			return;
 		}
 
 		$this->configure_plugins();

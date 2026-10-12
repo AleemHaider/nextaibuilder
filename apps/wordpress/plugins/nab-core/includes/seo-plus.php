@@ -295,6 +295,12 @@ function nab_faq_items() {
 		array( 'What if I miss a live session?', 'Every live session is recorded and posted to your student dashboard within 24 hours.' ),
 		array( 'What tools do I need to get started?', 'A computer and an internet connection. The guided setup steps walk you through installing everything else, and our AI checks each step from a screenshot.' ),
 		array( 'Is there a refund policy?', 'Yes. You get a full refund within 2 weeks of the cohort start date, no questions asked. See the refund policy page for details.' ),
+		array( 'How much does the course cost?', 'The live cohort is $3,000, or 3 installments of $1,000. The self-paced recorded course is $200, also available in 3 installments.' ),
+		array( 'How long is the live cohort and how much time does it take?', 'Five weeks with 10 live sessions of 3 hours each, two per week. Plan extra time between sessions to build your own product.' ),
+		array( 'What will I build?', 'Your own AI product. Over five weeks you set up an AI-native workflow with Claude Code, design an AI agent, connect it to real tools such as Jira, Confluence, Slack and GitHub, add tests and quality gates, and ship it to production with CI/CD.' ),
+		array( 'Which tools and models does the course use?', 'Claude Code, Cursor and the Anthropic Claude API, plus tool use and the Model Context Protocol (MCP) for connecting agents to Jira, Confluence, Slack, GitHub and Figma.' ),
+		array( 'Do I get a certificate?', 'Yes. Both the live cohort and the self-paced course include a certificate of completion.' ),
+		array( 'What is the refund policy for the self-paced course?', 'A full refund within 2 weeks of purchase, no questions asked.' ),
 	);
 }
 
