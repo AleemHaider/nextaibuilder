@@ -7,8 +7,8 @@
  * @package nextaibuilder
  */
 
-// Real project screenshots aren't in yet: show this section only with demo content on.
-if ( ! function_exists( 'nab_demo_on' ) || ! nab_demo_on() ) {
+// Real projects aren't in yet: the cards only render with demo claims on, so hide the whole section otherwise.
+if ( ! function_exists( 'nab_demo_claims' ) || ! nab_demo_claims() ) {
 	return;
 }
 ?>

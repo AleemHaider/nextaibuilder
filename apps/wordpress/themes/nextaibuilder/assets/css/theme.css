@@ -733,10 +733,13 @@ body.tutor-lms code, body.tutor-lms pre { font-family: var(--wp--preset--font-fa
 /* AI helper form: same grid-track fix as the upload form. */
 .nab-ts__form { grid-template-columns: minmax(0, 1fr); }
 .nab-ts__form textarea, .nab-ts__form input { width: 100%; max-width: 100%; box-sizing: border-box; }
-/* Mobile header: logo on the left, actions and the menu button together on the right. */
+/* Mobile header: logo on the left, actions and the menu button together on the right.
+   Up to 781px the links do not fit beside the logo and CTA, so the menu stays collapsed into a button (core collapses only below 600px). */
 @media (max-width: 781px) {
 	.nab-header .nab-nav { order: 3; margin-left: 0.25rem; }
-	.nab-header__cta { margin-left: auto; }
+	.nab-header .nab-header__cta { margin-left: auto !important; }
+	.nab-header .wp-block-navigation__responsive-container-open:not(.always-shown) { display: flex; }
+	.nab-header .wp-block-navigation__responsive-container:not(.hidden-by-default):not(.is-menu-open) { display: none; }
 }
 @media (max-width: 380px) {
 	.nab-header__cta .wp-block-button__link { padding: 0.45rem 0.8rem !important; font-size: 0.875rem !important; }
@@ -862,3 +865,13 @@ html body [class*="tutor-dashboard-menu"] a:focus-visible { outline: 2px solid v
 
 /* Show code exactly as typed: no != or -> ligatures. */
 pre, code, kbd, samp { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
+
+/* Mobile menu: backdrop-filter on the header made it the containing block for the
+   fixed menu overlay, clipping the open menu to the header's 66px. The blur now
+   lives on a pseudo-element, so the overlay covers the whole screen again. */
+.nab-header { backdrop-filter: none; background: transparent !important; }
+.nab-header::before { content: ""; position: absolute; inset: 0; z-index: -1; background: rgba(255, 255, 255, 0.85); backdrop-filter: saturate(1.6) blur(12px); -webkit-backdrop-filter: saturate(1.6) blur(12px); }
+/* 44px tap targets for the menu open/close buttons and the links in the open menu. */
+.nab-header .wp-block-navigation__responsive-container-open,
+.nab-header .wp-block-navigation__responsive-container-close { padding: 10px; margin: -10px; box-sizing: content-box; }
+.nab-header .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation-item__content { display: block; padding-block: 0.6rem; font-size: 1.125rem; }
